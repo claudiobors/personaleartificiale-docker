@@ -1,0 +1,14 @@
+{
+  "name": "personaleartificiale-it",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pagina lavori in corso per personaleartificiale.it",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
