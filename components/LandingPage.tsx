@@ -116,8 +116,6 @@ const agents: Agent[] = [
       "Crea schede cliente ordinate",
       "Prepara liste lead qualificate",
       "Compila tabelle operative",
-      "Aggiorna gestionali, CRM o board collegate",
-      "Analizza dati di reparto e anomalie",
       "Organizza follow-up commerciali",
       "Suggerisce ottimizzazioni operative",
       "E molto altro"
