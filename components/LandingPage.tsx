@@ -1,16 +1,22 @@
 "use client";
 
 import { FormEvent, ReactNode, useMemo, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  ArrowRight,
   ArrowUpRight,
+  BellRing,
   Bot,
   BrainCircuit,
+  BriefcaseBusiness,
   Building2,
   CalendarDays,
   Check,
   ChevronDown,
+  ClipboardCheck,
   Clock3,
+  FileText,
   Files,
   MailCheck,
   Menu,
@@ -18,6 +24,7 @@ import {
   Mic2,
   PenLine,
   PlugZap,
+  Send,
   ShieldCheck,
   Sparkles,
   Trello,
@@ -26,100 +33,191 @@ import {
   X
 } from "lucide-react";
 
-type Power = {
+type Agent = {
+  name: string;
   title: string;
-  eyebrow: string;
-  copy: string;
+  photo: string;
+  accent: string;
+  tagline: string;
+  tasks: string[];
+};
+
+type Demo = {
+  title: string;
+  plainTitle: string;
   icon: ReactNode;
-  visual: "calendar" | "marketing" | "automation";
+  agent: string;
+  telegram: string;
+  does: string[];
+  result: string;
+  visual: "calendar" | "mail" | "invoice" | "marketing" | "lead" | "trello";
 };
 
 const navItems = [
-  { label: "Azione", href: "#azione" },
-  { label: "Metodo", href: "#come-funziona" },
+  { label: "Team", href: "#team" },
+  { label: "Demo", href: "#demo" },
+  { label: "Metodo", href: "#metodo" },
   { label: "Prezzi", href: "#pricing" },
-  { label: "Enterprise", href: "#enterprise" }
+  { label: "Contatto", href: "#enterprise" }
+];
+
+const agents: Agent[] = [
+  {
+    name: "Giulia",
+    title: "Assistente Operativa",
+    photo:
+      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1000&q=90",
+    accent: "from-cyan to-aurora",
+    tagline: "Tiene in ordine agenda, Gmail, promemoria e documenti.",
+    tasks: ["Legge Gmail e priorita", "Fissa appuntamenti", "Salva file su Drive", "Ti ricorda cosa fare"]
+  },
+  {
+    name: "Marco",
+    title: "Responsabile Marketing",
+    photo:
+      "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1000&q=90",
+    accent: "from-plasma to-cyan",
+    tagline: "Trasforma idee confuse in post, copy, campagne e immagini.",
+    tasks: ["Scrive post social", "Crea idee contenuto", "Prepara caption", "Adatta il tono del brand"]
+  },
+  {
+    name: "Lorenzo",
+    title: "Collaboratore Aziendale",
+    photo:
+      "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1000&q=90",
+    accent: "from-ember to-aurora",
+    tagline: "Esegue lavori ripetitivi: Trello, PDF, lead, schede e follow-up.",
+    tasks: ["Aggiorna Trello", "Estrae dati dai PDF", "Crea schede operative", "Prepara liste lead"]
+  }
 ];
 
 const chatMessages = [
   {
-    author: "AI",
-    text: "Buongiorno! Email analizzate, call delle 15:00 fissata, fattura salvata su Drive. Procedo con il post LinkedIn?"
+    author: "Giulia",
+    text: "Ho letto 34 messaggi Gmail. 5 sono urgenti. Ho fissato la call con Luca domani alle 15:00 e salvato la fattura in Drive."
   },
   {
     author: "Tu",
-    text: "Procedi e ricordami il commercialista alle 18."
+    text: "Perfetto. Preparami anche il promemoria per il commercialista alle 18."
   },
   {
-    author: "AI",
-    text: "Fatto. Reminder impostato. 👍"
+    author: "Giulia",
+    text: "Fatto. Ti avviso alle 18:00 su Telegram. Ho anche preparato il riepilogo dei messaggi Gmail importanti."
   }
 ];
 
-const powers: Power[] = [
+const demos: Demo[] = [
   {
-    title: "Gestione Calendario",
-    eyebrow: "Agenda autonoma",
-    copy: "Gli scrivi su WhatsApp, lui fissa l'appuntamento sul tuo Calendar senza conflitti.",
+    title: "Calendario senza messaggi avanti e indietro",
+    plainTitle: "Appuntamento fissato",
     icon: <CalendarDays />,
+    agent: "Giulia",
+    telegram: "Fissa una call con Luca domani pomeriggio, evita sovrapposizioni.",
+    does: ["Controlla il calendario", "Trova uno slot libero", "Crea l'evento", "Ti manda conferma"],
+    result: "Evento creato: Call con Luca, domani ore 15:00.",
     visual: "calendar"
   },
   {
-    title: "Team Marketing",
-    eyebrow: "Contenuti pronti",
-    copy: "Il tuo Responsabile Marketing digitale crea post, copy e immagini in pochi secondi.",
+    title: "Gmail capito e ordinato prima che tu apra la casella",
+    plainTitle: "Gmail prioritario",
+    icon: <MailCheck />,
+    agent: "Giulia",
+    telegram: "Dimmi quali messaggi Gmail devo leggere oggi e cosa devo fare prima.",
+    does: ["Legge mittenti e contenuti", "Separa urgenze da rumore", "Prepara risposta breve", "Segna le azioni"],
+    result: "5 messaggi urgenti, 2 risposte pronte, 1 documento da firmare.",
+    visual: "mail"
+  },
+  {
+    title: "Fatture e PDF trasformati in lavoro fatto",
+    plainTitle: "PDF processato",
+    icon: <FileText />,
+    agent: "Lorenzo",
+    telegram: "Prendi questa fattura, salva i dati e prepara la scheda cliente.",
+    does: ["Legge il PDF", "Estrae importo e scadenza", "Compila la scheda", "Archivia il file"],
+    result: "Scheda cliente pronta con P.IVA, importo, scadenza e link al PDF.",
+    visual: "invoice"
+  },
+  {
+    title: "Marketing senza fissare una riunione",
+    plainTitle: "Post pronto",
     icon: <PenLine />,
+    agent: "Marco",
+    telegram: "Fammi un post LinkedIn per spiegare che automatizziamo il back office.",
+    does: ["Capisce il messaggio", "Scrive il copy", "Propone una visual", "Prepara 3 varianti"],
+    result: "Post LinkedIn pronto: titolo, testo, CTA e idea immagine.",
     visual: "marketing"
   },
   {
-    title: "Automazione Aziendale",
-    eyebrow: "Operazioni sincronizzate",
-    copy: "Il Collaboratore aggiorna Trello, estrapola dati dai documenti e fa lead generation per te.",
+    title: "Lead generation spiegata semplice",
+    plainTitle: "Lista contatti",
+    icon: <BriefcaseBusiness />,
+    agent: "Lorenzo",
+    telegram: "Trovami 20 studi dentistici a Milano con Gmail o contatto pubblico e telefono.",
+    does: ["Cerca aziende compatibili", "Filtra contatti inutili", "Prepara tabella", "Scrive primo messaggio"],
+    result: "20 lead ordinati per zona, contatto e probabilita di risposta.",
+    visual: "lead"
+  },
+  {
+    title: "Trello aggiornato senza aprire Trello",
+    plainTitle: "Board aggiornata",
     icon: <Trello />,
-    visual: "automation"
+    agent: "Lorenzo",
+    telegram: "Sposta il task del preventivo in urgente e aggiungi la scadenza di venerdi.",
+    does: ["Trova la card giusta", "Aggiorna stato e scadenza", "Aggiunge checklist", "Ti conferma tutto"],
+    result: "Card aggiornata, checklist inserita, scadenza venerdi ore 12:00.",
+    visual: "trello"
   }
 ];
 
 const features = [
   {
-    title: "Interfaccia Umana",
-    copy: "Nessun software da imparare. Usi messaggi o vocali su WhatsApp/Telegram.",
-    icon: <Mic2 />
+    title: "Parli su Telegram",
+    copy: "Non installi gestionali strani. Scrivi o mandi vocali come faresti con una persona.",
+    icon: <Send />
   },
   {
-    title: "Memoria a Lungo Termine",
-    copy: "Ricorda clienti, progetti passati e preferenze operative.",
+    title: "Ricorda il contesto",
+    copy: "Clienti, preferenze, progetti, stile di comunicazione e regole operative restano in memoria.",
     icon: <BrainCircuit />
   },
   {
-    title: "Connessione Totale",
-    copy: "Integrato nativamente con Email, Drive, Calendar e Trello.",
+    title: "Lavora negli strumenti",
+    copy: "Gmail, Drive, Calendar, Trello e flussi aziendali vengono collegati al tuo Motore AI.",
     icon: <PlugZap />
   }
 ];
 
+const examples = [
+  ["Commercialista", "Ricordami di mandargli la fattura e prepara il testo della mail."],
+  ["Cliente lento", "Scrivi un follow-up gentile ma fermo per il preventivo non approvato."],
+  ["Agenda piena", "Trova 30 minuti liberi questa settimana per parlare con Martina."],
+  ["Post social", "Trasforma questo audio in un post LinkedIn semplice e convincente."],
+  ["Documenti", "Riassumi questo PDF e dimmi le tre cose che devo fare."],
+  ["Trello", "Crea una card per il nuovo cliente e metti le attivita in ordine."]
+];
+
 const onboarding = [
-  "Ricevi la videoguida per aprire VPS e OpenAI. Dati e chiavi restano tuoi.",
-  "Compili il caso d'uso per istruire la tua AI.",
-  "Video-call di 1 ora con l'Esperto: fine chiamata, AI installata e attiva sul tuo telefono."
+  "Ricevi la videoguida per aprire VPS e Motore AI. Dati, accessi e chiavi restano tuoi.",
+  "Compili il caso d'uso: cosa deve fare l'agente, cosa non deve fare, che tono deve usare.",
+  "Video-call di 1 ora con l'esperto: a fine chiamata il tuo team digitale e attivo su Telegram."
 ];
 
 const packages = [
   {
     name: "Assistente Base",
     price: "€399",
-    description: "Per professionisti che vogliono togliere attrito da email, agenda e file.",
-    items: ["1 Agente Assistente", "WhatsApp/Telegram", "Mail, Calendar, Drive", "Setup 1h inclusa"],
+    description: "Per chi vuole iniziare con una persona digitale che gestisce il lavoro quotidiano.",
+    items: ["1 agente: Giulia Assistente", "Solo Telegram", "Mail, Calendar, Drive", "Setup 1h inclusa"],
     highlighted: false
   },
   {
     name: "Top Team Personale Artificiale",
     price: "€999",
-    description: "Per chi vuole un piccolo reparto digitale già diviso per responsabilità.",
+    description: "Per chi vuole tre profili specializzati che si dividono i compiti come un vero mini-team.",
     items: [
-      "3 Agenti: Assistente, Marketing, Collaboratore",
-      "Sentiment email e priorità operative",
-      "Trello, copywriting e immagini",
+      "3 agenti: Giulia, Marco, Lorenzo",
+      "Gmail, sentiment e priorita operative",
+      "Trello, copywriting, PDF e lead generation",
       "Setup 1h inclusa"
     ],
     highlighted: true
@@ -129,19 +227,47 @@ const packages = [
 const faqs = [
   {
     question: "Devo essere un esperto informatico?",
-    answer: "No, usi solo WhatsApp e ti guidiamo noi."
+    answer: "No. Tu usi Telegram. La parte tecnica la prepariamo insieme durante l'onboarding."
   },
   {
     question: "I dati sono al sicuro?",
-    answer: "Sì, VPS tua, chiavi tue."
+    answer: "Si. La struttura e tua, gli accessi sono tuoi, le chiavi restano sotto il tuo controllo."
   },
   {
     question: "Costi ricorrenti?",
-    answer: "Nessun abbonamento nostro. Solo i tuoi costi vivi di VPS (pochi €) e token OpenAI."
+    answer: "Nessun abbonamento mensile da parte nostra. Restano solo i tuoi costi vivi: VPS e consumo del Motore AI."
   },
   {
-    question: "Perché 3 agenti?",
-    answer: "Specializzazione. Si dividono i task lavorando in sinergia."
+    question: "Perche 3 agenti?",
+    answer: "Perche specializzare funziona meglio. Uno segue agenda e Gmail, uno marketing, uno operazioni e documenti."
+  },
+  {
+    question: "E se non capisco cosa chiedergli?",
+    answer: "Ti diamo esempi pronti e casi d'uso. Parti copiando comandi semplici, poi l'agente impara il tuo modo di lavorare."
+  },
+  {
+    question: "Posso usare solo un agente all'inizio?",
+    answer: "Si. Puoi partire con Giulia Assistente e aggiungere Marco o Lorenzo quando capisci quali lavori vuoi delegare."
+  },
+  {
+    question: "Funziona anche con vocali?",
+    answer: "Si. Puoi scrivere o mandare vocali su Telegram: il punto e comandare il lavoro come faresti con un dipendente."
+  },
+  {
+    question: "Serve cambiare modo di lavorare?",
+    answer: "No. L'obiettivo e toglierti passaggi, non aggiungerne. Parti da Telegram e gli agenti lavorano sugli strumenti collegati."
+  },
+  {
+    question: "Chi controlla cosa fa l'agente?",
+    answer: "Tu. Possiamo impostare conferme obbligatorie per azioni sensibili come invii, modifiche importanti o aggiornamenti operativi."
+  },
+  {
+    question: "Quanto tempo serve per vedere utilita reale?",
+    answer: "Di solito appena vengono collegati Gmail, Calendar e Drive. I primi casi utili sono promemoria, sintesi, risposte e appuntamenti."
+  },
+  {
+    question: "E se sbaglia?",
+    answer: "Si corregge il comportamento con regole operative e memoria. Per le azioni critiche puoi richiedere sempre approvazione prima dell'esecuzione."
   }
 ];
 
@@ -166,7 +292,7 @@ function MotionSection({
       id={id}
       initial={reduceMotion ? false : "hidden"}
       whileInView="visible"
-      viewport={{ once: true, amount: 0.18 }}
+      viewport={{ once: true, amount: 0.16 }}
       variants={fadeUp}
       transition={{ duration: 0.82, ease: [0.32, 0.72, 0, 1] }}
       className={className}
@@ -224,14 +350,14 @@ function FluidNav() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-40 px-4 pt-5">
-        <nav className="mx-auto flex w-full max-w-5xl items-center justify-between rounded-full border border-white/[0.12] bg-obsidian/70 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl">
+        <nav className="mx-auto flex w-full max-w-6xl items-center justify-between rounded-full border border-white/[0.12] bg-obsidian/70 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl">
           <a href="#" className="flex items-center gap-3 text-sm font-semibold text-white">
             <span className="flex size-9 items-center justify-center rounded-full bg-white text-obsidian">
               <Bot className="size-4 stroke-[1.4]" />
             </span>
             Personale Artificiale
           </a>
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="hidden items-center gap-1 lg:flex">
             {navItems.map((item) => (
               <a
                 key={item.href}
@@ -246,7 +372,7 @@ function FluidNav() {
             type="button"
             aria-label={open ? "Chiudi menu" : "Apri menu"}
             onClick={() => setOpen((value) => !value)}
-            className="relative flex size-10 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.06] text-white transition-all duration-700 ease-premium md:hidden"
+            className="relative flex size-10 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.06] text-white transition-all duration-700 ease-premium lg:hidden"
           >
             <Menu className={`absolute size-4 stroke-[1.25] transition-all duration-700 ease-premium ${open ? "scale-0 opacity-0" : "scale-100 opacity-100"}`} />
             <X className={`absolute size-4 stroke-[1.25] transition-all duration-700 ease-premium ${open ? "scale-100 opacity-100" : "scale-0 opacity-0"}`} />
@@ -261,7 +387,7 @@ function FluidNav() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -18 }}
             transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
-            className="fixed inset-0 z-30 bg-obsidian/90 px-6 pt-28 backdrop-blur-3xl md:hidden"
+            className="fixed inset-0 z-30 bg-obsidian/90 px-6 pt-28 backdrop-blur-3xl lg:hidden"
           >
             <div className="flex flex-col gap-4">
               {navItems.map((item, index) => (
@@ -285,21 +411,21 @@ function FluidNav() {
   );
 }
 
-function AnimatedMockup() {
+function TelegramMockup() {
   return (
-    <div className="outer-shell relative mx-auto w-full max-w-[460px] rounded-[2rem] p-2 shadow-plasma">
+    <div className="outer-shell relative mx-auto w-full max-w-[500px] rounded-[2rem] p-2 shadow-plasma">
       <div className="inner-core overflow-hidden rounded-[calc(2rem-0.5rem)]">
         <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
           <div className="flex items-center gap-3">
             <span className="flex size-10 items-center justify-center rounded-full bg-cyan/[0.14] text-cyan">
-              <Bot className="size-5 stroke-[1.3]" />
+              <Send className="size-5 stroke-[1.3]" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-white">Assistente PA</p>
-              <p className="text-xs text-aurora">online e operativo</p>
+          <p className="text-sm font-semibold text-white">Telegram · Team Digitale</p>
+              <p className="text-xs text-aurora">Giulia, Marco e Lorenzo sono online</p>
             </div>
           </div>
-          <span className="rounded-full border border-aurora/25 bg-aurora/10 px-3 py-1 text-xs text-aurora">24/7</span>
+          <span className="rounded-full border border-aurora/25 bg-aurora/10 px-3 py-1 text-xs text-aurora">attivo</span>
         </div>
 
         <div className="space-y-4 p-4 sm:p-5">
@@ -308,12 +434,12 @@ function AnimatedMockup() {
               key={message.text}
               initial={{ opacity: 0, y: 20, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.7, delay: 0.45 + index * 0.52, ease: [0.32, 0.72, 0, 1] }}
+              transition={{ duration: 0.7, delay: 0.35 + index * 0.5, ease: [0.32, 0.72, 0, 1] }}
               className={`flex ${message.author === "Tu" ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={[
-                  "max-w-[86%] rounded-lg px-4 py-3 text-sm leading-relaxed",
+                  "max-w-[88%] rounded-lg px-4 py-3 text-sm leading-relaxed",
                   message.author === "Tu"
                     ? "bg-vapor text-obsidian"
                     : "border border-white/10 bg-white/[0.06] text-white/[0.88]"
@@ -330,15 +456,15 @@ function AnimatedMockup() {
 
         <div className="grid grid-cols-3 border-t border-white/[0.08]">
           {[
-            ["Mail", <MailCheck key="mail" />],
-            ["Calendar", <CalendarDays key="calendar" />],
-            ["Drive", <Files key="files" />]
+            ["Gmail", <MailCheck key="mail" />],
+            ["Agenda", <CalendarDays key="calendar" />],
+            ["Documenti", <Files key="files" />]
           ].map(([label, icon], index) => (
             <motion.div
               key={label as string}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, delay: 2.25 + index * 0.14, ease: [0.32, 0.72, 0, 1] }}
+              transition={{ duration: 0.65, delay: 2.15 + index * 0.14, ease: [0.32, 0.72, 0, 1] }}
               className="flex flex-col items-center gap-2 border-r border-white/[0.08] px-3 py-4 last:border-r-0"
             >
               <span className="text-cyan [&_svg]:size-5 [&_svg]:stroke-[1.25]">{icon}</span>
@@ -355,7 +481,7 @@ function Hero() {
   return (
     <section className="relative z-10 min-h-[100dvh] overflow-hidden px-4 pb-20 pt-32 md:pt-40">
       <div className="absolute inset-x-0 top-0 -z-10 h-[760px] bg-hero-mesh opacity-90" />
-      <div className="mx-auto grid w-full max-w-7xl items-center gap-12 md:grid-cols-[1.08fr_0.92fr]">
+      <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <motion.div
           initial={{ opacity: 0, y: 46, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -363,30 +489,30 @@ function Hero() {
           className="max-w-4xl"
         >
           <span className="mb-6 inline-flex rounded-full border border-cyan/[0.24] bg-cyan/[0.08] px-3 py-1 text-[10px] font-semibold uppercase text-cyan">
-            AI employees for serious operators
+            Il tuo team operativo dentro Telegram
           </span>
           <h1 className="text-balance bg-shine-text bg-clip-text text-5xl font-black leading-[0.95] text-transparent sm:text-6xl md:text-7xl">
             Smetti di rincorrere il lavoro. Assumi il tuo primo dipendente digitale.
           </h1>
           <p className="mt-7 max-w-2xl text-pretty text-lg leading-8 text-white/70 md:text-xl">
-            Un assistente personale basato sull&apos;AI che vive nel tuo WhatsApp o Telegram.
-            Gestisce email, appuntamenti e la tua vita aziendale 24/7. Risparmia oltre ½
-            della tua giornata lavorativa.
+            Tre agenti con nomi, ruoli e responsabilita chiare. Tu scrivi su Telegram.
+            Loro leggono Gmail, fissano appuntamenti, preparano contenuti, aggiornano Trello
+            e trasformano documenti in azioni concrete.
           </p>
           <div className="mt-9 flex flex-col gap-4 sm:flex-row">
-            <PremiumButton href="#pricing">Scopri i Pacchetti</PremiumButton>
-            <PremiumButton href="#enterprise" variant="secondary">
-              Richiedi Consulenza
+            <PremiumButton href="#demo">Vedi esempi pratici</PremiumButton>
+            <PremiumButton href="#pricing" variant="secondary">
+              Scopri i Pacchetti
             </PremiumButton>
           </div>
           <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
             {[
-              ["Tempo recuperato", "½ giornata"],
-              ["Canali", "WA + Telegram"],
-              ["Setup", "1 ora"]
+              ["Modo naturale", "Parli via messaggio come con un tuo dipendente"],
+              ["Tempo recuperato", "fino a 1/2 giornata"],
+              ["Setup guidato", "1 ora"]
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
-                <p className="text-xl font-bold text-white">{value}</p>
+                <p className="text-lg font-bold text-white md:text-xl">{value}</p>
                 <p className="mt-1 text-xs text-white/50">{label}</p>
               </div>
             ))}
@@ -399,177 +525,348 @@ function Hero() {
           transition={{ duration: 1, delay: 0.18, ease: [0.32, 0.72, 0, 1] }}
           className="relative"
         >
-          <AnimatedMockup />
+          <TelegramMockup />
         </motion.div>
       </div>
     </section>
   );
 }
 
-function PowerVisual({ type }: { type: Power["visual"] }) {
+function AgentTeam() {
+  return (
+    <MotionSection id="team" className="relative z-10 px-4 py-24 md:py-32">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-12 max-w-4xl">
+          <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
+            Non bot anonimi
+          </span>
+          <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
+            Li vendiamo come persone digitali: ognuno ha un mestiere preciso.
+          </h2>
+          <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-white/[0.62]">
+            Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. A Giulia chiedi agenda
+            e Gmail. A Marco chiedi marketing. A Lorenzo chiedi lavoro operativo e documenti.
+          </p>
+        </div>
+        <div className="grid gap-5 lg:grid-cols-3">
+          {agents.map((agent) => (
+            <motion.article
+              key={agent.name}
+              whileHover={{ y: -8 }}
+              transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+              className="outer-shell rounded-[2rem] p-2"
+            >
+              <div className="inner-core overflow-hidden rounded-[calc(2rem-0.5rem)]">
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <Image
+                    src={agent.photo}
+                    alt={`${agent.name}, ${agent.title}`}
+                    fill
+                    sizes="(min-width: 1024px) 33vw, 100vw"
+                    className="object-cover"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/10 to-transparent" />
+                  <div className={`absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r ${agent.accent}`} />
+                </div>
+                <div className="p-6">
+                  <p className="text-sm font-semibold uppercase text-cyan">{agent.title}</p>
+                  <h3 className="mt-2 text-3xl font-black text-white">{agent.name}</h3>
+                  <p className="mt-4 text-pretty leading-7 text-white/[0.62]">{agent.tagline}</p>
+                  <div className="mt-6 grid gap-2">
+                    {agent.tasks.map((task) => (
+                      <div key={task} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-sm text-white/[0.72]">
+                        <Check className="size-4 stroke-[1.4] text-aurora" />
+                        {task}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+      </div>
+    </MotionSection>
+  );
+}
+
+function DemoVisual({ type }: { type: Demo["visual"] }) {
+  const base = "rounded-lg border border-white/10 bg-obsidian p-5";
+
   if (type === "calendar") {
     return (
-      <div className="relative min-h-[290px] overflow-hidden rounded-lg border border-white/10 bg-obsidian p-5">
+      <div className={`${base} relative min-h-[340px] overflow-hidden`}>
+        <MessageBubble text="Fissa con Luca domani pomeriggio" />
+        <FlowLine />
         <motion.div
-          key="calendar-msg"
-          initial={{ opacity: 0, x: -24, y: 12 }}
-          animate={{ opacity: 1, x: 0, y: 0 }}
-          transition={{ duration: 0.72, ease: [0.32, 0.72, 0, 1] }}
-          className="w-[78%] rounded-lg bg-white text-obsidian p-4 text-sm font-semibold"
-        >
-          Fissa una call con Luca domani alle 15:00
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 20, y: 40 }}
-          animate={{ opacity: 1, x: 0, y: 12 }}
-          transition={{ duration: 0.8, delay: 0.35, ease: [0.32, 0.72, 0, 1] }}
-          className="ml-auto mt-4 w-[72%] rounded-lg border border-cyan/30 bg-cyan/10 p-4"
+          initial={{ opacity: 0, x: 20, y: 36 }}
+          animate={{ opacity: 1, x: 0, y: 18 }}
+          transition={{ duration: 0.8, delay: 0.28, ease: [0.32, 0.72, 0, 1] }}
+          className="ml-auto mt-6 w-[78%] rounded-lg border border-cyan/30 bg-cyan/10 p-4"
         >
           <div className="mb-3 flex items-center gap-2 text-cyan">
             <CalendarDays className="size-4 stroke-[1.3]" />
-            <span className="text-xs font-semibold">Google Calendar</span>
+            <span className="text-xs font-semibold">Calendar</span>
           </div>
-          <p className="text-lg font-bold text-white">Call con Luca</p>
+          <p className="text-xl font-bold text-white">Call con Luca</p>
           <p className="mt-2 text-sm text-white/[0.58]">Domani · 15:00 · nessun conflitto</p>
         </motion.div>
-        <motion.span
-          initial={{ scaleX: 0, opacity: 0 }}
-          animate={{ scaleX: 1, opacity: 1 }}
-          transition={{ duration: 0.74, delay: 0.2, ease: [0.32, 0.72, 0, 1] }}
-          className="absolute left-[34%] top-[45%] h-px w-28 origin-left bg-cyan/70"
-        />
+      </div>
+    );
+  }
+
+  if (type === "mail") {
+    return (
+      <div className={`${base} min-h-[340px]`}>
+        <div className="mb-5 flex items-center gap-3">
+          <IconWrap>
+            <MailCheck />
+          </IconWrap>
+          <div>
+            <p className="text-sm font-semibold text-white">Inbox sintetizzata</p>
+            <p className="text-xs text-white/[0.48]">34 messaggi Gmail letti in background</p>
+          </div>
+        </div>
+        {["Urgente: cliente in attesa", "Firma contratto", "Newsletter ignorabile", "Pagamento ricevuto"].map((item, index) => (
+          <motion.div
+            key={item}
+            initial={{ opacity: 0, x: -18 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.55, delay: index * 0.12, ease: [0.32, 0.72, 0, 1] }}
+            className="mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.035] p-3"
+          >
+            <span className="text-sm text-white/[0.74]">{item}</span>
+            <span className={`rounded-full px-2 py-1 text-[10px] ${index < 2 ? "bg-ember/15 text-ember" : "bg-white/10 text-white/45"}`}>
+              {index < 2 ? "azione" : "bassa"}
+            </span>
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === "invoice") {
+    return (
+      <div className={`${base} min-h-[340px]`}>
+        <div className="rounded-lg border border-ember/30 bg-ember/10 p-4">
+          <div className="mb-3 flex items-center gap-2 text-ember">
+            <FileText className="size-4 stroke-[1.3]" />
+            <span className="text-xs font-semibold">PDF letto</span>
+          </div>
+          <div className="space-y-2">
+            <span className="block h-2 w-full rounded-full bg-white/[0.16]" />
+            <span className="block h-2 w-4/5 rounded-full bg-white/[0.12]" />
+            <span className="block h-2 w-3/5 rounded-full bg-white/10" />
+          </div>
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 12 }}
+          transition={{ duration: 0.75, delay: 0.25, ease: [0.32, 0.72, 0, 1] }}
+          className="mt-5 rounded-lg border border-aurora/30 bg-aurora/10 p-4"
+        >
+          <p className="text-sm font-semibold text-white">Dati estratti</p>
+          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+            <Info label="Importo" value="€1.280" />
+            <Info label="Scadenza" value="30 giorni" />
+            <Info label="P.IVA" value="salvata" />
+            <Info label="Drive" value="archiviata" />
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   if (type === "marketing") {
     return (
-      <div className="min-h-[290px] rounded-lg border border-white/10 bg-obsidian p-5">
+      <div className={`${base} min-h-[340px]`}>
         <div className="mb-5 flex items-center gap-3">
           <IconWrap>
             <WandSparkles />
           </IconWrap>
           <div>
-            <p className="text-sm font-semibold text-white">Marketing Agent</p>
-            <p className="text-xs text-white/[0.48]">Generazione campagna</p>
+            <p className="text-sm font-semibold text-white">Campagna pronta</p>
+            <p className="text-xs text-white/[0.48]">Copy + visual + CTA</p>
           </div>
         </div>
-        <div className="space-y-3">
-          {["Analisi tone of voice", "Copy LinkedIn", "Immagine post", "CTA finale"].map((step, index) => (
-            <div key={step} className="rounded-lg border border-white/[0.08] bg-white/[0.035] p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-white/60">
-                <span>{step}</span>
-                <span>{index === 3 ? "100%" : `${62 + index * 11}%`}</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-                <motion.div
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.85, delay: index * 0.16, ease: [0.32, 0.72, 0, 1] }}
-                  className="h-full origin-left rounded-full bg-gradient-to-r from-cyan to-aurora"
-                  style={{ width: `${70 + index * 10}%` }}
-                />
-              </div>
+        {["Idea centrale", "Hook del post", "Caption", "CTA finale"].map((step, index) => (
+          <div key={step} className="mb-3 rounded-lg border border-white/[0.08] bg-white/[0.035] p-3">
+            <div className="mb-2 flex items-center justify-between text-xs text-white/60">
+              <span>{step}</span>
+              <span>{index === 3 ? "100%" : `${68 + index * 9}%`}</span>
             </div>
-          ))}
-        </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+              <motion.div
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.85, delay: index * 0.16, ease: [0.32, 0.72, 0, 1] }}
+                className="h-full origin-left rounded-full bg-gradient-to-r from-plasma to-cyan"
+                style={{ width: `${70 + index * 10}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (type === "lead") {
+    return (
+      <div className={`${base} min-h-[340px]`}>
+        <p className="mb-4 text-sm font-semibold text-white">Lead trovati e puliti</p>
+        {["Studio Aurora", "Dental Milano Nord", "Clinica Sorriso", "Ortodonzia Verdi"].map((lead, index) => (
+          <motion.div
+            key={lead}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: index * 0.13, ease: [0.32, 0.72, 0, 1] }}
+            className="mb-3 grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] p-3"
+          >
+            <div>
+              <p className="text-sm font-semibold text-white">{lead}</p>
+              <p className="text-xs text-white/[0.46]">contatto + telefono verificati</p>
+            </div>
+            <span className="rounded-full bg-aurora/12 px-2 py-1 text-xs text-aurora">{80 + index * 4}%</span>
+          </motion.div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="relative min-h-[290px] overflow-hidden rounded-lg border border-white/10 bg-obsidian p-5">
-      <motion.div
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
-        className="rounded-lg border border-ember/30 bg-ember/10 p-4"
-      >
-        <div className="mb-3 flex items-center gap-2 text-ember">
-          <Files className="size-4 stroke-[1.3]" />
-          <span className="text-xs font-semibold">PDF parsing</span>
-        </div>
-        <div className="space-y-2">
-          <span className="block h-2 w-full rounded-full bg-white/[0.16]" />
-          <span className="block h-2 w-4/5 rounded-full bg-white/[0.12]" />
-          <span className="block h-2 w-3/5 rounded-full bg-white/10" />
-        </div>
-      </motion.div>
-      <motion.div
-        initial={{ opacity: 0, x: 26, y: 34 }}
-        animate={{ opacity: 1, x: 0, y: 12 }}
-        transition={{ duration: 0.82, delay: 0.34, ease: [0.32, 0.72, 0, 1] }}
-        className="ml-auto mt-5 w-[82%] rounded-lg border border-plasma/35 bg-plasma/12 p-4"
-      >
-        <div className="mb-3 flex items-center gap-2 text-plasma">
-          <Trello className="size-4 stroke-[1.3]" />
-          <span className="text-xs font-semibold">Trello aggiornato</span>
-        </div>
-        <p className="text-sm font-semibold text-white">Lead qualificato · Preventivo allegato</p>
-        <p className="mt-2 text-xs text-white/[0.52]">Scadenza, valore e next action estratti.</p>
-      </motion.div>
+    <div className={`${base} min-h-[340px]`}>
+      <div className="mb-4 flex items-center gap-3 text-plasma">
+        <Trello className="size-5 stroke-[1.3]" />
+        <span className="text-sm font-semibold">Trello aggiornato</span>
+      </div>
+      {["Preventivo cliente", "Checklist documenti", "Scadenza venerdi", "Responsabile assegnato"].map((item, index) => (
+        <motion.div
+          key={item}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.55, delay: index * 0.12, ease: [0.32, 0.72, 0, 1] }}
+          className="mb-3 flex items-center gap-3 rounded-lg border border-plasma/25 bg-plasma/10 p-3"
+        >
+          <ClipboardCheck className="size-4 stroke-[1.3] text-plasma" />
+          <span className="text-sm text-white/[0.72]">{item}</span>
+        </motion.div>
+      ))}
     </div>
   );
 }
 
-function ActionShowcase() {
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+      <p className="text-[10px] uppercase text-white/[0.42]">{label}</p>
+      <p className="mt-1 font-semibold text-white">{value}</p>
+    </div>
+  );
+}
+
+function MessageBubble({ text }: { text: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -24, y: 12 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      transition={{ duration: 0.72, ease: [0.32, 0.72, 0, 1] }}
+      className="w-[80%] rounded-lg bg-white p-4 text-sm font-semibold text-obsidian"
+    >
+      {text}
+    </motion.div>
+  );
+}
+
+function FlowLine() {
+  return (
+    <motion.span
+      initial={{ scaleX: 0, opacity: 0 }}
+      animate={{ scaleX: 1, opacity: 1 }}
+      transition={{ duration: 0.74, delay: 0.18, ease: [0.32, 0.72, 0, 1] }}
+      className="absolute left-[34%] top-[42%] h-px w-28 origin-left bg-cyan/70"
+    />
+  );
+}
+
+function DemoShowcase() {
   const [active, setActive] = useState(0);
-  const current = powers[active];
+  const current = demos[active];
 
   return (
-    <MotionSection id="azione" className="relative z-10 px-4 py-24 md:py-32">
+    <MotionSection id="demo" className="relative z-10 px-4 py-24 md:py-32">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div className="mb-12 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
           <div>
             <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
-              L&apos;AI in Azione
+              Demo per capirlo subito
             </span>
             <h2 className="text-balance text-4xl font-black leading-tight text-white md:text-6xl">
-              Tre agenti, un solo modo naturale di comandarli.
+              Guarda cosa gli scrivi e cosa succede dopo.
             </h2>
           </div>
           <p className="max-w-md text-pretty text-base leading-7 text-white/[0.62]">
-            Ogni demo simula un flusso reale: messaggio in chat, interpretazione AI,
-            aggiornamento dello strumento corretto.
+            Zero teoria. Ogni esempio parte da un messaggio Telegram reale e finisce con un risultato concreto.
           </p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-[0.88fr_1.12fr]">
-          <div className="flex gap-3 overflow-x-auto pb-2 md:flex-col md:overflow-visible md:pb-0">
-            {powers.map((power, index) => (
+        <div className="grid gap-5 lg:grid-cols-[0.78fr_1.22fr]">
+          <div className="grid max-h-[720px] gap-3 overflow-y-auto pr-1">
+            {demos.map((demo, index) => (
               <button
                 type="button"
-                key={power.title}
+                key={demo.title}
                 onClick={() => setActive(index)}
                 className={[
-                  "outer-shell min-w-[280px] rounded-lg p-1 text-left transition-all duration-700 ease-premium md:min-w-0",
+                  "outer-shell rounded-lg p-1 text-left transition-all duration-700 ease-premium",
                   active === index ? "shadow-halo" : "opacity-78 hover:opacity-100"
                 ].join(" ")}
               >
-                <div className="inner-core rounded-[calc(0.5rem-0.125rem)] p-5">
-                  <div className="mb-5 flex items-center justify-between">
-                    <IconWrap>{power.icon}</IconWrap>
-                    <span className="text-xs text-white/[0.42]">0{index + 1}</span>
+                <div className="inner-core rounded-[calc(0.5rem-0.125rem)] p-4">
+                  <div className="flex items-start gap-4">
+                    <IconWrap>{demo.icon}</IconWrap>
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-cyan">{demo.agent}</p>
+                      <h3 className="mt-1 text-lg font-bold text-white">{demo.plainTitle}</h3>
+                      <p className="mt-2 text-sm leading-6 text-white/[0.58]">{demo.title}</p>
+                    </div>
                   </div>
-                  <p className="text-xs font-semibold uppercase text-cyan">{power.eyebrow}</p>
-                  <h3 className="mt-2 text-xl font-bold text-white">{power.title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-white/[0.58]">{power.copy}</p>
                 </div>
               </button>
             ))}
           </div>
 
           <div className="outer-shell rounded-[2rem] p-2">
-            <div className="inner-core rounded-[calc(2rem-0.5rem)] p-3">
+            <div className="inner-core rounded-[calc(2rem-0.5rem)] p-3 md:p-5">
               <AnimatePresence mode="wait">
                 <motion.div
-                  key={current.visual}
+                  key={current.title}
                   initial={{ opacity: 0, y: 20, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -12, scale: 0.985 }}
                   transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+                  className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]"
                 >
-                  <PowerVisual type={current.visual} />
+                  <div className="rounded-lg border border-white/10 bg-white/[0.035] p-5">
+                    <p className="text-xs font-semibold uppercase text-cyan">Tu scrivi su Telegram</p>
+                    <p className="mt-3 rounded-lg bg-white p-4 text-base font-semibold leading-7 text-obsidian">
+                      {current.telegram}
+                    </p>
+
+                    <p className="mt-6 text-xs font-semibold uppercase text-white/[0.46]">L&apos;agente fa questo</p>
+                    <div className="mt-3 space-y-2">
+                      {current.does.map((item) => (
+                        <div key={item} className="flex items-center gap-3 rounded-lg border border-white/10 bg-obsidian px-3 py-2 text-sm text-white/[0.72]">
+                          <ArrowRight className="size-4 stroke-[1.3] text-cyan" />
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="mt-6 text-xs font-semibold uppercase text-aurora">Risultato finale</p>
+                    <p className="mt-2 text-pretty text-lg font-bold leading-7 text-white">{current.result}</p>
+                  </div>
+                  <DemoVisual type={current.visual} />
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -580,16 +877,45 @@ function ActionShowcase() {
   );
 }
 
+function SimpleExamples() {
+  return (
+    <MotionSection className="relative z-10 px-4 py-24 md:py-28">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-10 max-w-3xl">
+          <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
+            Copia e incolla
+          </span>
+          <h2 className="text-balance text-4xl font-black leading-tight md:text-5xl">
+            Se non sai cosa chiedere, parti da questi comandi.
+          </h2>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {examples.map(([title, prompt]) => (
+            <div key={title} className="outer-shell rounded-lg p-1">
+              <div className="inner-core min-h-[180px] rounded-[calc(0.5rem-0.125rem)] p-5">
+                <p className="text-sm font-semibold uppercase text-cyan">{title}</p>
+                <p className="mt-4 text-pretty text-lg font-bold leading-7 text-white">
+                  &quot;{prompt}&quot;
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </MotionSection>
+  );
+}
+
 function FeatureGrid() {
   return (
-    <MotionSection id="come-funziona" className="relative z-10 px-4 py-24 md:py-32">
+    <MotionSection id="metodo" className="relative z-10 px-4 py-24 md:py-32">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 max-w-3xl">
           <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
             Come funziona
           </span>
           <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
-            Non cambi abitudini. Cambi leva operativa.
+            Tu continui a parlare. Il sistema si occupa del resto.
           </h2>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
@@ -624,7 +950,7 @@ function OnboardingFlow() {
                 Onboarding guidato
               </span>
               <h2 className="text-balance text-4xl font-black leading-tight md:text-5xl">
-                Dal primo briefing al telefono operativo in una chiamata.
+                Nessun salto nel buio: lo accendiamo insieme.
               </h2>
             </div>
             <div className="relative grid gap-6 md:grid-cols-3">
@@ -655,17 +981,17 @@ function Pricing() {
   return (
     <MotionSection id="pricing" className="relative z-10 px-4 py-24 md:py-32">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-12 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div className="mb-12 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
           <div>
             <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
               Pricing
             </span>
             <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
-              Un acquisto, nessun abbonamento mensile da parte nostra.
+              Pacchetti chiari. Niente abbonamento mensile da parte nostra.
             </h2>
           </div>
           <p className="max-w-md text-pretty leading-7 text-white/[0.62]">
-            Paghi setup e configurazione. I costi vivi di VPS e token OpenAI restano sotto il tuo controllo.
+            Paghi setup e configurazione. Restano solo i costi vivi della tua infrastruttura e del Motore AI.
           </p>
         </div>
 
@@ -732,13 +1058,14 @@ function EnterpriseForm() {
       <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.78fr_1.22fr]">
         <div className="pt-3">
           <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
-            Enterprise
+            Aziende strutturate
           </span>
           <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
-            Per aziende strutturate, progettiamo il tuo reparto AI.
+            Ti disegniamo un reparto digitale su misura.
           </h2>
           <p className="mt-6 text-pretty text-lg leading-8 text-white/[0.62]">
-            Raccontaci struttura, volumi e obiettivi. Ti rispondiamo con una proposta concreta, non con una demo generica.
+            Se hai processi, reparti, clienti e volumi piu alti, partiamo da una mappa operativa:
+            cosa delegare, quali strumenti collegare, quali controlli mantenere.
           </p>
         </div>
 
@@ -746,7 +1073,7 @@ function EnterpriseForm() {
           <form onSubmit={handleSubmit} className="inner-core rounded-[calc(2rem-0.5rem)] p-5 md:p-8">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Nome" name="name" placeholder="Mario Rossi" />
-              <Field label="Email Aziendale" name="email" type="email" placeholder="mario@azienda.it" />
+              <Field label="Gmail aziendale" name="email" type="email" placeholder="mario@azienda.it" />
               <Field label="Telefono" name="phone" placeholder="+39 333 000 0000" />
               <Field label="P.IVA" name="vat" placeholder="IT00000000000" />
               <label className="md:col-span-2">
@@ -771,7 +1098,7 @@ function EnterpriseForm() {
                   name="description"
                   required
                   rows={5}
-                  placeholder="Quali processi vuoi delegare alla tua AI?"
+                  placeholder="Esempio: voglio gestire Gmail clienti, preventivi, Trello e post social da Telegram."
                   className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none transition-all duration-700 ease-premium placeholder:text-white/32 focus:border-cyan/60"
                 />
               </label>
@@ -844,7 +1171,7 @@ function FAQ() {
             FAQ
           </span>
           <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
-            Dubbi normali, risposte dritte.
+            Domande che fanno tutti prima di capire quanto e utile.
           </h2>
         </div>
         <div className="space-y-3">
@@ -889,7 +1216,7 @@ function TrustStrip() {
       { icon: <ShieldCheck />, label: "Dati e chiavi restano tuoi" },
       { icon: <Clock3 />, label: "Operativo 24/7" },
       { icon: <Building2 />, label: "Pensato per processi aziendali" },
-      { icon: <MessageCircle />, label: "Comandi via chat e vocali" }
+      { icon: <MessageCircle />, label: "Comandi testuali e vocali via Telegram" }
     ],
     []
   );
@@ -914,7 +1241,9 @@ export default function LandingPage() {
       <FluidNav />
       <Hero />
       <TrustStrip />
-      <ActionShowcase />
+      <AgentTeam />
+      <DemoShowcase />
+      <SimpleExamples />
       <FeatureGrid />
       <OnboardingFlow />
       <Pricing />
@@ -923,7 +1252,7 @@ export default function LandingPage() {
       <footer className="relative z-10 border-t border-white/10 px-4 py-10">
         <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 text-sm text-white/[0.46] md:flex-row">
           <p>© 2026 Personale Artificiale</p>
-          <p>Assistenti digitali AI su WhatsApp e Telegram.</p>
+          <p>Team digitali AI su Telegram.</p>
         </div>
       </footer>
     </main>

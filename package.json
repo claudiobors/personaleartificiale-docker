@@ -2,7 +2,7 @@
   "name": "personaleartificiale-it",
   "version": "2.0.0",
   "private": true,
-  "description": "Landing page per Personale Artificiale, agenzia di assistenti digitali AI su WhatsApp e Telegram.",
+  "description": "Landing page per Personale Artificiale, agenzia di team digitali AI su Telegram.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -3,15 +3,15 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Personale Artificiale | Dipendenti digitali AI su WhatsApp",
+  title: "Personale Artificiale | Dipendenti digitali AI su Telegram",
   description:
-    "Assistenti digitali AI per WhatsApp e Telegram che gestiscono email, appuntamenti, contenuti e automazioni aziendali 24/7.",
+    "Team digitali AI su Telegram che gestiscono Gmail, appuntamenti, contenuti, documenti e automazioni aziendali 24/7.",
   icons: {
     icon: "/favicon.svg"
   },
   openGraph: {
     title: "Personale Artificiale",
-    description: "Assumi il tuo primo dipendente digitale su WhatsApp o Telegram.",
+    description: "Assumi il tuo primo dipendente digitale su Telegram.",
     url: "https://personaleartificiale.it",
     siteName: "Personale Artificiale",
     locale: "it_IT",
