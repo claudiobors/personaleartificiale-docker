@@ -105,7 +105,7 @@ const agents: Agent[] = [
   {
     name: "Federico",
     title: "Il braccio destro: operativo, ordinato, affidabile",
-    photo: "/agents/Federico.png",
+    photo: "/agents/federico.png",
     photoClass: "object-[center_18%]",
     accent: "from-ember to-aurora",
     tagline: "Federico è il collaboratore che tiene insieme i pezzi: task, schede, PDF, lead, checklist e avanzamento operativo.",
