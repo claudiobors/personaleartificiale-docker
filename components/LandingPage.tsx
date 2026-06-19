@@ -35,6 +35,7 @@ type Agent = {
   name: string;
   title: string;
   photo: string;
+  photoClass: string;
   accent: string;
   tagline: string;
   tasks: string[];
@@ -61,10 +62,11 @@ const navItems = [
 
 const agents: Agent[] = [
   {
-    name: "Nina Agenda",
+    name: "Alisa",
     title: "Assistente personale e segreteria digitale",
     photo:
       "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1000&q=90",
+    photoClass: "object-[center_22%]",
     accent: "from-cyan to-aurora",
     tagline: "Tiene in ordine la giornata: Gmail, agenda, promemoria, documenti e piccole decisioni operative.",
     tasks: [
@@ -79,10 +81,11 @@ const agents: Agent[] = [
     ]
   },
   {
-    name: "Marta Market",
+    name: "Marco",
     title: "Responsabile marketing e contenuti",
     photo:
       "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1000&q=90",
+    photoClass: "object-[center_18%]",
     accent: "from-plasma to-cyan",
     tagline: "Trasforma idee grezze in contenuti pubblicabili: post, campagne, angoli creativi e messaggi commerciali.",
     tasks: [
@@ -97,10 +100,11 @@ const agents: Agent[] = [
     ]
   },
   {
-    name: "Luca Liste",
+    name: "Matteo",
     title: "Collaboratore operativo e back office",
     photo:
-      "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1000&q=90",
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=1000&q=90",
+    photoClass: "object-[center_18%]",
     accent: "from-ember to-aurora",
     tagline: "Fa avanzare il lavoro sporco: Trello, PDF, lead, schede cliente, checklist e aggiornamenti ricorrenti.",
     tasks: [
@@ -118,15 +122,15 @@ const agents: Agent[] = [
 
 const chatMessages = [
   {
-    author: "Nina",
-    text: "Ho letto 34 messaggi Gmail. 5 sono urgenti. Ho fissato la call con Luca domani alle 15:00 e salvato la fattura in Drive."
+    author: "Alisa",
+    text: "Ho letto 34 messaggi Gmail. 5 sono urgenti. Ho fissato la call con Davide domani alle 15:00 e salvato la fattura in Drive."
   },
   {
     author: "Tu",
     text: "Perfetto. Preparami anche il promemoria per il commercialista alle 18."
   },
   {
-    author: "Nina",
+    author: "Alisa",
     text: "Fatto. Ti avviso alle 18:00 su Telegram. Ho anche preparato il riepilogo dei messaggi Gmail importanti."
   }
 ];
@@ -136,17 +140,17 @@ const demos: Demo[] = [
     title: "Calendario senza messaggi avanti e indietro",
     plainTitle: "Appuntamento fissato",
     icon: <CalendarDays />,
-    agent: "Nina Agenda",
-    telegram: "Fissa una call con Luca domani pomeriggio, evita sovrapposizioni.",
+    agent: "Alisa",
+    telegram: "Fissa una call con Davide domani pomeriggio, evita sovrapposizioni.",
     does: ["Controlla il calendario", "Trova uno slot libero", "Crea l'evento", "Prepara reminder e note", "Ti manda conferma"],
-    result: "Evento creato: call con Luca, reminder impostato e nota pronta per arrivare preparato.",
+    result: "Evento creato: call con Davide, reminder impostato e nota pronta per arrivare preparato.",
     visual: "calendar"
   },
   {
     title: "Gmail capito e ordinato prima che tu apra la casella",
     plainTitle: "Gmail prioritario",
     icon: <MailCheck />,
-    agent: "Nina Agenda",
+    agent: "Alisa",
     telegram: "Dimmi quali messaggi Gmail devo leggere oggi e cosa devo fare prima.",
     does: ["Legge mittenti e contenuti", "Separa urgenze da rumore", "Prepara risposte brevi", "Crea una lista azioni", "Ti segnala cosa ignorare"],
     result: "5 messaggi urgenti, 2 risposte pronte, 1 documento da firmare e rumore archiviato.",
@@ -156,7 +160,7 @@ const demos: Demo[] = [
     title: "Fatture e PDF trasformati in lavoro fatto",
     plainTitle: "PDF processato",
     icon: <FileText />,
-    agent: "Luca Liste",
+    agent: "Matteo",
     telegram: "Prendi questa fattura, salva i dati e prepara la scheda cliente.",
     does: ["Legge il PDF", "Estrae importo e scadenza", "Compila la scheda", "Archivia il file", "Crea task di controllo"],
     result: "Scheda cliente pronta con P.IVA, importo, scadenza, link al PDF e prossimo task.",
@@ -166,7 +170,7 @@ const demos: Demo[] = [
     title: "Marketing senza fissare una riunione",
     plainTitle: "Post pronto",
     icon: <PenLine />,
-    agent: "Marta Market",
+    agent: "Marco",
     telegram: "Fammi un post LinkedIn per spiegare che automatizziamo il back office.",
     does: ["Capisce il messaggio", "Scrive il copy", "Propone una visual", "Prepara 3 varianti", "Adatta il tono al brand"],
     result: "Post LinkedIn pronto: hook, testo, CTA, idea immagine e 3 versioni alternative.",
@@ -176,7 +180,7 @@ const demos: Demo[] = [
     title: "Lead generation spiegata semplice",
     plainTitle: "Lista contatti",
     icon: <BriefcaseBusiness />,
-    agent: "Luca Liste",
+    agent: "Matteo",
     telegram: "Trovami 20 studi dentistici a Milano con Gmail o contatto pubblico e telefono.",
     does: ["Cerca aziende compatibili", "Filtra contatti inutili", "Prepara tabella", "Scrive primo messaggio", "Suggerisce priorita di contatto"],
     result: "20 lead ordinati per zona, contatto, probabilita di risposta e primo messaggio pronto.",
@@ -186,7 +190,7 @@ const demos: Demo[] = [
     title: "Trello aggiornato senza aprire Trello",
     plainTitle: "Board aggiornata",
     icon: <Trello />,
-    agent: "Luca Liste",
+    agent: "Matteo",
     telegram: "Sposta il task del preventivo in urgente e aggiungi la scadenza di venerdi.",
     does: ["Trova la card giusta", "Aggiorna stato e scadenza", "Aggiunge checklist", "Segnala task bloccati", "Ti conferma tutto"],
     result: "Card aggiornata, checklist inserita, scadenza venerdi ore 12:00 e blocchi evidenziati.",
@@ -233,7 +237,7 @@ const packages = [
     price: "€599",
     billing: "una tantum",
     description: "Per chi vuole iniziare con una persona digitale che gestisce il lavoro quotidiano.",
-    items: ["1 agente: Nina Agenda", "Solo Telegram", "Gmail, Calendar, Drive", "Setup 1h inclusa"],
+    items: ["1 agente: Alisa", "Solo Telegram", "Gmail, Calendar, Drive", "Setup 1h inclusa"],
     highlighted: false
   },
   {
@@ -242,7 +246,7 @@ const packages = [
     billing: "una tantum",
     description: "Per chi vuole tre profili specializzati che si dividono i compiti come un vero mini-team.",
     items: [
-      "3 agenti: Nina Agenda, Marta Market, Luca Liste",
+      "3 agenti: Alisa, Marco, Matteo",
       "Gmail, sentiment e priorita operative",
       "Trello, copywriting, PDF e lead generation",
       "Setup 1h inclusa"
@@ -274,7 +278,7 @@ const faqs = [
   },
   {
     question: "Posso usare solo un agente all'inizio?",
-    answer: "Si. Puoi partire con Nina Agenda e aggiungere Marta Market o Luca Liste quando capisci quali lavori vuoi delegare."
+    answer: "Si. Puoi partire con Alisa e aggiungere Marco o Matteo quando capisci quali lavori vuoi delegare."
   },
   {
     question: "Funziona anche con vocali?",
@@ -494,7 +498,7 @@ function TelegramMockup() {
             </span>
             <div>
           <p className="text-sm font-semibold text-white">Telegram · Team Digitale</p>
-              <p className="text-xs text-aurora">Nina, Marta e Luca sono online</p>
+              <p className="text-xs text-aurora">Alisa, Marco e Matteo sono online</p>
             </div>
           </div>
           <span className="rounded-full border border-aurora/25 bg-aurora/10 px-3 py-1 text-xs text-aurora">attivo</span>
@@ -579,7 +583,7 @@ function Hero() {
           </div>
           <div className="mt-10 grid max-w-[620px] grid-cols-1 gap-3 sm:grid-cols-3">
             {[
-              ["Modo naturale", "Parli via messaggio come con un tuo dipendente"],
+              ["Modo naturale", "Parli come a un dipendente"],
               ["Tempo recuperato", "fino a 1/2 giornata"],
               ["Setup guidato", "1 ora"]
             ].map(([label, value]) => (
@@ -616,8 +620,8 @@ function AgentTeam() {
             Li vendiamo come persone digitali: ognuno ha un mestiere preciso.
           </h2>
           <p className="mt-6 max-w-[620px] text-pretty text-lg leading-8 text-white/[0.62]">
-            Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. A Nina chiedi agenda
-            e Gmail. A Marta chiedi marketing. A Luca chiedi lavoro operativo e documenti.
+            Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. Ad Alisa chiedi agenda
+            e Gmail. A Marco chiedi marketing. A Matteo chiedi lavoro operativo e documenti.
           </p>
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
@@ -635,7 +639,7 @@ function AgentTeam() {
                     alt={`${agent.name}, ${agent.title}`}
                     fill
                     sizes="(min-width: 1024px) 33vw, 100vw"
-                    className="object-cover"
+                    className={`object-cover ${agent.photoClass}`}
                     loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/10 to-transparent" />
@@ -669,7 +673,7 @@ function DemoVisual({ type }: { type: Demo["visual"] }) {
   if (type === "calendar") {
     return (
       <div className={`${base} relative min-h-[340px] overflow-hidden`}>
-        <MessageBubble text="Fissa con Luca domani pomeriggio" />
+        <MessageBubble text="Fissa con Davide domani pomeriggio" />
         <FlowLine />
         <motion.div
           initial={{ opacity: 0, x: 20, y: 36 }}
@@ -681,7 +685,7 @@ function DemoVisual({ type }: { type: Demo["visual"] }) {
             <CalendarDays className="size-4 stroke-[1.3]" />
             <span className="text-xs font-semibold">Calendar</span>
           </div>
-          <p className="text-xl font-bold text-white">Call con Luca</p>
+          <p className="text-xl font-bold text-white">Call con Davide</p>
           <p className="mt-2 text-sm text-white/[0.58]">Domani · 15:00 · nessun conflitto</p>
         </motion.div>
       </div>
