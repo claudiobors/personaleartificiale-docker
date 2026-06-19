@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Personale Artificiale brand mark</title>
+  <desc id="desc">Monogramma PA con connessioni digitali.</desc>
+  <defs>
+    <linearGradient id="pa-a" x1="14" y1="12" x2="82" y2="86" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset="0.42" stop-color="#39e7f5"/>
+      <stop offset="1" stop-color="#2df8a2"/>
+    </linearGradient>
+    <linearGradient id="pa-b" x1="20" y1="82" x2="82" y2="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7c5cff"/>
+      <stop offset="1" stop-color="#39e7f5"/>
+    </linearGradient>
+    <filter id="pa-glow" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="3.2" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.22 0 0 0 0 0.91 0 0 0 0 0.96 0 0 0 0.55 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+  <rect width="96" height="96" rx="24" fill="#050506"/>
+  <rect x="7" y="7" width="82" height="82" rx="20" fill="#0b0d10" stroke="rgba(255,255,255,0.13)" stroke-width="1.5"/>
+  <path d="M25 72V24h20c12.2 0 20 6.8 20 17.1S57.2 58 45 58H34.6v14H25Zm9.6-22.5h9.8c6.4 0 10.6-3.2 10.6-8.4 0-5.3-4.2-8.5-10.6-8.5h-9.8v16.9Z" fill="url(#pa-a)" filter="url(#pa-glow)"/>
+  <path d="M49.4 72 66.2 24h7.4L91 72H80.6l-3.2-9.5H62.3L59.2 72h-9.8Zm15.3-17.4h10.2l-5.1-15.4-5.1 15.4Z" fill="url(#pa-b)" opacity="0.94"/>
+  <path d="M35 24 68 24M35 72h45M58 56l10 7" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="1.2" stroke-linecap="round"/>
+  <circle cx="68" cy="24" r="3.2" fill="#39e7f5"/>
+  <circle cx="80" cy="72" r="3.2" fill="#2df8a2"/>
+  <circle cx="58" cy="56" r="2.6" fill="#f8fbff"/>
+</svg>

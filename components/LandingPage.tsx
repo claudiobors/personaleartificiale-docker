@@ -6,8 +6,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   ArrowUpRight,
-  BellRing,
-  Bot,
   BrainCircuit,
   BriefcaseBusiness,
   Building2,
@@ -63,37 +61,64 @@ const navItems = [
 
 const agents: Agent[] = [
   {
-    name: "Giulia",
-    title: "Assistente Operativa",
+    name: "Nina Agenda",
+    title: "Assistente personale e segreteria digitale",
     photo:
       "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1000&q=90",
     accent: "from-cyan to-aurora",
-    tagline: "Tiene in ordine agenda, Gmail, promemoria e documenti.",
-    tasks: ["Legge Gmail e priorita", "Fissa appuntamenti", "Salva file su Drive", "Ti ricorda cosa fare"]
+    tagline: "Tiene in ordine la giornata: Gmail, agenda, promemoria, documenti e piccole decisioni operative.",
+    tasks: [
+      "Legge Gmail e trova le priorita",
+      "Prepara bozze di risposta",
+      "Fissa appuntamenti senza conflitti",
+      "Gestisce promemoria e follow-up",
+      "Riassume conversazioni e documenti",
+      "Salva e rinomina file su Drive",
+      "Crea liste di cose da fare",
+      "E molto altro"
+    ]
   },
   {
-    name: "Marco",
-    title: "Responsabile Marketing",
+    name: "Marta Market",
+    title: "Responsabile marketing e contenuti",
     photo:
       "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1000&q=90",
     accent: "from-plasma to-cyan",
-    tagline: "Trasforma idee confuse in post, copy, campagne e immagini.",
-    tasks: ["Scrive post social", "Crea idee contenuto", "Prepara caption", "Adatta il tono del brand"]
+    tagline: "Trasforma idee grezze in contenuti pubblicabili: post, campagne, angoli creativi e messaggi commerciali.",
+    tasks: [
+      "Scrive post LinkedIn e social",
+      "Prepara calendari editoriali",
+      "Crea caption e hook iniziali",
+      "Propone idee per campagne",
+      "Adatta il tono del brand",
+      "Genera varianti per A/B test",
+      "Riutilizza contenuti lunghi in pillole",
+      "E molto altro"
+    ]
   },
   {
-    name: "Lorenzo",
-    title: "Collaboratore Aziendale",
+    name: "Luca Liste",
+    title: "Collaboratore operativo e back office",
     photo:
       "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&w=1000&q=90",
     accent: "from-ember to-aurora",
-    tagline: "Esegue lavori ripetitivi: Trello, PDF, lead, schede e follow-up.",
-    tasks: ["Aggiorna Trello", "Estrae dati dai PDF", "Crea schede operative", "Prepara liste lead"]
+    tagline: "Fa avanzare il lavoro sporco: Trello, PDF, lead, schede cliente, checklist e aggiornamenti ricorrenti.",
+    tasks: [
+      "Aggiorna Trello e checklist",
+      "Estrae dati da PDF e fatture",
+      "Crea schede cliente ordinate",
+      "Prepara liste lead qualificate",
+      "Compila tabelle operative",
+      "Organizza follow-up commerciali",
+      "Controlla scadenze e task fermi",
+      "E molto altro"
+    ]
   }
 ];
 
 const chatMessages = [
   {
-    author: "Giulia",
+    author: "Nina",
     text: "Ho letto 34 messaggi Gmail. 5 sono urgenti. Ho fissato la call con Luca domani alle 15:00 e salvato la fattura in Drive."
   },
   {
@@ -101,7 +126,7 @@ const chatMessages = [
     text: "Perfetto. Preparami anche il promemoria per il commercialista alle 18."
   },
   {
-    author: "Giulia",
+    author: "Nina",
     text: "Fatto. Ti avviso alle 18:00 su Telegram. Ho anche preparato il riepilogo dei messaggi Gmail importanti."
   }
 ];
@@ -111,60 +136,60 @@ const demos: Demo[] = [
     title: "Calendario senza messaggi avanti e indietro",
     plainTitle: "Appuntamento fissato",
     icon: <CalendarDays />,
-    agent: "Giulia",
+    agent: "Nina Agenda",
     telegram: "Fissa una call con Luca domani pomeriggio, evita sovrapposizioni.",
-    does: ["Controlla il calendario", "Trova uno slot libero", "Crea l'evento", "Ti manda conferma"],
-    result: "Evento creato: Call con Luca, domani ore 15:00.",
+    does: ["Controlla il calendario", "Trova uno slot libero", "Crea l'evento", "Prepara reminder e note", "Ti manda conferma"],
+    result: "Evento creato: call con Luca, reminder impostato e nota pronta per arrivare preparato.",
     visual: "calendar"
   },
   {
     title: "Gmail capito e ordinato prima che tu apra la casella",
     plainTitle: "Gmail prioritario",
     icon: <MailCheck />,
-    agent: "Giulia",
+    agent: "Nina Agenda",
     telegram: "Dimmi quali messaggi Gmail devo leggere oggi e cosa devo fare prima.",
-    does: ["Legge mittenti e contenuti", "Separa urgenze da rumore", "Prepara risposta breve", "Segna le azioni"],
-    result: "5 messaggi urgenti, 2 risposte pronte, 1 documento da firmare.",
+    does: ["Legge mittenti e contenuti", "Separa urgenze da rumore", "Prepara risposte brevi", "Crea una lista azioni", "Ti segnala cosa ignorare"],
+    result: "5 messaggi urgenti, 2 risposte pronte, 1 documento da firmare e rumore archiviato.",
     visual: "mail"
   },
   {
     title: "Fatture e PDF trasformati in lavoro fatto",
     plainTitle: "PDF processato",
     icon: <FileText />,
-    agent: "Lorenzo",
+    agent: "Luca Liste",
     telegram: "Prendi questa fattura, salva i dati e prepara la scheda cliente.",
-    does: ["Legge il PDF", "Estrae importo e scadenza", "Compila la scheda", "Archivia il file"],
-    result: "Scheda cliente pronta con P.IVA, importo, scadenza e link al PDF.",
+    does: ["Legge il PDF", "Estrae importo e scadenza", "Compila la scheda", "Archivia il file", "Crea task di controllo"],
+    result: "Scheda cliente pronta con P.IVA, importo, scadenza, link al PDF e prossimo task.",
     visual: "invoice"
   },
   {
     title: "Marketing senza fissare una riunione",
     plainTitle: "Post pronto",
     icon: <PenLine />,
-    agent: "Marco",
+    agent: "Marta Market",
     telegram: "Fammi un post LinkedIn per spiegare che automatizziamo il back office.",
-    does: ["Capisce il messaggio", "Scrive il copy", "Propone una visual", "Prepara 3 varianti"],
-    result: "Post LinkedIn pronto: titolo, testo, CTA e idea immagine.",
+    does: ["Capisce il messaggio", "Scrive il copy", "Propone una visual", "Prepara 3 varianti", "Adatta il tono al brand"],
+    result: "Post LinkedIn pronto: hook, testo, CTA, idea immagine e 3 versioni alternative.",
     visual: "marketing"
   },
   {
     title: "Lead generation spiegata semplice",
     plainTitle: "Lista contatti",
     icon: <BriefcaseBusiness />,
-    agent: "Lorenzo",
+    agent: "Luca Liste",
     telegram: "Trovami 20 studi dentistici a Milano con Gmail o contatto pubblico e telefono.",
-    does: ["Cerca aziende compatibili", "Filtra contatti inutili", "Prepara tabella", "Scrive primo messaggio"],
-    result: "20 lead ordinati per zona, contatto e probabilita di risposta.",
+    does: ["Cerca aziende compatibili", "Filtra contatti inutili", "Prepara tabella", "Scrive primo messaggio", "Suggerisce priorita di contatto"],
+    result: "20 lead ordinati per zona, contatto, probabilita di risposta e primo messaggio pronto.",
     visual: "lead"
   },
   {
     title: "Trello aggiornato senza aprire Trello",
     plainTitle: "Board aggiornata",
     icon: <Trello />,
-    agent: "Lorenzo",
+    agent: "Luca Liste",
     telegram: "Sposta il task del preventivo in urgente e aggiungi la scadenza di venerdi.",
-    does: ["Trova la card giusta", "Aggiorna stato e scadenza", "Aggiunge checklist", "Ti conferma tutto"],
-    result: "Card aggiornata, checklist inserita, scadenza venerdi ore 12:00.",
+    does: ["Trova la card giusta", "Aggiorna stato e scadenza", "Aggiunge checklist", "Segnala task bloccati", "Ti conferma tutto"],
+    result: "Card aggiornata, checklist inserita, scadenza venerdi ore 12:00 e blocchi evidenziati.",
     visual: "trello"
   }
 ];
@@ -208,7 +233,7 @@ const packages = [
     price: "€599",
     billing: "una tantum",
     description: "Per chi vuole iniziare con una persona digitale che gestisce il lavoro quotidiano.",
-    items: ["1 agente: Giulia Assistente", "Solo Telegram", "Mail, Calendar, Drive", "Setup 1h inclusa"],
+    items: ["1 agente: Nina Agenda", "Solo Telegram", "Gmail, Calendar, Drive", "Setup 1h inclusa"],
     highlighted: false
   },
   {
@@ -217,7 +242,7 @@ const packages = [
     billing: "una tantum",
     description: "Per chi vuole tre profili specializzati che si dividono i compiti come un vero mini-team.",
     items: [
-      "3 agenti: Giulia, Marco, Lorenzo",
+      "3 agenti: Nina Agenda, Marta Market, Luca Liste",
       "Gmail, sentiment e priorita operative",
       "Trello, copywriting, PDF e lead generation",
       "Setup 1h inclusa"
@@ -249,7 +274,7 @@ const faqs = [
   },
   {
     question: "Posso usare solo un agente all'inizio?",
-    answer: "Si. Puoi partire con Giulia Assistente e aggiungere Marco o Lorenzo quando capisci quali lavori vuoi delegare."
+    answer: "Si. Puoi partire con Nina Agenda e aggiungere Marta Market o Luca Liste quando capisci quali lavori vuoi delegare."
   },
   {
     question: "Funziona anche con vocali?",
@@ -273,7 +298,7 @@ const faqs = [
   },
   {
     question: "E se ho bisogno di cambiare funzioni o fare aggiornamenti dopo un mese?",
-    answer: "Nessun problema. Essendo il sistema di tua proprietà, puoi fare le modifiche in autonomia. Se invece preferisci delegare a noi la manutenzione tecnica, puoi abbonarti al nostro 'Piano Protezione AI' (29€/mese per 2 ore di assistenza incluse) oppure prenotare un intervento orario una tantum al bisogno (59€/ora)."
+    answer: "Nessun problema. Essendo il sistema di tua proprietà, puoi fare le modifiche in autonomia. Se invece preferisci delegare a noi la manutenzione tecnica, puoi abbonarti al nostro 'Piano Protezione AI' (29€/mese): include 2 ore di assistenza, aggiornamenti periodici alle nostre ultime release e accesso prioritario e agevolato ai futuri dipendenti digitali. In alternativa puoi prenotare un intervento orario una tantum al bisogno (59€/ora)."
   }
 ];
 
@@ -312,6 +337,44 @@ function IconWrap({ children }: { children: ReactNode }) {
   return (
     <span className="flex size-11 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-cyan [&_svg]:size-5 [&_svg]:stroke-[1.3]">
       {children}
+    </span>
+  );
+}
+
+function BrandMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      className={[
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/14 bg-obsidian shadow-[inset_0_1px_1px_rgba(255,255,255,0.18),0_0_32px_rgba(57,231,245,0.18)]",
+        compact ? "size-9" : "size-12"
+      ].join(" ")}
+      aria-hidden="true"
+    >
+      <span className="absolute inset-0 bg-[radial-gradient(circle_at_28%_18%,rgba(57,231,245,0.26),transparent_34%),radial-gradient(circle_at_76%_82%,rgba(45,248,162,0.2),transparent_32%)]" />
+      <svg viewBox="0 0 64 64" className={compact ? "relative size-7" : "relative size-9"}>
+        <path
+          d="M14 48V16h14c8.2 0 13.5 4.6 13.5 11.3S36.2 38.6 28 38.6h-7.4V48H14Zm6.6-15.2h6.8c4.3 0 7.1-2.1 7.1-5.5s-2.8-5.5-7.1-5.5h-6.8v11Z"
+          fill="url(#brand-a)"
+        />
+        <path
+          d="M32.6 48 44.2 16h5.4L62 48h-7.2l-2.1-6.4h-10L40.6 48h-8Zm12-12.2h6.2l-3.1-9.8-3.1 9.8Z"
+          fill="url(#brand-b)"
+        />
+        <path d="M21 16h23M21 48h34M37 37l9 5" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.1" strokeLinecap="round" />
+        <circle cx="44" cy="16" r="2.1" fill="#39e7f5" />
+        <circle cx="55" cy="48" r="2.1" fill="#2df8a2" />
+        <defs>
+          <linearGradient id="brand-a" x1="12" y1="14" x2="45" y2="50" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#ffffff" />
+            <stop offset="0.5" stopColor="#39e7f5" />
+            <stop offset="1" stopColor="#2df8a2" />
+          </linearGradient>
+          <linearGradient id="brand-b" x1="35" y1="48" x2="58" y2="16" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#7c5cff" />
+            <stop offset="1" stopColor="#39e7f5" />
+          </linearGradient>
+        </defs>
+      </svg>
     </span>
   );
 }
@@ -357,11 +420,14 @@ function FluidNav() {
     <>
       <header className="fixed inset-x-0 top-0 z-40 px-4 pt-5">
         <nav className="mx-auto flex w-full max-w-[1040px] items-center justify-between rounded-full border border-white/[0.12] bg-obsidian/70 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl">
-          <a href="#" className="flex items-center gap-3 text-sm font-semibold text-white">
-            <span className="flex size-9 items-center justify-center rounded-full bg-white text-obsidian">
-              <Bot className="size-4 stroke-[1.4]" />
+          <a href="#" className="flex items-center gap-3 text-white">
+            <BrandMark compact />
+            <span className="leading-none">
+              <span className="block text-sm font-black tracking-tight">Personale Artificiale</span>
+              <span className="mt-1 hidden text-[10px] font-semibold uppercase text-white/[0.46] sm:block">
+                dipendenti digitali
+              </span>
             </span>
-            Personale Artificiale
           </a>
           <div className="hidden items-center gap-1 lg:flex">
             {navItems.map((item) => (
@@ -428,7 +494,7 @@ function TelegramMockup() {
             </span>
             <div>
           <p className="text-sm font-semibold text-white">Telegram · Team Digitale</p>
-              <p className="text-xs text-aurora">Giulia, Marco e Lorenzo sono online</p>
+              <p className="text-xs text-aurora">Nina, Marta e Luca sono online</p>
             </div>
           </div>
           <span className="rounded-full border border-aurora/25 bg-aurora/10 px-3 py-1 text-xs text-aurora">attivo</span>
@@ -550,8 +616,8 @@ function AgentTeam() {
             Li vendiamo come persone digitali: ognuno ha un mestiere preciso.
           </h2>
           <p className="mt-6 max-w-[620px] text-pretty text-lg leading-8 text-white/[0.62]">
-            Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. A Giulia chiedi agenda
-            e Gmail. A Marco chiedi marketing. A Lorenzo chiedi lavoro operativo e documenti.
+            Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. A Nina chiedi agenda
+            e Gmail. A Marta chiedi marketing. A Luca chiedi lavoro operativo e documenti.
           </p>
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
@@ -1094,8 +1160,20 @@ function MaintenanceAssistance() {
                     <p className="pb-2 text-sm font-semibold text-white/[0.52]">/mese</p>
                   </div>
                   <p className="mt-6 text-pretty text-lg leading-8 text-white/[0.66]">
-                    Include fino a 2 ore al mese di intervento tecnico dedicato da parte di un nostro AI Expert direttamente sulla tua VPS, su tua richiesta.
+                    Include fino a 2 ore al mese di intervento tecnico dedicato da parte di un nostro AI Expert direttamente sulla tua VPS, aggiornamenti periodici alle nostre ultime release e accesso prioritario e agevolato ai futuri dipendenti digitali.
                   </p>
+                  <div className="mt-6 grid gap-2">
+                    {[
+                      "2 ore/mese di assistenza tecnica inclusa",
+                      "Aggiornamenti periodici alle ultime release",
+                      "Accesso prioritario e agevolato ai nuovi dipendenti digitali"
+                    ].map((benefit) => (
+                      <div key={benefit} className="flex items-center gap-3 rounded-lg border border-aurora/15 bg-aurora/[0.055] px-3 py-2 text-sm font-semibold text-white/[0.72]">
+                        <Check className="size-4 stroke-[1.4] text-aurora" />
+                        {benefit}
+                      </div>
+                    ))}
+                  </div>
                   <div className="mt-7 rounded-lg border border-aurora/20 bg-aurora/[0.08] p-4 text-sm font-semibold text-aurora">
                     Ideale se vuoi evolvere l&apos;assistente ogni mese senza pensare alla parte tecnica.
                   </div>
@@ -1344,9 +1422,15 @@ export default function LandingPage() {
       <EnterpriseForm />
       <FAQ />
       <footer className="relative z-10 border-t border-white/10 px-4 py-10">
-        <div className="mx-auto flex max-w-[1080px] flex-col justify-between gap-4 text-sm text-white/[0.46] md:flex-row">
-          <p>© 2026 Personale Artificiale</p>
-          <p>Team digitali AI su Telegram.</p>
+        <div className="mx-auto flex max-w-[1080px] flex-col justify-between gap-6 text-sm text-white/[0.46] md:flex-row md:items-center">
+          <div className="flex items-center gap-3">
+            <BrandMark compact />
+            <div>
+              <p className="font-semibold text-white">Personale Artificiale</p>
+              <p className="mt-1">© 2026 · Dipendenti digitali su Telegram</p>
+            </div>
+          </div>
+          <p>Un marchio costruito per vendere lavoro che lavora davvero.</p>
         </div>
       </footer>
     </main>
