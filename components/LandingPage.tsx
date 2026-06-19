@@ -205,14 +205,16 @@ const onboarding = [
 const packages = [
   {
     name: "Assistente Base",
-    price: "€399",
+    price: "€599",
+    billing: "una tantum",
     description: "Per chi vuole iniziare con una persona digitale che gestisce il lavoro quotidiano.",
     items: ["1 agente: Giulia Assistente", "Solo Telegram", "Mail, Calendar, Drive", "Setup 1h inclusa"],
     highlighted: false
   },
   {
     name: "Top Team Personale Artificiale",
-    price: "€999",
+    price: "€1500",
+    billing: "una tantum",
     description: "Per chi vuole tre profili specializzati che si dividono i compiti come un vero mini-team.",
     items: [
       "3 agenti: Giulia, Marco, Lorenzo",
@@ -268,6 +270,10 @@ const faqs = [
   {
     question: "E se sbaglia?",
     answer: "Si corregge il comportamento con regole operative e memoria. Per le azioni critiche puoi richiedere sempre approvazione prima dell'esecuzione."
+  },
+  {
+    question: "E se ho bisogno di cambiare funzioni o fare aggiornamenti dopo un mese?",
+    answer: "Nessun problema. Essendo il sistema di tua proprietà, puoi fare le modifiche in autonomia. Se invece preferisci delegare a noi la manutenzione tecnica, puoi abbonarti al nostro 'Piano Protezione AI' (29€/mese per 2 ore di assistenza incluse) oppure prenotare un intervento orario una tantum al bisogno (59€/ora)."
   }
 ];
 
@@ -350,7 +356,7 @@ function FluidNav() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-40 px-4 pt-5">
-        <nav className="mx-auto flex w-full max-w-6xl items-center justify-between rounded-full border border-white/[0.12] bg-obsidian/70 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl">
+        <nav className="mx-auto flex w-full max-w-[1040px] items-center justify-between rounded-full border border-white/[0.12] bg-obsidian/70 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-2xl">
           <a href="#" className="flex items-center gap-3 text-sm font-semibold text-white">
             <span className="flex size-9 items-center justify-center rounded-full bg-white text-obsidian">
               <Bot className="size-4 stroke-[1.4]" />
@@ -413,7 +419,7 @@ function FluidNav() {
 
 function TelegramMockup() {
   return (
-    <div className="outer-shell relative mx-auto w-full max-w-[500px] rounded-[2rem] p-2 shadow-plasma">
+    <div className="outer-shell relative mx-auto w-full max-w-[450px] rounded-[2rem] p-2 shadow-plasma">
       <div className="inner-core overflow-hidden rounded-[calc(2rem-0.5rem)]">
         <div className="flex items-center justify-between border-b border-white/[0.08] px-5 py-4">
           <div className="flex items-center gap-3">
@@ -481,20 +487,20 @@ function Hero() {
   return (
     <section className="relative z-10 min-h-[100dvh] overflow-hidden px-4 pb-20 pt-32 md:pt-40">
       <div className="absolute inset-x-0 top-0 -z-10 h-[760px] bg-hero-mesh opacity-90" />
-      <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="mx-auto grid w-full max-w-[1120px] items-center gap-10 lg:grid-cols-[0.98fr_0.82fr]">
         <motion.div
           initial={{ opacity: 0, y: 46, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.95, ease: [0.32, 0.72, 0, 1] }}
-          className="max-w-4xl"
+          className="max-w-[760px]"
         >
           <span className="mb-6 inline-flex rounded-full border border-cyan/[0.24] bg-cyan/[0.08] px-3 py-1 text-[10px] font-semibold uppercase text-cyan">
             Il tuo team operativo dentro Telegram
           </span>
-          <h1 className="text-balance bg-shine-text bg-clip-text text-5xl font-black leading-[0.95] text-transparent sm:text-6xl md:text-7xl">
+          <h1 className="text-balance bg-shine-text bg-clip-text text-5xl font-black leading-[0.95] text-transparent sm:text-6xl xl:text-[4.45rem]">
             Smetti di rincorrere il lavoro. Assumi il tuo primo dipendente digitale.
           </h1>
-          <p className="mt-7 max-w-2xl text-pretty text-lg leading-8 text-white/70 md:text-xl">
+          <p className="mt-7 max-w-[620px] text-pretty text-lg leading-8 text-white/70 md:text-xl">
             Tre agenti con nomi, ruoli e responsabilita chiare. Tu scrivi su Telegram.
             Loro leggono Gmail, fissano appuntamenti, preparano contenuti, aggiornano Trello
             e trasformano documenti in azioni concrete.
@@ -505,7 +511,7 @@ function Hero() {
               Scopri i Pacchetti
             </PremiumButton>
           </div>
-          <div className="mt-10 grid max-w-2xl grid-cols-3 gap-3">
+          <div className="mt-10 grid max-w-[620px] grid-cols-1 gap-3 sm:grid-cols-3">
             {[
               ["Modo naturale", "Parli via messaggio come con un tuo dipendente"],
               ["Tempo recuperato", "fino a 1/2 giornata"],
@@ -535,15 +541,15 @@ function Hero() {
 function AgentTeam() {
   return (
     <MotionSection id="team" className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-12 max-w-4xl">
+      <div className="mx-auto max-w-[1120px]">
+        <div className="mb-12 max-w-[760px]">
           <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
             Non bot anonimi
           </span>
           <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
             Li vendiamo come persone digitali: ognuno ha un mestiere preciso.
           </h2>
-          <p className="mt-6 max-w-2xl text-pretty text-lg leading-8 text-white/[0.62]">
+          <p className="mt-6 max-w-[620px] text-pretty text-lg leading-8 text-white/[0.62]">
             Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. A Giulia chiedi agenda
             e Gmail. A Marco chiedi marketing. A Lorenzo chiedi lavoro operativo e documenti.
           </p>
@@ -795,7 +801,7 @@ function DemoShowcase() {
 
   return (
     <MotionSection id="demo" className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1120px]">
         <div className="mb-12 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
           <div>
             <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
@@ -810,7 +816,7 @@ function DemoShowcase() {
           </p>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-[0.78fr_1.22fr]">
+        <div className="grid gap-5 lg:grid-cols-[0.72fr_1.08fr]">
           <div className="grid max-h-[720px] gap-3 overflow-y-auto pr-1">
             {demos.map((demo, index) => (
               <button
@@ -845,7 +851,7 @@ function DemoShowcase() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -12, scale: 0.985 }}
                   transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
-                  className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]"
+                  className="grid gap-5 xl:grid-cols-[0.9fr_1fr]"
                 >
                   <div className="rounded-lg border border-white/10 bg-white/[0.035] p-5">
                     <p className="text-xs font-semibold uppercase text-cyan">Tu scrivi su Telegram</p>
@@ -880,7 +886,7 @@ function DemoShowcase() {
 function SimpleExamples() {
   return (
     <MotionSection className="relative z-10 px-4 py-24 md:py-28">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1120px]">
         <div className="mb-10 max-w-3xl">
           <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
             Copia e incolla
@@ -909,7 +915,7 @@ function SimpleExamples() {
 function FeatureGrid() {
   return (
     <MotionSection id="metodo" className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1120px]">
         <div className="mb-12 max-w-3xl">
           <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
             Come funziona
@@ -942,7 +948,7 @@ function FeatureGrid() {
 function OnboardingFlow() {
   return (
     <MotionSection className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-[1040px]">
         <div className="outer-shell rounded-[2rem] p-2">
           <div className="inner-core rounded-[calc(2rem-0.5rem)] p-6 md:p-10">
             <div className="mb-10 max-w-3xl">
@@ -980,7 +986,7 @@ function OnboardingFlow() {
 function Pricing() {
   return (
     <MotionSection id="pricing" className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1080px]">
         <div className="mb-12 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
           <div>
             <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
@@ -1018,7 +1024,10 @@ function Pricing() {
                     <h3 className="text-3xl font-black text-white">{pack.name}</h3>
                     <p className="mt-4 max-w-lg text-pretty leading-7 text-white/[0.58]">{pack.description}</p>
                   </div>
-                  <p className="text-4xl font-black text-white">{pack.price}</p>
+                  <div className="text-right">
+                    <p className="text-4xl font-black text-white">{pack.price}</p>
+                    <p className="mt-1 text-xs font-semibold uppercase text-white/[0.46]">{pack.billing}</p>
+                  </div>
                 </div>
                 <ul className="space-y-3">
                   {pack.items.map((item) => (
@@ -1044,6 +1053,90 @@ function Pricing() {
   );
 }
 
+function MaintenanceAssistance() {
+  return (
+    <MotionSection className="relative z-10 px-4 pb-24 md:pb-32">
+      <div className="mx-auto max-w-[1080px]">
+        <div className="outer-shell rounded-[2rem] p-2">
+          <div className="inner-core rounded-[calc(2rem-0.5rem)] p-6 md:p-10">
+            <div className="mb-10 grid gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-end">
+              <div>
+                <span className="mb-4 inline-flex rounded-full border border-aurora/[0.24] bg-aurora/[0.08] px-3 py-1 text-[10px] font-semibold uppercase text-aurora">
+                  Post vendita chiaro
+                </span>
+                <h2 className="text-balance text-4xl font-black leading-tight md:text-5xl">
+                  Manutenzione e Assistenza <span className="text-white/[0.48]">(Opzionale)</span>
+                </h2>
+              </div>
+              <p className="text-pretty text-base leading-7 text-white/[0.64] md:text-lg">
+                Il tuo assistente è di tua proprietà e non ha canoni obbligatori. Ma se vuoi che il nostro team sia sempre a tua disposizione per modifiche, aggiornamenti o nuove integrazioni, offriamo due soluzioni:
+              </p>
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <motion.article
+                whileHover={{ y: -6 }}
+                transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+                className="rounded-[1.5rem] border border-aurora/35 bg-slate-800/40 p-1 shadow-[0_0_70px_rgba(45,248,162,0.12)]"
+              >
+                <div className="min-h-[330px] rounded-[calc(1.5rem-0.25rem)] border border-white/10 bg-obsidian/80 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
+                  <div className="mb-7 flex items-start justify-between gap-4">
+                    <IconWrap>
+                      <ShieldCheck />
+                    </IconWrap>
+                    <span className="rounded-full border border-aurora/35 bg-aurora/12 px-3 py-1 text-[10px] font-black uppercase text-aurora">
+                      Consigliato
+                    </span>
+                  </div>
+                  <h3 className="text-3xl font-black text-white">Piano Protezione AI</h3>
+                  <div className="mt-5 flex items-end gap-2">
+                    <p className="text-5xl font-black text-white">€29</p>
+                    <p className="pb-2 text-sm font-semibold text-white/[0.52]">/mese</p>
+                  </div>
+                  <p className="mt-6 text-pretty text-lg leading-8 text-white/[0.66]">
+                    Include fino a 2 ore al mese di intervento tecnico dedicato da parte di un nostro AI Expert direttamente sulla tua VPS, su tua richiesta.
+                  </p>
+                  <div className="mt-7 rounded-lg border border-aurora/20 bg-aurora/[0.08] p-4 text-sm font-semibold text-aurora">
+                    Ideale se vuoi evolvere l&apos;assistente ogni mese senza pensare alla parte tecnica.
+                  </div>
+                </div>
+              </motion.article>
+
+              <motion.article
+                whileHover={{ y: -6 }}
+                transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+                className="rounded-[1.5rem] border border-white/12 bg-slate-800/40 p-1"
+              >
+                <div className="min-h-[330px] rounded-[calc(1.5rem-0.25rem)] border border-white/10 bg-obsidian/72 p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)]">
+                  <div className="mb-7 flex items-start justify-between gap-4">
+                    <IconWrap>
+                      <Clock3 />
+                    </IconWrap>
+                    <span className="rounded-full border border-white/12 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.54]">
+                      Al bisogno
+                    </span>
+                  </div>
+                  <h3 className="text-3xl font-black text-white">Intervento Singolo</h3>
+                  <div className="mt-5 flex items-end gap-2">
+                    <p className="text-5xl font-black text-white">€59</p>
+                    <p className="pb-2 text-sm font-semibold text-white/[0.52]">/ora</p>
+                  </div>
+                  <p className="mt-6 text-pretty text-lg leading-8 text-white/[0.66]">
+                    Non vuoi abbonamenti? Nessun problema. Puoi richiedere assistenza tecnica pay-as-you-go e farti affiancare da un tecnico solo quando ne hai effettivamente bisogno.
+                  </p>
+                  <div className="mt-7 rounded-lg border border-white/10 bg-white/[0.045] p-4 text-sm font-semibold text-white/[0.62]">
+                    Perfetto se prevedi modifiche rare o vuoi tenere la massima libertà.
+                  </div>
+                </div>
+              </motion.article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </MotionSection>
+  );
+}
+
 function EnterpriseForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
 
@@ -1055,7 +1148,7 @@ function EnterpriseForm() {
 
   return (
     <MotionSection id="enterprise" className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.78fr_1.22fr]">
+      <div className="mx-auto grid max-w-[1080px] gap-8 lg:grid-cols-[0.72fr_1fr]">
         <div className="pt-3">
           <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
             Aziende strutturate
@@ -1165,7 +1258,7 @@ function FAQ() {
 
   return (
     <MotionSection className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-[900px]">
         <div className="mb-10 text-center">
           <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
             FAQ
@@ -1223,7 +1316,7 @@ function TrustStrip() {
 
   return (
     <MotionSection className="relative z-10 px-4 py-16">
-      <div className="mx-auto grid max-w-7xl gap-3 md:grid-cols-4">
+      <div className="mx-auto grid max-w-[1080px] gap-3 md:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-lg border border-white/10 bg-white/[0.035] p-4">
             <div className="mb-3 text-cyan [&_svg]:size-5 [&_svg]:stroke-[1.3]">{stat.icon}</div>
@@ -1247,10 +1340,11 @@ export default function LandingPage() {
       <FeatureGrid />
       <OnboardingFlow />
       <Pricing />
+      <MaintenanceAssistance />
       <EnterpriseForm />
       <FAQ />
       <footer className="relative z-10 border-t border-white/10 px-4 py-10">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 text-sm text-white/[0.46] md:flex-row">
+        <div className="mx-auto flex max-w-[1080px] flex-col justify-between gap-4 text-sm text-white/[0.46] md:flex-row">
           <p>© 2026 Personale Artificiale</p>
           <p>Team digitali AI su Telegram.</p>
         </div>
