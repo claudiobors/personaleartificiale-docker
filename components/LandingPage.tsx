@@ -38,6 +38,7 @@ type Agent = {
   photoClass: string;
   accent: string;
   tagline: string;
+  story: string;
   tasks: string[];
 };
 
@@ -62,13 +63,14 @@ const navItems = [
 
 const agents: Agent[] = [
   {
-    name: "Alisa",
-    title: "Assistente personale e segreteria digitale",
-    photo:
-      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1000&q=90",
-    photoClass: "object-[center_22%]",
+    name: "Roberta",
+    title: "La precisa: segreteria, agenda e Gmail",
+    photo: "/agents/roberta.png",
+    photoClass: "object-[center_18%]",
     accent: "from-cyan to-aurora",
-    tagline: "Tiene in ordine la giornata: Gmail, agenda, promemoria, documenti e piccole decisioni operative.",
+    tagline: "Roberta è quella che non lascia cadere nulla: legge, ordina, ricorda, prepara e ti fa arrivare alla giornata gia in controllo.",
+    story:
+      "La mattina ti manda un riepilogo secco: cosa è urgente, chi aspetta risposta, quali appuntamenti hai e quali documenti mancano. Tu non parti piu aprendo dieci tab: parti sapendo cosa fare.",
     tasks: [
       "Legge Gmail e trova le priorita",
       "Prepara bozze di risposta",
@@ -81,13 +83,14 @@ const agents: Agent[] = [
     ]
   },
   {
-    name: "Marco",
-    title: "Responsabile marketing e contenuti",
-    photo:
-      "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1000&q=90",
+    name: "Luca",
+    title: "Il creativo: marketing, idee e contenuti",
+    photo: "/agents/luca.png",
     photoClass: "object-[center_18%]",
     accent: "from-plasma to-cyan",
-    tagline: "Trasforma idee grezze in contenuti pubblicabili: post, campagne, angoli creativi e messaggi commerciali.",
+    tagline: "Luca prende le idee buttate in chat e le trasforma in contenuti che sembrano usciti da un reparto marketing vero.",
+    story:
+      "Gli mandi un vocale confuso di due minuti e lui tira fuori angolo creativo, post LinkedIn, caption, CTA, varianti e una proposta di campagna. Non sostituisce la tua visione: la rende pubblicabile.",
     tasks: [
       "Scrive post LinkedIn e social",
       "Prepara calendari editoriali",
@@ -100,13 +103,14 @@ const agents: Agent[] = [
     ]
   },
   {
-    name: "Matteo",
-    title: "Collaboratore operativo e back office",
-    photo:
-      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=1000&q=90",
+    name: "Federico",
+    title: "Il braccio destro: operativo, ordinato, affidabile",
+    photo: "/agents/Federico.png",
     photoClass: "object-[center_18%]",
     accent: "from-ember to-aurora",
-    tagline: "Fa avanzare il lavoro sporco: Trello, PDF, lead, schede cliente, checklist e aggiornamenti ricorrenti.",
+    tagline: "Federico è il collaboratore che tiene insieme i pezzi: task, schede, PDF, lead, checklist e avanzamento operativo.",
+    story:
+      "Quando un cliente manda un documento, Federico lo legge, estrae i dati, aggiorna Trello, crea la scheda e ti segnala il prossimo passo. E il classico braccio destro che ti fa dire: meno male che c'e.",
     tasks: [
       "Aggiorna Trello e checklist",
       "Estrae dati da PDF e fatture",
@@ -122,7 +126,7 @@ const agents: Agent[] = [
 
 const chatMessages = [
   {
-    author: "Alisa",
+    author: "Roberta",
     text: "Ho letto 34 messaggi Gmail. 5 sono urgenti. Ho fissato la call con Davide domani alle 15:00 e salvato la fattura in Drive."
   },
   {
@@ -130,7 +134,7 @@ const chatMessages = [
     text: "Perfetto. Preparami anche il promemoria per il commercialista alle 18."
   },
   {
-    author: "Alisa",
+    author: "Roberta",
     text: "Fatto. Ti avviso alle 18:00 su Telegram. Ho anche preparato il riepilogo dei messaggi Gmail importanti."
   }
 ];
@@ -140,7 +144,7 @@ const demos: Demo[] = [
     title: "Calendario senza messaggi avanti e indietro",
     plainTitle: "Appuntamento fissato",
     icon: <CalendarDays />,
-    agent: "Alisa",
+    agent: "Roberta",
     telegram: "Fissa una call con Davide domani pomeriggio, evita sovrapposizioni.",
     does: ["Controlla il calendario", "Trova uno slot libero", "Crea l'evento", "Prepara reminder e note", "Ti manda conferma"],
     result: "Evento creato: call con Davide, reminder impostato e nota pronta per arrivare preparato.",
@@ -150,7 +154,7 @@ const demos: Demo[] = [
     title: "Gmail capito e ordinato prima che tu apra la casella",
     plainTitle: "Gmail prioritario",
     icon: <MailCheck />,
-    agent: "Alisa",
+    agent: "Roberta",
     telegram: "Dimmi quali messaggi Gmail devo leggere oggi e cosa devo fare prima.",
     does: ["Legge mittenti e contenuti", "Separa urgenze da rumore", "Prepara risposte brevi", "Crea una lista azioni", "Ti segnala cosa ignorare"],
     result: "5 messaggi urgenti, 2 risposte pronte, 1 documento da firmare e rumore archiviato.",
@@ -160,7 +164,7 @@ const demos: Demo[] = [
     title: "Fatture e PDF trasformati in lavoro fatto",
     plainTitle: "PDF processato",
     icon: <FileText />,
-    agent: "Matteo",
+    agent: "Federico",
     telegram: "Prendi questa fattura, salva i dati e prepara la scheda cliente.",
     does: ["Legge il PDF", "Estrae importo e scadenza", "Compila la scheda", "Archivia il file", "Crea task di controllo"],
     result: "Scheda cliente pronta con P.IVA, importo, scadenza, link al PDF e prossimo task.",
@@ -170,7 +174,7 @@ const demos: Demo[] = [
     title: "Marketing senza fissare una riunione",
     plainTitle: "Post pronto",
     icon: <PenLine />,
-    agent: "Marco",
+    agent: "Luca",
     telegram: "Fammi un post LinkedIn per spiegare che automatizziamo il back office.",
     does: ["Capisce il messaggio", "Scrive il copy", "Propone una visual", "Prepara 3 varianti", "Adatta il tono al brand"],
     result: "Post LinkedIn pronto: hook, testo, CTA, idea immagine e 3 versioni alternative.",
@@ -180,7 +184,7 @@ const demos: Demo[] = [
     title: "Lead generation spiegata semplice",
     plainTitle: "Lista contatti",
     icon: <BriefcaseBusiness />,
-    agent: "Matteo",
+    agent: "Federico",
     telegram: "Trovami 20 studi dentistici a Milano con Gmail o contatto pubblico e telefono.",
     does: ["Cerca aziende compatibili", "Filtra contatti inutili", "Prepara tabella", "Scrive primo messaggio", "Suggerisce priorita di contatto"],
     result: "20 lead ordinati per zona, contatto, probabilita di risposta e primo messaggio pronto.",
@@ -190,7 +194,7 @@ const demos: Demo[] = [
     title: "Trello aggiornato senza aprire Trello",
     plainTitle: "Board aggiornata",
     icon: <Trello />,
-    agent: "Matteo",
+    agent: "Federico",
     telegram: "Sposta il task del preventivo in urgente e aggiungi la scadenza di venerdi.",
     does: ["Trova la card giusta", "Aggiorna stato e scadenza", "Aggiunge checklist", "Segnala task bloccati", "Ti conferma tutto"],
     result: "Card aggiornata, checklist inserita, scadenza venerdi ore 12:00 e blocchi evidenziati.",
@@ -237,19 +241,19 @@ const packages = [
     price: "€599",
     billing: "una tantum",
     description: "Per chi vuole iniziare con una persona digitale che gestisce il lavoro quotidiano.",
-    items: ["1 agente: Alisa", "Solo Telegram", "Gmail, Calendar, Drive", "Setup 1h inclusa"],
+    items: ["1 agente: Roberta", "Solo Telegram", "Gmail, Calendar, Drive", "Setup 1h inclusa"],
     highlighted: false
   },
   {
     name: "Top Team Personale Artificiale",
-    price: "€1500",
+    price: "€1499",
     billing: "una tantum",
     description: "Per chi vuole tre profili specializzati che si dividono i compiti come un vero mini-team.",
     items: [
-      "3 agenti: Alisa, Marco, Matteo",
+      "3 agenti: Roberta, Luca, Federico",
       "Gmail, sentiment e priorita operative",
       "Trello, copywriting, PDF e lead generation",
-      "Setup 1h inclusa"
+      "Setup incluso e onboarding guidato 1h",
     ],
     highlighted: true
   }
@@ -278,7 +282,7 @@ const faqs = [
   },
   {
     question: "Posso usare solo un agente all'inizio?",
-    answer: "Si. Puoi partire con Alisa e aggiungere Marco o Matteo quando capisci quali lavori vuoi delegare."
+    answer: "Si. Puoi partire con Roberta e aggiungere Luca o Federico quando capisci quali lavori vuoi delegare."
   },
   {
     question: "Funziona anche con vocali?",
@@ -498,7 +502,7 @@ function TelegramMockup() {
             </span>
             <div>
           <p className="text-sm font-semibold text-white">Telegram · Team Digitale</p>
-              <p className="text-xs text-aurora">Alisa, Marco e Matteo sono online</p>
+              <p className="text-xs text-aurora">Roberta, Luca e Federico sono online</p>
             </div>
           </div>
           <span className="rounded-full border border-aurora/25 bg-aurora/10 px-3 py-1 text-xs text-aurora">attivo</span>
@@ -620,8 +624,8 @@ function AgentTeam() {
             Li vendiamo come persone digitali: ognuno ha un mestiere preciso.
           </h2>
           <p className="mt-6 max-w-[620px] text-pretty text-lg leading-8 text-white/[0.62]">
-            Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. Ad Alisa chiedi agenda
-            e Gmail. A Marco chiedi marketing. A Matteo chiedi lavoro operativo e documenti.
+            Se non sai cosa chiedere a una &quot;AI&quot;, pensa a una persona. A Roberta chiedi ordine
+            e precisione. A Luca chiedi idee e marketing. A Federico chiedi esecuzione e back office.
           </p>
         </div>
         <div className="grid gap-5 lg:grid-cols-3">
@@ -649,6 +653,10 @@ function AgentTeam() {
                   <p className="text-sm font-semibold uppercase text-cyan">{agent.title}</p>
                   <h3 className="mt-2 text-3xl font-black text-white">{agent.name}</h3>
                   <p className="mt-4 text-pretty leading-7 text-white/[0.62]">{agent.tagline}</p>
+                  <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-[10px] font-semibold uppercase text-white/[0.42]">Scenario reale</p>
+                    <p className="mt-2 text-pretty text-sm leading-6 text-white/[0.68]">{agent.story}</p>
+                  </div>
                   <div className="mt-6 grid gap-2">
                     {agent.tasks.map((task) => (
                       <div key={task} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-sm text-white/[0.72]">
@@ -1110,7 +1118,7 @@ function Pricing() {
                   ))}
                 </ul>
                 <div className="mt-auto pt-10">
-                  <PremiumButton href="#enterprise" variant={pack.highlighted ? "primary" : "secondary"}>
+                  <PremiumButton href="https://app.personaleartificiale.it" variant={pack.highlighted ? "primary" : "secondary"}>
                     Richiedi attivazione
                   </PremiumButton>
                 </div>
@@ -1229,28 +1237,110 @@ function EnterpriseForm() {
   }
 
   return (
-    <MotionSection id="enterprise" className="relative z-10 px-4 py-24 md:py-32">
-      <div className="mx-auto grid max-w-[1080px] gap-8 lg:grid-cols-[0.72fr_1fr]">
-        <div className="pt-3">
-          <span className="mb-4 inline-flex rounded-full border border-white/[0.12] bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase text-white/[0.58]">
-            Aziende strutturate
+    <MotionSection id="enterprise" className="relative z-10 px-4 py-28 md:py-36">
+      <div className="absolute inset-x-0 top-0 -z-10 h-full border-y border-white/10 bg-[linear-gradient(180deg,rgba(124,92,255,0.12),rgba(5,5,6,0)_34%,rgba(45,248,162,0.08))]" />
+      <div className="mx-auto max-w-[1080px]">
+        <div className="mb-10 flex flex-col gap-5 border-l border-cyan/35 pl-5 md:mb-12 md:pl-7">
+          <span className="w-max rounded-full border border-cyan/24 bg-cyan/[0.08] px-3 py-1 text-[10px] font-black uppercase text-cyan">
+            Enterprise e ambienti complessi
           </span>
-          <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
-            Ti disegniamo un reparto digitale su misura.
-          </h2>
-          <p className="mt-6 text-pretty text-lg leading-8 text-white/[0.62]">
-            Se hai processi, reparti, clienti e volumi piu alti, partiamo da una mappa operativa:
-            cosa delegare, quali strumenti collegare, quali controlli mantenere.
-          </p>
+          <div className="grid gap-6 lg:grid-cols-[0.78fr_1fr] lg:items-end">
+            <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
+              Quando il lavoro non è lineare, serve un reparto digitale progettato bene.
+            </h2>
+            <p className="text-pretty text-lg leading-8 text-white/[0.66]">
+              Questo form non è per comprare un agente standard. È per aziende con reparti,
+              flussi delicati, volumi importanti, permessi, integrazioni e procedure che devono
+              essere mappate prima di automatizzare.
+            </p>
+          </div>
         </div>
 
-        <div className="outer-shell rounded-[2rem] p-2">
+        <div className="grid gap-6 lg:grid-cols-[0.72fr_1fr]">
+          <aside className="space-y-4">
+            <div className="outer-shell rounded-[1.5rem] p-1">
+              <div className="inner-core rounded-[calc(1.5rem-0.25rem)] p-5">
+                <div className="mb-5 flex items-center gap-3">
+                  <IconWrap>
+                    <Building2 />
+                  </IconWrap>
+                  <div>
+                    <p className="text-lg font-black text-white">È per te se...</p>
+                    <p className="text-sm text-white/[0.48]">Hai bisogno di controllo e struttura.</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    "Hai più persone o reparti coinvolti",
+                    "Vuoi collegare Gmail, Drive, Calendar, Trello o CRM",
+                    "Gestisci clienti, preventivi, documenti e follow-up",
+                    "Servono ruoli, permessi e conferme prima delle azioni",
+                    "Vuoi una roadmap, non una semplice installazione"
+                  ].map((item) => (
+                    <div key={item} className="flex gap-3 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-sm leading-6 text-white/[0.72]">
+                      <Check className="mt-1 size-4 shrink-0 stroke-[1.4] text-aurora" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-ember/25 bg-ember/[0.07] p-5">
+              <p className="text-sm font-black uppercase text-ember">Output della consulenza</p>
+              <p className="mt-3 text-pretty text-sm leading-6 text-white/[0.66]">
+                Ti restituiamo una proposta operativa: agenti necessari, strumenti da collegare,
+                priorità, rischi, tempi e livello di automazione consigliato.
+              </p>
+            </div>
+          </aside>
+
+          <div className="outer-shell rounded-[2rem] p-2 shadow-plasma">
           <form onSubmit={handleSubmit} className="inner-core rounded-[calc(2rem-0.5rem)] p-5 md:p-8">
+            <div className="mb-6 rounded-lg border border-cyan/20 bg-cyan/[0.06] p-4">
+              <p className="text-sm font-black text-white">Richiesta progetto aziendale</p>
+              <p className="mt-2 text-sm leading-6 text-white/[0.58]">
+                Più dettagli inserisci, più possiamo capire se serve un solo agente, un team digitale
+                o un impianto su misura per processi complessi.
+              </p>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Nome" name="name" placeholder="Mario Rossi" />
               <Field label="Gmail aziendale" name="email" type="email" placeholder="mario@azienda.it" />
               <Field label="Telefono" name="phone" placeholder="+39 333 000 0000" />
               <Field label="P.IVA" name="vat" placeholder="IT00000000000" />
+              <label>
+                <span className="mb-2 block text-sm font-semibold text-white/[0.72]">Dimensione azienda</span>
+                <select
+                  name="company_size"
+                  required
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none transition-all duration-700 ease-premium focus:border-cyan/60"
+                >
+                  <option className="bg-obsidian" value="">
+                    Seleziona dimensione
+                  </option>
+                  <option className="bg-obsidian">1 - 5 persone</option>
+                  <option className="bg-obsidian">6 - 20 persone</option>
+                  <option className="bg-obsidian">21 - 50 persone</option>
+                  <option className="bg-obsidian">50+ persone</option>
+                </select>
+              </label>
+              <label>
+                <span className="mb-2 block text-sm font-semibold text-white/[0.72]">Complessità</span>
+                <select
+                  name="complexity"
+                  required
+                  className="w-full rounded-lg border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none transition-all duration-700 ease-premium focus:border-cyan/60"
+                >
+                  <option className="bg-obsidian" value="">
+                    Che tipo di progetto?
+                  </option>
+                  <option className="bg-obsidian">Un reparto da supportare</option>
+                  <option className="bg-obsidian">Più reparti e strumenti</option>
+                  <option className="bg-obsidian">Processi con approvazioni</option>
+                  <option className="bg-obsidian">Automazione aziendale completa</option>
+                </select>
+              </label>
               <label className="md:col-span-2">
                 <span className="mb-2 block text-sm font-semibold text-white/[0.72]">Fascia Fatturato</span>
                 <select
@@ -1268,12 +1358,12 @@ function EnterpriseForm() {
                 </select>
               </label>
               <label className="md:col-span-2">
-                <span className="mb-2 block text-sm font-semibold text-white/[0.72]">Descrizione</span>
+                <span className="mb-2 block text-sm font-semibold text-white/[0.72]">Descrivi processi, strumenti e colli di bottiglia</span>
                 <textarea
                   name="description"
                   required
-                  rows={5}
-                  placeholder="Esempio: voglio gestire Gmail clienti, preventivi, Trello e post social da Telegram."
+                  rows={6}
+                  placeholder="Esempio: abbiamo 3 persone che gestiscono richieste clienti su Gmail, preventivi su Drive, task su Trello e follow-up commerciali. Vorremmo capire cosa delegare, con quali controlli e con quali integrazioni."
                   className="w-full resize-none rounded-lg border border-white/10 bg-white/[0.055] px-4 py-3 text-white outline-none transition-all duration-700 ease-premium placeholder:text-white/32 focus:border-cyan/60"
                 />
               </label>
@@ -1304,6 +1394,7 @@ function EnterpriseForm() {
               </AnimatePresence>
             </div>
           </form>
+          </div>
         </div>
       </div>
     </MotionSection>
@@ -1346,7 +1437,7 @@ function FAQ() {
             FAQ
           </span>
           <h2 className="text-balance text-4xl font-black leading-tight md:text-6xl">
-            Domande che fanno tutti prima di capire quanto e utile.
+            Domande che fanno tutti prima di capire quanto è utile.
           </h2>
         </div>
         <div className="space-y-3">
