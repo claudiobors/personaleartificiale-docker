@@ -43,6 +43,16 @@ type Demo = {
   icon: ReactNode;
 };
 
+type Package = {
+  name: string;
+  price: string;
+  billing: string;
+  description: string;
+  items: string[];
+  payback: string;
+  highlighted: boolean;
+};
+
 const navItems = [
   { label: "Team", href: "#team" },
   { label: "Demo", href: "#demo" },
@@ -139,13 +149,21 @@ const method = [
   }
 ];
 
-const packages = [
+const valueExamples = [
+  ["Email", "20 minuti al giorno diventano oltre 6 ore al mese."],
+  ["Agenda", "Basta smettere di rincorrere orari, conferme e promemoria."],
+  ["Documenti", "PDF, fatture e riepiloghi non devono piu fermare la giornata."],
+  ["Contenuti", "Post e messaggi partono da un vocale, non da una pagina bianca."]
+];
+
+const packages: Package[] = [
   {
     name: "Assistente Base",
     price: "599 euro",
     billing: "una tantum",
     description: "Per chi vuole un aiuto concreto su email, appuntamenti, promemoria e documenti.",
     items: ["1 agente", "Telegram", "Gmail, Calendar, Drive", "Setup guidato 1 ora"],
+    payback: "Se ti libera 2 ore a settimana, il valore si vede gia nel primo mese.",
     highlighted: false
   },
   {
@@ -154,6 +172,7 @@ const packages = [
     billing: "una tantum",
     description: "Per chi vuole delegare anche contenuti, fatture, ordini, liste e comunicazioni clienti.",
     items: ["3 agenti", "Email e agenda", "Post, fatture e ordini", "Onboarding guidato"],
+    payback: "Per chi perde ogni settimana tempo su piu fronti e vuole recuperarlo subito.",
     highlighted: true
   }
 ];
@@ -342,8 +361,9 @@ function FluidNav() {
 
 function Hero() {
   return (
-    <section className="relative isolate overflow-hidden px-4 pt-28">
-      <div className="absolute inset-0 -z-10 bg-[linear-gradient(135deg,rgba(0,57,255,0.10),transparent_30%),radial-gradient(circle_at_88%_18%,rgba(0,57,255,0.12),transparent_28%)]" />
+    <section className="relative isolate overflow-hidden bg-hero-mesh px-4 pt-28 text-white">
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(180deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:84px_84px] opacity-35" />
+      <div className="absolute -left-24 top-28 -z-10 size-72 rounded-full bg-white/10 blur-3xl" />
       <div className="mx-auto grid min-h-[calc(100dvh-7rem)] max-w-[1180px] items-center gap-10 py-12 lg:grid-cols-[0.95fr_1.05fr]">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -351,19 +371,22 @@ function Hero() {
           transition={{ duration: 0.72, ease: [0.22, 0.86, 0.18, 1] }}
           className="max-w-[680px]"
         >
-          <p className="mb-5 inline-flex rounded-full bg-blue px-4 py-2 text-sm font-black text-white shadow-[0_14px_50px_rgba(0,57,255,0.25)]">
+          <p className="mb-5 inline-flex rounded-full bg-white px-4 py-2 text-sm font-black text-blue shadow-[0_18px_60px_rgba(0,0,0,0.24)]">
             Per chi vuole farsi aiutare senza imparare software nuovi
           </p>
-          <h1 className="text-balance text-[clamp(3.5rem,8vw,7.6rem)] font-black leading-[0.88] tracking-tight text-ink">
-            Tu scrivi su Telegram. Lui fa il lavoro.
+          <h1 className="text-balance text-[clamp(3.7rem,8vw,7.8rem)] font-black leading-[0.88] tracking-tight text-white drop-shadow-[0_22px_50px_rgba(0,0,0,0.28)]">
+            Tu scrivi. Lui fa il lavoro.
           </h1>
-          <p className="mt-7 max-w-[58ch] text-lg leading-8 text-ink/66 md:text-xl">
+          <p className="mt-7 max-w-[58ch] text-lg leading-8 text-white/76 md:text-xl">
             Email, appuntamenti, fatture, documenti, post e promemoria: chiedi in parole semplici e il tuo assistente digitale prepara tutto al posto tuo.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="#pricing">Voglio il mio assistente</ButtonLink>
             <ButtonLink href="#demo" variant="secondary">Fammi vedere esempi</ButtonLink>
           </div>
+          <p className="mt-5 max-w-[52ch] text-sm font-bold leading-6 text-white/72">
+            Valuta quanto vale il tuo tempo: se ti libera anche poche ore ogni settimana, inizia a ripagarsi con il lavoro che non devi piu fare tu.
+          </p>
         </motion.div>
 
         <motion.div
@@ -372,14 +395,14 @@ function Hero() {
           transition={{ duration: 0.9, delay: 0.08, ease: [0.22, 0.86, 0.18, 1] }}
           className="relative mx-auto w-full max-w-[620px]"
         >
-          <div className="absolute -inset-8 -z-10 rounded-[44px] bg-blue/[0.08] blur-3xl" />
-          <div className="relative overflow-hidden rounded-[34px] border border-ink/10 bg-white p-4 shadow-[0_36px_120px_rgba(1,19,56,0.16)]">
-            <div className="grid min-h-[430px] place-items-center rounded-[26px] bg-[linear-gradient(145deg,#ffffff,#eef3ff)] p-8">
+          <div className="absolute -inset-8 -z-10 rounded-[44px] bg-white/20 blur-3xl" />
+          <div className="relative overflow-hidden rounded-[34px] border border-white/20 bg-white p-4 shadow-[0_44px_150px_rgba(0,0,0,0.34)]">
+            <div className="grid min-h-[430px] place-items-center rounded-[26px] bg-[radial-gradient(circle_at_70%_20%,rgba(0,71,255,0.14),transparent_28%),linear-gradient(145deg,#ffffff,#e7efff)] p-8">
               <Logo className="w-full max-w-[520px] drop-shadow-[0_20px_30px_rgba(1,19,56,0.14)]" />
             </div>
-            <div className="absolute bottom-6 left-6 right-6 grid gap-2 rounded-[22px] border border-blue/20 bg-white/94 p-4 shadow-[0_18px_60px_rgba(0,57,255,0.16)] backdrop-blur-xl sm:grid-cols-3">
-              {["Email", "Agenda", "Documenti"].map((item) => (
-                <div key={item} className="rounded-[16px] bg-blue px-4 py-3 text-sm font-black text-white">
+            <div className="absolute bottom-6 left-6 right-6 grid grid-cols-2 gap-2 rounded-[22px] border border-blue/25 bg-white/96 p-4 shadow-[0_22px_70px_rgba(0,71,255,0.22)] backdrop-blur-xl sm:grid-cols-4">
+              {["Email", "Agenda", "Documenti", "Fatture", "Post", "Clienti", "Promemoria", "Molto altro"].map((item) => (
+                <div key={item} className="rounded-[16px] bg-blue px-3 py-3 text-center text-sm font-black text-white shadow-[0_12px_30px_rgba(0,71,255,0.24)]">
                   {item}
                 </div>
               ))}
@@ -393,21 +416,65 @@ function Hero() {
 
 function TrustStrip() {
   const stats = [
-    ["24/7", "Sempre operativo"],
-    ["3", "Profili specializzati"],
-    ["0", "Nuovi pannelli da imparare"],
-    ["100%", "Accessi sotto il tuo controllo"]
+    ["0", "software nuovi da imparare"],
+    ["1", "chat Telegram per chiedere tutto"],
+    ["3", "profili che si dividono i compiti"],
+    ["24/7", "disponibile quando ti serve"]
   ];
 
   return (
-    <MotionSection className="px-4 py-10">
-      <div className="mx-auto grid max-w-[1180px] border-y border-ink/10 md:grid-cols-4">
+    <MotionSection className="-mt-px bg-ink px-4 py-10 text-white">
+      <div className="mx-auto grid max-w-[1180px] border-y border-white/14 md:grid-cols-4">
         {stats.map(([value, label]) => (
-          <div key={label} className="px-2 py-7 md:border-l md:border-ink/10 md:first:border-l-0">
-            <p className="text-4xl font-black tracking-tight text-ink">{value}</p>
-            <p className="mt-1 text-sm font-semibold text-ink/55">{label}</p>
+          <div key={label} className="px-2 py-7 md:border-l md:border-white/14 md:first:border-l-0">
+            <p className="text-5xl font-black tracking-tight text-white">{value}</p>
+            <p className="mt-2 text-sm font-semibold text-white/62">{label}</p>
           </div>
         ))}
+      </div>
+    </MotionSection>
+  );
+}
+
+function ValueProof() {
+  return (
+    <MotionSection className="bg-ink px-4 pb-28 pt-10 text-white md:pb-36">
+      <div className="mx-auto grid max-w-[1180px] gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch">
+        <div className="rounded-[34px] border border-white/12 bg-white/[0.06] p-6 shadow-[0_32px_120px_rgba(0,0,0,0.28)] md:p-9">
+          <div className="mb-7 flex items-center gap-3">
+            <IconWrap>
+              <Clock3 />
+            </IconWrap>
+            <p className="text-sm font-black text-electric">Il vero costo e il tempo che perdi</p>
+          </div>
+          <h2 className="text-balance text-5xl font-black leading-[0.94] tracking-tight md:text-7xl">
+            Quanto vale un&apos;ora tua?
+          </h2>
+          <p className="mt-6 max-w-[58ch] text-lg leading-8 text-white/66">
+            Se ogni settimana perdi ore tra email, appuntamenti, documenti e messaggi, l&apos;assistente non e una spesa da guardare da sola. E tempo che torna disponibile per clienti, vendite e famiglia.
+          </p>
+          <div className="mt-8 rounded-[24px] bg-blue p-5 shadow-halo">
+            <p className="text-2xl font-black leading-tight">Si ripaga quando smetti di fare a mano il lavoro che non porta valore.</p>
+            <p className="mt-3 leading-7 text-white/76">
+              Valuta il tuo tempo: anche poche ore risparmiate ogni settimana cambiano il conto.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 rounded-[34px] bg-white p-4 text-ink shadow-[0_34px_120px_rgba(0,0,0,0.22)] md:p-5">
+          {valueExamples.map(([title, copy]) => (
+            <div key={title} className="grid gap-4 rounded-[24px] bg-paper p-5 sm:grid-cols-[150px_1fr] sm:items-center">
+              <p className="text-2xl font-black tracking-tight text-blue">{title}</p>
+              <p className="text-lg font-bold leading-7 text-ink">{copy}</p>
+            </div>
+          ))}
+          <div className="rounded-[24px] bg-ink p-5 text-white">
+            <div className="mb-4 text-electric [&_svg]:size-6 [&_svg]:stroke-[1.6]">
+              <ClipboardCheck />
+            </div>
+            <p className="text-2xl font-black tracking-tight">Non devi diventare piu produttivo. Devi smettere di fare da solo i compiti ripetitivi.</p>
+          </div>
+        </div>
       </div>
     </MotionSection>
   );
@@ -545,13 +612,21 @@ function DemoShowcase() {
 
 function SimpleExamples() {
   return (
-    <MotionSection className="px-4 py-20">
+    <MotionSection className="px-4 py-24 md:py-32">
       <div className="mx-auto max-w-[1180px]">
-        <div className="grid gap-px overflow-hidden rounded-[28px] border border-ink/10 bg-ink/10 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-10 grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
+          <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
+            Frasi normali. Risultati utili.
+          </h2>
+          <p className="text-lg font-semibold leading-8 text-ink/62">
+            Chi compra non deve imparare prompt strani. Deve solo chiedere quello che chiederebbe a una persona.
+          </p>
+        </div>
+        <div className="grid gap-px overflow-hidden rounded-[32px] bg-ink shadow-[0_34px_120px_rgba(1,19,56,0.16)] md:grid-cols-2 lg:grid-cols-3">
           {examples.map(([label, text]) => (
-            <div key={label} className="bg-white p-6">
-              <p className="text-sm font-black text-blue">{label}</p>
-              <p className="mt-4 text-xl font-black leading-snug tracking-tight text-ink">{text}</p>
+            <div key={label} className="group bg-white p-6 transition duration-500 hover:bg-blue">
+              <p className="text-sm font-black text-blue transition duration-500 group-hover:text-white/70">{label}</p>
+              <p className="mt-4 text-xl font-black leading-snug tracking-tight text-ink transition duration-500 group-hover:text-white">{text}</p>
             </div>
           ))}
         </div>
@@ -649,6 +724,12 @@ function Pricing() {
           <p className="mt-6 text-lg leading-8 text-ink/62">
             Ti aiutiamo a configurare l&apos;assistente e a usarlo sui lavori di ogni giorno. Niente abbonamento obbligatorio da parte nostra.
           </p>
+          <div className="mt-7 rounded-[24px] border border-blue/18 bg-blue/[0.07] p-5 text-ink shadow-[0_18px_70px_rgba(0,71,255,0.10)]">
+            <p className="text-xl font-black tracking-tight">Non guardare solo il prezzo. Guarda le ore che smetti di perdere.</p>
+            <p className="mt-3 leading-7 text-ink/64">
+              Email, appuntamenti, documenti e messaggi rubano tempo ogni settimana. Valuta il tuo tempo e ti rendi conto di quanto puoi risparmiare delegando quei compiti.
+            </p>
+          </div>
         </div>
 
         <div className="mt-12 grid gap-5 lg:grid-cols-2">
@@ -656,12 +737,22 @@ function Pricing() {
             <article
               key={item.name}
               className={[
-                "rounded-[32px] border p-6 shadow-[0_28px_100px_rgba(1,19,56,0.10)]",
-                item.highlighted ? "border-blue/24 bg-blue text-white" : "border-ink/10 bg-white text-ink"
+                "relative flex min-h-[560px] flex-col overflow-hidden rounded-[32px] border p-6 shadow-[0_34px_120px_rgba(1,19,56,0.16)]",
+                item.highlighted
+                  ? "border-blue bg-ink text-white"
+                  : "border-ink/10 bg-white text-ink"
               ].join(" ")}
             >
+              {item.highlighted ? (
+                <div className="absolute inset-x-0 top-0 h-2 bg-blue" />
+              ) : null}
               <div className="mb-10 flex items-start justify-between gap-4">
                 <div>
+                  {item.highlighted ? (
+                    <p className="mb-3 inline-flex rounded-full bg-blue px-3 py-1 text-xs font-black text-white">
+                      Scelta piu forte
+                    </p>
+                  ) : null}
                   <h3 className="text-3xl font-black tracking-tight">{item.name}</h3>
                   <p className={`mt-3 leading-7 ${item.highlighted ? "text-white/70" : "text-ink/62"}`}>{item.description}</p>
                 </div>
@@ -679,13 +770,46 @@ function Pricing() {
                   </div>
                 ))}
               </div>
-              <div className="mt-8">
+              <div className={`mt-6 rounded-[20px] p-4 ${item.highlighted ? "bg-blue/16 text-white" : "bg-blue/[0.07] text-ink"}`}>
+                <p className="text-sm font-black text-blue">{item.highlighted ? "Tempo recuperato" : "Perche ha senso"}</p>
+                <p className={`mt-2 text-sm font-bold leading-6 ${item.highlighted ? "text-white/74" : "text-ink/68"}`}>{item.payback}</p>
+              </div>
+              <div className="mt-auto pt-8">
                 <ButtonLink href="#enterprise" variant={item.highlighted ? "secondary" : "primary"}>
                   Richiedi disponibilita
                 </ButtonLink>
               </div>
             </article>
           ))}
+        </div>
+      </div>
+    </MotionSection>
+  );
+}
+
+function SalesCTA() {
+  return (
+    <MotionSection className="px-4 py-16">
+      <div className="mx-auto overflow-hidden rounded-[38px] bg-hero-mesh p-6 text-white shadow-[0_44px_150px_rgba(1,19,56,0.28)] md:p-10">
+        <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
+          <div className="grid min-h-[260px] place-items-center rounded-[30px] bg-white p-8 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.34)]">
+            <Logo className="w-full max-w-[320px]" />
+          </div>
+          <div>
+            <p className="mb-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-black text-blue">
+              Se il tempo costa, delegare conviene
+            </p>
+            <h2 className="text-balance text-5xl font-black leading-[0.94] tracking-tight md:text-7xl">
+              Smetti di pagarti per fare lavori da assistente.
+            </h2>
+            <p className="mt-6 max-w-[62ch] text-lg leading-8 text-white/72">
+              Ogni ora spesa tra email, agenda, fatture e messaggi e un&apos;ora tolta a clienti, vendite e decisioni. Fatti aiutare dove perdi piu tempo.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <ButtonLink href="#enterprise">Voglio essere ricontattato</ButtonLink>
+              <ButtonLink href="#demo" variant="secondary">Rivedi esempi concreti</ButtonLink>
+            </div>
+          </div>
         </div>
       </div>
     </MotionSection>
@@ -914,12 +1038,14 @@ export default function LandingPage() {
       <FluidNav />
       <Hero />
       <TrustStrip />
+      <ValueProof />
       <AgentTeam />
       <DemoShowcase />
       <SimpleExamples />
       <FeatureGrid />
       <OnboardingFlow />
       <Pricing />
+      <SalesCTA />
       <MaintenanceAssistance />
       <EnterpriseForm />
       <FAQ />
