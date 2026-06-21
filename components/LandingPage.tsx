@@ -1056,7 +1056,7 @@ function BusinessCallout() {
               Per aziende
             </p>
             <h2 className="text-balance text-4xl font-black leading-[0.96] tracking-tight md:text-6xl">
-              Hai un&apos;azienda? C&apos;e una sezione dedicata ai sistemi AI seri.
+              Hai un&apos;azienda? C&apos;e una sezione dedicata ai sistemi AI professionali.
             </h2>
             <p className="mt-5 max-w-[64ch] text-lg font-semibold leading-8 text-white/84">
               Non parliamo di assistenti generici: progettiamo agenti IA collegati a dati, gestionale, software aziendali e processi produttivi, con attenzione a sicurezza, audit e infrastruttura.

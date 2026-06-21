@@ -52,6 +52,41 @@ const implementationFlow = [
   "Estensione progressiva agli altri processi aziendali"
 ];
 
+const revenueRanges = [
+  "Sotto 500k euro",
+  "500k - 2M euro",
+  "2M - 10M euro",
+  "10M - 50M euro",
+  "Oltre 50M euro",
+  "Preferisco parlarne a voce"
+];
+
+const companySizes = [
+  "1 - 10 persone",
+  "11 - 50 persone",
+  "51 - 200 persone",
+  "Oltre 200 persone"
+];
+
+const businessSectors = [
+  "Produzione",
+  "Logistica",
+  "Servizi",
+  "Commercio",
+  "Sanita",
+  "Studi professionali",
+  "Altro"
+];
+
+const projectTypes = [
+  "Audit gratuito iniziale",
+  "Agenti IA in cloud",
+  "AI locale in azienda",
+  "Soluzione ibrida cloud + locale",
+  "Integrazione gestionale e dati",
+  "Studio hardware per modelli locali"
+];
+
 const sectionMotion = {
   hidden: { opacity: 0, y: 42, filter: "blur(10px)" },
   visible: { opacity: 1, y: 0, filter: "blur(0px)" }
@@ -360,13 +395,13 @@ function ImplementationFlow() {
 function FinalCTA() {
   return (
     <MotionSection className="bg-[#05060b] px-4 py-28 text-white md:py-36">
-      <div className="mx-auto overflow-hidden rounded-[38px] border border-white/12 bg-[radial-gradient(circle_at_82%_18%,rgba(3,71,255,0.46),transparent_32%),linear-gradient(135deg,#080c18,#05060b)] p-6 shadow-[0_44px_150px_rgba(0,0,0,0.34)] md:p-10">
-        <div className="grid gap-8 lg:grid-cols-[0.76fr_1.24fr] lg:items-center">
-          <div className="grid min-h-[260px] place-items-center rounded-[30px] bg-white p-8">
-            <Logo className="w-full max-w-[320px]" />
-          </div>
+      <div className="mx-auto max-w-[1180px] overflow-hidden rounded-[38px] border border-white/12 bg-[radial-gradient(circle_at_82%_18%,rgba(3,71,255,0.46),transparent_32%),linear-gradient(135deg,#080c18,#05060b)] p-5 shadow-[0_44px_150px_rgba(0,0,0,0.34)] md:p-8">
+        <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <div>
-            <p className="mb-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#0347ff]">
+            <div className="grid min-h-[220px] place-items-center rounded-[30px] bg-white p-8 shadow-[0_34px_120px_rgba(3,71,255,0.18)]">
+              <Logo className="w-full max-w-[300px]" />
+            </div>
+            <p className="mb-4 mt-6 inline-flex rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#0347ff]">
               Primo passo
             </p>
             <h2 className="text-balance text-5xl font-black leading-[0.94] tracking-tight md:text-7xl">
@@ -375,15 +410,139 @@ function FinalCTA() {
             <p className="mt-6 max-w-[66ch] text-lg font-semibold leading-8 text-white/82">
               Ci racconti software, dati, reparto e obiettivi. Ti restituiamo una prima lettura su opportunita, rischi e implementazioni possibili.
             </p>
-            <div className="mt-8">
-              <EnterpriseButton href="mailto:info@personaleartificiale.it?subject=Audit%20gratuito%20AI%20aziendale">
-                Scrivici per l&apos;audit gratuito
-              </EnterpriseButton>
+            <div className="mt-7 grid gap-3 text-sm font-bold text-white/82">
+              <p className="rounded-[20px] border border-white/12 bg-white/[0.08] px-4 py-3">
+                Compilalo con i dati principali: ci aiuta a capire subito dimensione, priorita e livello di integrazione possibile.
+              </p>
+              <p className="rounded-[20px] border border-white/12 bg-white/[0.08] px-4 py-3">
+                Il messaggio verra preparato per info@personaleartificiale.it.
+              </p>
             </div>
           </div>
+
+          <form
+            action="mailto:info@personaleartificiale.it?subject=Richiesta%20informazioni%20AI%20aziendale"
+            method="post"
+            encType="text/plain"
+            className="rounded-[30px] bg-white p-4 text-[#05060b] shadow-[0_34px_120px_rgba(0,0,0,0.28)] md:p-6"
+          >
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-[#05060b]/10 pb-5">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#0347ff]">Richiesta info aziende</p>
+                <h3 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">Parliamo del tuo caso reale.</h3>
+              </div>
+              <span className="rounded-full bg-[#eef4ff] px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-[#0347ff]">
+                Audit gratuito
+              </span>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <BusinessField label="Nome e cognome" name="nome_cognome" placeholder="Mario Rossi" />
+              <BusinessField label="Email aziendale" name="email_aziendale" type="email" placeholder="nome@azienda.it" />
+              <BusinessField label="Telefono" name="telefono" type="tel" placeholder="+39 ..." />
+              <BusinessField label="Ruolo in azienda" name="ruolo" placeholder="Titolare, operations, IT..." />
+              <BusinessField label="Azienda" name="azienda" placeholder="Nome azienda" />
+              <BusinessField label="Partita IVA" name="partita_iva" placeholder="IT..." />
+              <BusinessSelect label="Settore" name="settore" options={businessSectors} />
+              <BusinessSelect label="Fatturato indicativo" name="fatturato_indicativo" options={revenueRanges} />
+              <BusinessSelect label="Dimensione azienda" name="dimensione_azienda" options={companySizes} />
+              <BusinessSelect label="Interesse principale" name="interesse_principale" options={projectTypes} />
+            </div>
+
+            <div className="mt-4 grid gap-4">
+              <BusinessField
+                label="Gestionale, CRM o software principali"
+                name="software_principali"
+                placeholder="ERP, CRM, gestionale, fogli, database, Drive..."
+              />
+              <BusinessTextarea
+                label="Cosa vorresti automatizzare o migliorare?"
+                name="obiettivi"
+                placeholder="Descrivi reparto, processo, problema, dati disponibili o idea di agente IA."
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="mt-6 w-full rounded-[22px] bg-[#0347ff] px-6 py-5 text-base font-black uppercase tracking-[0.14em] text-white shadow-[0_18px_50px_rgba(3,71,255,0.34)] transition hover:-translate-y-0.5 hover:bg-[#0037ca]"
+            >
+              Invia richiesta informazioni
+            </button>
+          </form>
         </div>
       </div>
     </MotionSection>
+  );
+}
+
+function BusinessField({
+  label,
+  name,
+  placeholder,
+  type = "text"
+}: {
+  label: string;
+  name: string;
+  placeholder: string;
+  type?: string;
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-black text-[#05060b]/76">
+      {label}
+      <input
+        required
+        type={type}
+        name={name}
+        placeholder={placeholder}
+        className="h-[52px] rounded-[18px] border border-[#05060b]/12 bg-[#eef4ff] px-4 py-3 text-base font-bold text-[#05060b] outline-none transition placeholder:text-[#05060b]/34 focus:border-[#0347ff] focus:bg-white focus:ring-4 focus:ring-[#0347ff]/14"
+      />
+    </label>
+  );
+}
+
+function BusinessSelect({ label, name, options }: { label: string; name: string; options: string[] }) {
+  return (
+    <label className="grid gap-2 text-sm font-black text-[#05060b]/76">
+      {label}
+      <select
+        required
+        name={name}
+        defaultValue=""
+        className="h-[52px] rounded-[18px] border border-[#05060b]/12 bg-[#eef4ff] px-4 py-3 text-base font-bold text-[#05060b] outline-none transition focus:border-[#0347ff] focus:bg-white focus:ring-4 focus:ring-[#0347ff]/14"
+      >
+        <option value="" disabled>
+          Seleziona
+        </option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function BusinessTextarea({
+  label,
+  name,
+  placeholder
+}: {
+  label: string;
+  name: string;
+  placeholder: string;
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-black text-[#05060b]/76">
+      {label}
+      <textarea
+        required
+        name={name}
+        placeholder={placeholder}
+        rows={5}
+        className="resize-none rounded-[18px] border border-[#05060b]/12 bg-[#eef4ff] px-4 py-3 text-base font-bold leading-7 text-[#05060b] outline-none transition placeholder:text-[#05060b]/34 focus:border-[#0347ff] focus:bg-white focus:ring-4 focus:ring-[#0347ff]/14"
+      />
+    </label>
   );
 }
 
