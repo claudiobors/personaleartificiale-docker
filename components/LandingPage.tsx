@@ -310,7 +310,7 @@ function FluidNav() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
-        <nav className="mx-auto flex h-[72px] max-w-[1180px] items-center justify-between rounded-full border border-ink/10 bg-white/78 px-4 shadow-[0_18px_70px_rgba(1,19,56,0.10)] backdrop-blur-2xl">
+        <nav className="mx-auto flex h-[72px] max-w-[1180px] items-center justify-between rounded-full border border-blue/12 bg-white px-4 shadow-[0_22px_80px_rgba(3,18,60,0.22)]">
           <a href="#" className="flex min-w-0 items-center gap-3">
             <span className="grid size-12 place-items-center overflow-hidden rounded-full bg-white shadow-[inset_0_0_0_1px_rgba(1,19,56,0.08)]">
               <Logo className="h-9 w-12 object-contain" />
@@ -1028,25 +1028,52 @@ function FAQ() {
 }
 
 function BusinessCallout() {
+  const businessPoints = [
+    "Audit gratuito sullo stato AI dell'azienda",
+    "Agenti IA in cloud o in locale",
+    "Integrazione con gestionali e dati operativi",
+    "Studio hardware per modelli AI locali"
+  ];
+
   return (
-    <MotionSection className="px-4 pb-24">
+    <MotionSection className="px-4 pb-24 pt-6">
       <div className="mx-auto overflow-hidden rounded-[36px] bg-ink p-2 text-white shadow-[0_38px_140px_rgba(5,6,11,0.28)]">
-        <div className="grid gap-6 rounded-[calc(2.25rem-0.5rem)] border border-white/12 bg-[radial-gradient(circle_at_82%_18%,rgba(3,71,255,0.42),transparent_28%),linear-gradient(135deg,#05060b,#071131)] p-6 md:p-9 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
-          <div className="grid min-h-[220px] place-items-center rounded-[28px] bg-white p-8">
-            <Logo className="w-full max-w-[280px]" />
+        <div className="grid gap-7 rounded-[calc(2.25rem-0.5rem)] border border-white/12 bg-[radial-gradient(circle_at_82%_18%,rgba(3,71,255,0.50),transparent_30%),linear-gradient(135deg,#05060b,#071131)] p-6 md:p-9 lg:grid-cols-[0.78fr_1.22fr] lg:items-center">
+          <div className="rounded-[30px] border border-white/12 bg-white/[0.08] p-4">
+            <div className="grid min-h-[270px] place-items-center rounded-[24px] bg-white p-8">
+              <Logo className="w-full max-w-[320px]" />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {["Cloud", "Locale", "Sicurezza", "Gestionale"].map((item) => (
+                <div key={item} className="rounded-[16px] bg-blue px-3 py-3 text-center text-sm font-black text-white">
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
           <div>
             <p className="mb-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-blue">
               Per aziende
             </p>
             <h2 className="text-balance text-4xl font-black leading-[0.96] tracking-tight md:text-6xl">
-              Sistemi di agenti IA per dati, gestionali e processi produttivi.
+              Hai un&apos;azienda? C&apos;e una sezione dedicata ai sistemi AI seri.
             </h2>
             <p className="mt-5 max-w-[64ch] text-lg font-semibold leading-8 text-white/84">
-              Cloud, locale, sicurezza, integrazioni e audit gratuito sulle possibilita reali di implementazione.
+              Non parliamo di assistenti generici: progettiamo agenti IA collegati a dati, gestionale, software aziendali e processi produttivi, con attenzione a sicurezza, audit e infrastruttura.
             </p>
-            <div className="mt-7">
-              <ButtonLink href="/aziende">Scopri la pagina aziende</ButtonLink>
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              {businessPoints.map((point) => (
+                <div key={point} className="flex gap-3 rounded-[18px] bg-white/[0.10] px-4 py-3 text-sm font-bold leading-6 text-white/88">
+                  <Check className="mt-1 size-4 shrink-0 text-electric" />
+                  <span>{point}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <ButtonLink href="/aziende">Scopri la sezione dedicata</ButtonLink>
+              <p className="max-w-[34ch] text-sm font-bold leading-6 text-white/72">
+                Pensata per imprese produttive, reparti operativi e integrazioni su misura.
+              </p>
             </div>
           </div>
         </div>

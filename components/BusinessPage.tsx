@@ -147,7 +147,7 @@ function Shell({ children, className = "" }: { children: ReactNode; className?: 
 function EnterpriseNav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
-      <nav className="mx-auto flex h-[76px] max-w-[1180px] items-center justify-between rounded-full border border-white/80 bg-white/94 px-3 shadow-[0_26px_90px_rgba(3,18,60,0.24)] backdrop-blur-2xl md:px-4">
+      <nav className="mx-auto flex h-[76px] max-w-[1180px] items-center justify-between rounded-full border border-[#0347ff]/14 bg-white px-3 shadow-[0_26px_90px_rgba(3,18,60,0.28)] md:px-4">
         <a href="/" className="flex min-w-0 items-center gap-3">
           <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#eef4ff] ring-1 ring-[#0347ff]/14">
             <Logo className="h-9 w-12 object-contain" />
