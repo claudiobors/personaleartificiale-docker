@@ -59,6 +59,7 @@ const navItems = [
   { label: "Demo", href: "#demo" },
   { label: "Metodo", href: "#metodo" },
   { label: "Prezzi", href: "#pricing" },
+  { label: "Aziende", href: "/aziende" },
   { label: "Contatto", href: "#enterprise" }
 ];
 
@@ -911,7 +912,7 @@ function EnterpriseForm() {
         </aside>
 
         <form
-          action="mailto:personaleAI@cborsani.it?subject=Richiesta%20informazioni%20PersonaleArtificiale"
+          action="mailto:info@personaleartificiale.it?subject=Richiesta%20informazioni%20PersonaleArtificiale"
           method="post"
           encType="text/plain"
           className="rounded-[32px] border border-ink/10 bg-white p-5 shadow-[0_30px_110px_rgba(1,19,56,0.12)] md:p-8"
@@ -952,7 +953,7 @@ function EnterpriseForm() {
               <ArrowUpRight className="size-4 stroke-[1.8]" />
             </button>
             <p className="text-sm font-bold leading-6 text-ink/68">
-              Il messaggio verra preparato per personaleAI@cborsani.it.
+              Il messaggio verra preparato per info@personaleartificiale.it.
             </p>
           </div>
         </form>
@@ -1026,6 +1027,34 @@ function FAQ() {
   );
 }
 
+function BusinessCallout() {
+  return (
+    <MotionSection className="px-4 pb-24">
+      <div className="mx-auto overflow-hidden rounded-[36px] bg-ink p-2 text-white shadow-[0_38px_140px_rgba(5,6,11,0.28)]">
+        <div className="grid gap-6 rounded-[calc(2.25rem-0.5rem)] border border-white/12 bg-[radial-gradient(circle_at_82%_18%,rgba(3,71,255,0.42),transparent_28%),linear-gradient(135deg,#05060b,#071131)] p-6 md:p-9 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
+          <div className="grid min-h-[220px] place-items-center rounded-[28px] bg-white p-8">
+            <Logo className="w-full max-w-[280px]" />
+          </div>
+          <div>
+            <p className="mb-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-blue">
+              Per aziende
+            </p>
+            <h2 className="text-balance text-4xl font-black leading-[0.96] tracking-tight md:text-6xl">
+              Sistemi di agenti IA per dati, gestionali e processi produttivi.
+            </h2>
+            <p className="mt-5 max-w-[64ch] text-lg font-semibold leading-8 text-white/84">
+              Cloud, locale, sicurezza, integrazioni e audit gratuito sulle possibilita reali di implementazione.
+            </p>
+            <div className="mt-7">
+              <ButtonLink href="/aziende">Scopri la pagina aziende</ButtonLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    </MotionSection>
+  );
+}
+
 export default function LandingPage() {
   return (
     <main className="relative overflow-hidden">
@@ -1043,6 +1072,7 @@ export default function LandingPage() {
       <MaintenanceAssistance />
       <EnterpriseForm />
       <FAQ />
+      <BusinessCallout />
       <footer className="border-t border-ink/10 px-4 py-10">
         <div className="mx-auto flex max-w-[1180px] flex-col justify-between gap-6 text-sm font-semibold text-ink/68 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
