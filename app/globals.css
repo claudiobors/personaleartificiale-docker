@@ -18,9 +18,8 @@ html {
 body {
   min-height: 100dvh;
   background:
-    linear-gradient(135deg, rgba(0, 57, 255, 0.08), transparent 32%),
-    radial-gradient(circle at 88% 10%, rgba(0, 57, 255, 0.11), transparent 30%),
-    linear-gradient(180deg, #ffffff 0%, #f4f7fb 42%, #eef3fb 100%);
+    radial-gradient(circle at 84% 8%, rgba(0, 57, 255, 0.22), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, #f7f9ff 38%, #edf3ff 100%);
   color: #020712;
 }
 
@@ -30,7 +29,7 @@ body::before {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.34;
+  opacity: 0.22;
   background-image:
     linear-gradient(rgba(2, 7, 18, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(2, 7, 18, 0.08) 1px, transparent 1px);
@@ -44,7 +43,7 @@ body::after {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.38;
   background:
     linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.56), transparent),
     linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.42), transparent);

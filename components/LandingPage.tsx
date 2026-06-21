@@ -58,8 +58,8 @@ const agents: Agent[] = [
     photo: "/agents/roberta.png",
     imagePosition: "object-[center_18%]",
     promise:
-      "Tiene il ritmo della giornata: legge la posta, prepara risposte, organizza appuntamenti e ti avvisa prima che qualcosa scappi.",
-    tasks: ["Gmail prioritario", "Appuntamenti", "Follow-up", "Drive ordinato"]
+      "Legge le email, capisce cosa e urgente, prepara risposte e ti ricorda appuntamenti e scadenze senza farti aprire dieci schermate.",
+    tasks: ["Email importanti", "Agenda", "Promemoria", "Documenti"]
   },
   {
     name: "Luca",
@@ -67,8 +67,8 @@ const agents: Agent[] = [
     photo: "/agents/luca.png",
     imagePosition: "object-[center_18%]",
     promise:
-      "Trasforma vocali, appunti e idee sparse in post, campagne, caption, varianti e testi pronti da pubblicare.",
-    tasks: ["Post social", "Calendari editoriali", "Hook", "Tono di brand"]
+      "Gli mandi un vocale o due appunti e lui prepara post, messaggi, idee promozionali e testi gia pronti da usare.",
+    tasks: ["Post pronti", "Idee", "Messaggi clienti", "Promozioni"]
   },
   {
     name: "Simone",
@@ -76,65 +76,65 @@ const agents: Agent[] = [
     photo: "/agents/simone.png",
     imagePosition: "object-[center_18%]",
     promise:
-      "Legge PDF, controlla ordini, prepara schede cliente, organizza dati e segnala cosa va fatto prima.",
-    tasks: ["PDF e fatture", "Lead", "Ordini", "Tabelle operative"]
+      "Mette ordine nelle cose pratiche: PDF, fatture, clienti, ordini, liste e controlli che di solito fanno perdere tempo.",
+    tasks: ["Fatture", "Ordini", "Liste clienti", "Controlli"]
   }
 ];
 
 const demos: Demo[] = [
   {
-    title: "Calendario senza ping-pong",
+    title: "Appuntamenti fissati",
     agent: "Roberta",
     request: "Fissa una call con Davide domani pomeriggio, evita sovrapposizioni.",
-    result: "Evento creato, promemoria impostato, nota pronta per arrivare preparato.",
+    result: "Appuntamento creato, promemoria impostato e messaggio di conferma pronto.",
     icon: <CalendarDays />
   },
   {
-    title: "Gmail gia filtrata",
+    title: "Email gia ordinate",
     agent: "Roberta",
     request: "Dimmi quali messaggi devo leggere oggi e cosa devo fare prima.",
-    result: "5 messaggi urgenti, 2 risposte pronte, 1 documento da firmare.",
+    result: "Solo le cose importanti, con risposte gia pronte e prossime azioni chiare.",
     icon: <MailCheck />
   },
   {
-    title: "PDF trasformati in lavoro",
+    title: "Fatture e PDF sistemati",
     agent: "Simone",
     request: "Prendi questa fattura, salva i dati e prepara la scheda cliente.",
-    result: "Scheda pronta con importo, scadenza, link al file e prossimo task.",
+    result: "Dati estratti, file salvato, scadenza evidenziata e scheda cliente pronta.",
     icon: <FileText />
   },
   {
-    title: "Marketing senza riunioni",
+    title: "Post e messaggi pronti",
     agent: "Luca",
     request: "Fammi un post LinkedIn per spiegare che automatizziamo il back office.",
-    result: "Hook, testo, CTA, idea visual e tre versioni alternative.",
+    result: "Testo pronto da copiare, tre varianti e una proposta semplice per l'immagine.",
     icon: <PenLine />
   }
 ];
 
 const examples = [
-  ["Commercialista", "Ricordami di mandargli la fattura e prepara il testo della mail."],
-  ["Cliente lento", "Scrivi un follow-up gentile ma fermo per il preventivo non approvato."],
-  ["Agenda piena", "Trova 30 minuti liberi questa settimana per parlare con Martina."],
-  ["Post social", "Trasforma questo audio in un post LinkedIn semplice e convincente."],
-  ["Documenti", "Riassumi questo PDF e dimmi le tre cose che devo fare."],
-  ["Operazioni", "Controlla gli ordini in ritardo e dimmi quali clienti devo aggiornare oggi."]
+  ["Commercialista", "Ricordami la fattura e scrivi tu la mail."],
+  ["Cliente lento", "Prepara un messaggio gentile per sollecitare il preventivo."],
+  ["Agenda piena", "Trova un orario libero e mettilo in calendario."],
+  ["Post social", "Trasforma questo audio in un post semplice."],
+  ["Documenti", "Leggi questo PDF e dimmi cosa devo fare."],
+  ["Ordini", "Dimmi quali ordini sono in ritardo e chi devo avvisare."]
 ];
 
 const method = [
   {
     title: "Apri la base tecnica",
-    copy: "Ricevi una videoguida per VPS e Motore AI. Dati, accessi e chiavi restano tuoi.",
+    copy: "Ti accompagniamo passo passo. Non devi capire server, codice o impostazioni complicate.",
     icon: <ShieldCheck />
   },
   {
-    title: "Disegni il caso d'uso",
-    copy: "Definiamo cosa deve fare l'agente, cosa non deve fare e quale tono deve usare.",
+    title: "Scegli cosa delegare",
+    copy: "Partiamo dalle cose che ti pesano: email, appuntamenti, documenti, post, ordini o promemoria.",
     icon: <BrainCircuit />
   },
   {
     title: "Entra in Telegram",
-    copy: "In una video-call di setup il tuo team digitale diventa operativo dove gia scrivi ogni giorno.",
+    copy: "Dopo il setup lo usi con messaggi e vocali, come se stessi scrivendo a un collaboratore.",
     icon: <MessageCircle />
   }
 ];
@@ -144,7 +144,7 @@ const packages = [
     name: "Assistente Base",
     price: "599 euro",
     billing: "una tantum",
-    description: "Per iniziare con Roberta e liberare la giornata da posta, agenda e promemoria.",
+    description: "Per chi vuole un aiuto concreto su email, appuntamenti, promemoria e documenti.",
     items: ["1 agente", "Telegram", "Gmail, Calendar, Drive", "Setup guidato 1 ora"],
     highlighted: false
   },
@@ -152,8 +152,8 @@ const packages = [
     name: "Top Team Personale Artificiale",
     price: "1500 euro",
     billing: "una tantum",
-    description: "Per avere tre profili specializzati che si dividono il lavoro come un mini reparto.",
-    items: ["3 agenti", "Marketing e contenuti", "PDF, lead e operazioni", "Onboarding guidato"],
+    description: "Per chi vuole delegare anche contenuti, fatture, ordini, liste e comunicazioni clienti.",
+    items: ["3 agenti", "Email e agenda", "Post, fatture e ordini", "Onboarding guidato"],
     highlighted: true
   }
 ];
@@ -169,7 +169,7 @@ const faqs = [
   },
   {
     question: "Ci sono costi ricorrenti?",
-    answer: "Nessun abbonamento mensile obbligatorio. Restano solo VPS e consumo del Motore AI."
+    answer: "Nessun abbonamento mensile obbligatorio da parte nostra. Ti spieghiamo prima eventuali costi tecnici esterni, senza sorprese."
   },
   {
     question: "Funziona anche con vocali?",
@@ -255,8 +255,8 @@ function ButtonLink({
       className={[
         "group inline-flex min-h-12 items-center justify-center gap-3 rounded-full px-5 text-sm font-bold transition duration-500 ease-premium active:translate-y-px",
         primary
-          ? "bg-ink text-white shadow-[0_18px_50px_rgba(0,57,255,0.20)] hover:bg-blue"
-          : "border border-ink/15 bg-white/70 text-ink hover:border-blue/50 hover:text-blue"
+          ? "bg-blue text-white shadow-[0_18px_50px_rgba(0,57,255,0.28)] hover:bg-ink"
+          : "border border-ink/15 bg-white text-ink hover:border-blue/50 hover:text-blue"
       ].join(" ")}
     >
       <span>{children}</span>
@@ -351,18 +351,18 @@ function Hero() {
           transition={{ duration: 0.72, ease: [0.22, 0.86, 0.18, 1] }}
           className="max-w-[680px]"
         >
-          <p className="mb-5 inline-flex rounded-full border border-blue/18 bg-white/72 px-4 py-2 text-sm font-bold text-blue shadow-[0_14px_50px_rgba(0,57,255,0.10)]">
-            Team digitali AI su Telegram
+          <p className="mb-5 inline-flex rounded-full bg-blue px-4 py-2 text-sm font-black text-white shadow-[0_14px_50px_rgba(0,57,255,0.25)]">
+            Per chi vuole farsi aiutare senza imparare software nuovi
           </p>
           <h1 className="text-balance text-[clamp(3.5rem,8vw,7.6rem)] font-black leading-[0.88] tracking-tight text-ink">
-            Il lavoro ripetitivo trova finalmente personale.
+            Tu scrivi su Telegram. Lui fa il lavoro.
           </h1>
           <p className="mt-7 max-w-[58ch] text-lg leading-8 text-ink/66 md:text-xl">
-            Personale Artificiale costruisce agenti che leggono, organizzano, scrivono, ricordano e aggiornano strumenti aziendali mentre tu continui a parlare su Telegram.
+            Email, appuntamenti, fatture, documenti, post e promemoria: chiedi in parole semplici e il tuo assistente digitale prepara tutto al posto tuo.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <ButtonLink href="#pricing">Vedi i pacchetti</ButtonLink>
-            <ButtonLink href="#demo" variant="secondary">Guarda cosa fa</ButtonLink>
+            <ButtonLink href="#pricing">Voglio il mio assistente</ButtonLink>
+            <ButtonLink href="#demo" variant="secondary">Fammi vedere esempi</ButtonLink>
           </div>
         </motion.div>
 
@@ -377,9 +377,9 @@ function Hero() {
             <div className="grid min-h-[430px] place-items-center rounded-[26px] bg-[linear-gradient(145deg,#ffffff,#eef3ff)] p-8">
               <Logo className="w-full max-w-[520px] drop-shadow-[0_20px_30px_rgba(1,19,56,0.14)]" />
             </div>
-            <div className="absolute bottom-6 left-6 right-6 grid gap-2 rounded-[22px] border border-ink/10 bg-white/86 p-4 shadow-[0_18px_60px_rgba(1,19,56,0.12)] backdrop-blur-xl sm:grid-cols-3">
-              {["Gmail", "Calendar", "Drive"].map((item) => (
-                <div key={item} className="rounded-[16px] bg-ink/[0.04] px-4 py-3 text-sm font-black text-ink">
+            <div className="absolute bottom-6 left-6 right-6 grid gap-2 rounded-[22px] border border-blue/20 bg-white/94 p-4 shadow-[0_18px_60px_rgba(0,57,255,0.16)] backdrop-blur-xl sm:grid-cols-3">
+              {["Email", "Agenda", "Documenti"].map((item) => (
+                <div key={item} className="rounded-[16px] bg-blue px-4 py-3 text-sm font-black text-white">
                   {item}
                 </div>
               ))}
@@ -419,10 +419,10 @@ function AgentTeam() {
       <div className="mx-auto max-w-[1180px]">
         <div className="max-w-[760px]">
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
-            Non un chatbot. Un reparto con ruoli chiari.
+            Tre persone digitali, ognuna con un compito facile da capire.
           </h2>
           <p className="mt-6 text-lg leading-8 text-ink/62">
-            Ogni agente ha un perimetro preciso, una memoria operativa e un modo di lavorare riconoscibile. Cosi non chiedi &quot;all&apos;AI&quot;, chiedi alla persona digitale giusta.
+            Non devi sapere come funziona l&apos;AI. Devi solo sapere a chi chiedere: Roberta per organizzare, Luca per scrivere, Simone per mettere ordine.
           </p>
         </div>
 
@@ -475,7 +475,7 @@ function DemoShowcase() {
             Scrivi una richiesta. Vedi lavoro finito.
           </h2>
           <p className="mt-6 text-lg leading-8 text-ink/62">
-            La differenza non e la risposta. E tutto quello che succede dopo: controllo degli strumenti, preparazione, archiviazione e conferma.
+            La differenza e concreta: mandi un messaggio e ricevi una cosa utile, pronta da controllare o usare.
           </p>
           <div className="mt-8 grid gap-2">
             {demos.map((item, index) => (
@@ -486,7 +486,7 @@ function DemoShowcase() {
                 className={[
                   "flex items-center justify-between rounded-[18px] border px-4 py-4 text-left transition duration-500",
                   active === index
-                    ? "border-blue/35 bg-blue text-white shadow-[0_18px_60px_rgba(0,57,255,0.20)]"
+                      ? "border-blue bg-blue text-white shadow-[0_18px_60px_rgba(0,57,255,0.28)]"
                     : "border-ink/10 bg-white text-ink hover:border-blue/30"
                 ].join(" ")}
               >
@@ -564,17 +564,17 @@ function FeatureGrid() {
   const features = [
     {
       title: "Parli su Telegram",
-      copy: "Nessun pannello nuovo. Scrivi o mandi vocali come faresti con una persona.",
+      copy: "Nessun pannello nuovo. Scrivi una frase normale o mandi un vocale.",
       icon: <Send />
     },
     {
       title: "Ricorda il contesto",
-      copy: "Clienti, preferenze, progetti, stile di comunicazione e regole restano in memoria.",
+      copy: "Ricorda clienti, scadenze, preferenze e il modo in cui vuoi rispondere.",
       icon: <BrainCircuit />
     },
     {
-      title: "Lavora negli strumenti",
-      copy: "Gmail, Drive, Calendar, CRM, gestionali e board operative vengono collegati al tuo Motore AI.",
+      title: "Prepara cose finite",
+      copy: "Risposte email, appuntamenti, riassunti, liste, post, schede cliente e promemoria.",
       icon: <PlugZap />
     }
   ];
@@ -586,10 +586,10 @@ function FeatureGrid() {
           <div className="grid gap-8 rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,#07111f,#020817)] p-6 md:p-10 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
-                La parte semplice resta semplice.
+                Facile per te. Operativo per lui.
               </h2>
               <p className="mt-6 text-lg leading-8 text-white/64">
-                Il sistema e potente dietro le quinte, ma l&apos;esperienza per chi lo usa resta immediata: messaggio, azione, conferma.
+                Non vendiamo un pannello da imparare. Ti diamo un assistente che capisce richieste normali e restituisce lavoro pronto.
               </p>
             </div>
             <div className="grid gap-4">
@@ -614,10 +614,10 @@ function OnboardingFlow() {
       <div className="mx-auto max-w-[1180px]">
         <div className="grid gap-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
-            Dal primo messaggio al primo lavoro fatto.
+            Parti anche se non sei tecnico.
           </h2>
           <p className="text-lg leading-8 text-ink/62">
-            L&apos;onboarding serve a trasformare un agente generico in personale che conosce strumenti, regole e priorita della tua attivita.
+            Ti guidiamo noi. Alla fine sai solo la cosa che conta: apri Telegram, chiedi, controlli il risultato.
           </p>
         </div>
 
@@ -644,10 +644,10 @@ function Pricing() {
       <div className="mx-auto max-w-[1180px]">
         <div className="max-w-[760px]">
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
-            Parti piccolo o costruisci subito il team.
+            Scegli quanto lavoro vuoi toglierti.
           </h2>
           <p className="mt-6 text-lg leading-8 text-ink/62">
-            Paghi la configurazione iniziale. Il sistema resta tuo, con costi vivi separati per VPS e Motore AI.
+            Ti aiutiamo a configurare l&apos;assistente e a usarlo sui lavori di ogni giorno. Niente abbonamento obbligatorio da parte nostra.
           </p>
         </div>
 
@@ -699,10 +699,10 @@ function MaintenanceAssistance() {
         <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
             <h2 className="text-balance text-4xl font-black leading-tight tracking-tight text-ink md:text-6xl">
-              Assistenza quando vuoi evolvere.
+              Se vuoi cambiare qualcosa, ci siamo.
             </h2>
             <p className="mt-5 leading-8 text-ink/62">
-              Il tuo assistente e di tua proprieta. Se preferisci delegare manutenzione, aggiornamenti o nuove integrazioni, hai due strade.
+              Dopo il setup puoi continuare da solo o chiederci una mano quando vuoi aggiungere funzioni, sistemare collegamenti o migliorare l&apos;assistente.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -712,7 +712,7 @@ function MaintenanceAssistance() {
               </IconWrap>
               <h3 className="mt-6 text-2xl font-black">Piano Protezione AI</h3>
               <p className="mt-3 text-4xl font-black">29 euro/mese</p>
-              <p className="mt-4 leading-7 text-white/64">2 ore di assistenza, aggiornamenti periodici e priorita sui nuovi agenti.</p>
+              <p className="mt-4 leading-7 text-white/64">2 ore di aiuto ogni mese, piccoli aggiornamenti e priorita sui nuovi agenti.</p>
             </div>
             <div className="rounded-[24px] border border-ink/10 bg-paper p-5">
               <IconWrap>
@@ -720,7 +720,7 @@ function MaintenanceAssistance() {
               </IconWrap>
               <h3 className="mt-6 text-2xl font-black text-ink">Intervento singolo</h3>
               <p className="mt-3 text-4xl font-black text-ink">59 euro/ora</p>
-              <p className="mt-4 leading-7 text-ink/62">Assistenza tecnica al bisogno, senza abbonamenti e senza vincoli.</p>
+              <p className="mt-4 leading-7 text-ink/62">Una mano quando serve, senza abbonamenti e senza vincoli.</p>
             </div>
           </div>
         </div>
@@ -743,17 +743,17 @@ function EnterpriseForm() {
       <div className="mx-auto grid max-w-[1180px] gap-8 lg:grid-cols-[0.82fr_1.18fr]">
         <aside>
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
-            Progetti aziendali con processi reali.
+            Raccontaci cosa ti fa perdere tempo.
           </h2>
           <p className="mt-6 text-lg leading-8 text-ink/62">
-            Se hai CRM, gestionali, ordini, report o approvazioni interne, partiamo da una mappa operativa prima di automatizzare.
+            Anche se non sai ancora cosa automatizzare, basta descrivere le cose che ripeti ogni settimana. Ti aiutiamo a capire da dove partire.
           </p>
           <div className="mt-8 grid gap-3">
             {[
-              "Integrazioni con strumenti esistenti",
-              "Controllo ordini, stati e anomalie",
-              "Comunicazioni clienti con approvazione",
-              "Report e KPI di reparto"
+              "Email e appuntamenti da gestire",
+              "Fatture e documenti da sistemare",
+              "Clienti da richiamare o aggiornare",
+              "Post e messaggi da preparare"
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 rounded-[18px] border border-ink/10 bg-white px-4 py-3 font-bold text-ink">
                 <Check className="size-4 text-blue" />
@@ -769,8 +769,8 @@ function EnterpriseForm() {
               <Building2 />
             </IconWrap>
             <div>
-              <p className="text-xl font-black text-ink">Richiesta progetto</p>
-              <p className="text-sm font-semibold text-ink/52">Risposta dopo una prima valutazione del caso.</p>
+              <p className="text-xl font-black text-ink">Richiesta semplice</p>
+              <p className="text-sm font-semibold text-ink/52">Scrivi quello che ti serve, anche in modo imperfetto.</p>
             </div>
           </div>
 
@@ -781,17 +781,17 @@ function EnterpriseForm() {
             <Field label="Partita IVA" name="vat" placeholder="IT00000000000" />
             <SelectField label="Dimensione azienda" name="company_size" options={["1 - 5 persone", "6 - 20 persone", "21 - 50 persone", "50+ persone"]} />
             <SelectField
-              label="Tipo di progetto"
+              label="Cosa vuoi delegare"
               name="complexity"
-              options={["Gestionale o CRM", "Ordini e stati operativi", "Comunicazioni clienti", "Analisi dati e report"]}
+              options={["Email e appuntamenti", "Documenti e fatture", "Post e messaggi", "Ordini e clienti"]}
             />
             <label className="md:col-span-2">
-              <span className="mb-2 block text-sm font-bold text-ink/68">Processi, strumenti e colli di bottiglia</span>
+              <span className="mb-2 block text-sm font-bold text-ink/68">Cosa vorresti fargli fare?</span>
               <textarea
                 name="description"
                 required
                 rows={6}
-                placeholder="Esempio: abbiamo ordini su gestionale, richieste clienti su Gmail, preventivi su Drive e dati di reparto da analizzare."
+                placeholder="Esempio: vorrei che leggesse le email importanti, mi ricordasse gli appuntamenti e preparasse risposte per i clienti."
                 className="w-full resize-none rounded-[18px] border border-ink/12 bg-paper px-4 py-3 text-ink outline-none transition duration-500 placeholder:text-ink/35 focus:border-blue/55 focus:bg-white"
               />
             </label>
@@ -803,7 +803,7 @@ function EnterpriseForm() {
               disabled={status === "loading"}
               className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-ink px-5 text-sm font-bold text-white transition duration-500 hover:bg-blue active:translate-y-px disabled:cursor-wait disabled:opacity-70"
             >
-              <span>{status === "loading" ? "Invio in corso..." : "Invia richiesta"}</span>
+              <span>{status === "loading" ? "Invio in corso..." : "Voglio essere ricontattato"}</span>
               <ArrowUpRight className="size-4 stroke-[1.8]" />
             </button>
             <AnimatePresence>
@@ -875,7 +875,7 @@ function FAQ() {
     <MotionSection className="px-4 py-24 md:py-32">
       <div className="mx-auto max-w-[940px]">
         <h2 className="text-center text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
-          Domande prima di delegare davvero.
+          Domande normali, risposte chiare.
         </h2>
         <div className="mt-12 grid gap-3">
           {faqs.map((faq, index) => (

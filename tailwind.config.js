@@ -7,11 +7,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        paper: "#f4f7fb",
+        paper: "#f7f9ff",
         ink: "#020712",
-        blue: "#0039ff",
-        electric: "#4f7dff",
-        mist: "#dfe7f5"
+        blue: "#0047ff",
+        electric: "#00d46a",
+        mist: "#dbe6ff"
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
