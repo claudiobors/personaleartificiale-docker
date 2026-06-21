@@ -1,13 +1,12 @@
 "use client";
 
-import { FormEvent, ReactNode, useState } from "react";
+import { ReactNode, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   ArrowUpRight,
   BrainCircuit,
-  Building2,
   CalendarDays,
   Check,
   ChevronDown,
@@ -33,6 +32,8 @@ type Agent = {
   imagePosition: string;
   promise: string;
   tasks: string[];
+  connected: string;
+  workflows: string[];
 };
 
 type Demo = {
@@ -68,8 +69,14 @@ const agents: Agent[] = [
     photo: "/agents/roberta.png",
     imagePosition: "object-[center_18%]",
     promise:
-      "Legge le email, capisce cosa e urgente, prepara risposte e ti ricorda appuntamenti e scadenze senza farti aprire dieci schermate.",
-    tasks: ["Email importanti", "Agenda", "Promemoria", "Documenti"]
+      "Coordina il lavoro quotidiano: legge email, crea priorita, fissa appuntamenti, prepara risposte e tiene insieme scadenze, file e promemoria.",
+    tasks: ["Email urgenti", "Bozze Gmail", "Agenda", "Promemoria", "Follow-up", "Drive ordinato", "Riassunti", "Scadenze"],
+    connected: "Gmail, Calendar, Drive, Telegram",
+    workflows: [
+      "Legge una richiesta via email, prepara la risposta e ti chiede conferma prima dell'invio.",
+      "Trova uno slot libero, crea l'appuntamento, aggiunge note e manda promemoria.",
+      "Raccoglie documenti ricevuti, li rinomina, li salva in Drive e ti manda il riepilogo."
+    ]
   },
   {
     name: "Luca",
@@ -77,8 +84,14 @@ const agents: Agent[] = [
     photo: "/agents/luca.png",
     imagePosition: "object-[center_18%]",
     promise:
-      "Gli mandi un vocale o due appunti e lui prepara post, messaggi, idee promozionali e testi gia pronti da usare.",
-    tasks: ["Post pronti", "Idee", "Messaggi clienti", "Promozioni"]
+      "Trasforma idee confuse in comunicazione pronta: post, messaggi cliente, offerte, campagne semplici, varianti e contenuti adattati al tuo tono.",
+    tasks: ["Post pronti", "Caption", "Newsletter", "Messaggi clienti", "Offerte", "Calendario contenuti", "Varianti", "Hook"],
+    connected: "Telegram, Gmail, documenti, social",
+    workflows: [
+      "Trasforma un vocale in post LinkedIn, caption breve e messaggio WhatsApp per clienti.",
+      "Parte da una promozione e prepara testo, oggetto email, CTA e tre varianti.",
+      "Riutilizza un documento lungo in pillole, email e contenuti social semplici."
+    ]
   },
   {
     name: "Simone",
@@ -86,8 +99,14 @@ const agents: Agent[] = [
     photo: "/agents/simone.png",
     imagePosition: "object-[center_18%]",
     promise:
-      "Mette ordine nelle cose pratiche: PDF, fatture, clienti, ordini, liste e controlli che di solito fanno perdere tempo.",
-    tasks: ["Fatture", "Ordini", "Liste clienti", "Controlli"]
+      "Tiene ordinata la parte operativa: legge PDF e fatture, estrae dati, prepara schede cliente, controlla ordini e segnala cosa manca.",
+    tasks: ["Fatture", "PDF", "Ordini", "Schede cliente", "Liste lead", "Tabelle", "Controlli", "Anomalie"],
+    connected: "Drive, fogli, CRM, gestionali",
+    workflows: [
+      "Legge una fattura, estrae importo e scadenza, aggiorna la tabella e crea promemoria.",
+      "Controlla ordini in ritardo, prepara la lista clienti da avvisare e il messaggio.",
+      "Crea una scheda cliente ordinata partendo da email, PDF e note sparse."
+    ]
   }
 ];
 
@@ -168,7 +187,7 @@ const packages: Package[] = [
   },
   {
     name: "Top Team Personale Artificiale",
-    price: "1500 euro",
+    price: "1499 euro",
     billing: "una tantum",
     description: "Per chi vuole delegare anche contenuti, fatture, ordini, liste e comunicazioni clienti.",
     items: ["3 agenti", "Email e agenda", "Post, fatture e ordini", "Onboarding guidato"],
@@ -297,7 +316,7 @@ function FluidNav() {
             </span>
             <span className="leading-none">
               <span className="block text-sm font-black tracking-tight text-ink">PersonaleArtificiale</span>
-              <span className="mt-1 hidden text-[11px] font-semibold text-ink/50 sm:block">
+              <span className="mt-1 hidden text-[11px] font-semibold text-ink/68 sm:block">
                 Un aiuto concreto nelle attivita quotidiane
               </span>
             </span>
@@ -308,7 +327,7 @@ function FluidNav() {
               <a
                 key={item.href}
                 href={item.href}
-                className="rounded-full px-4 py-2 text-sm font-semibold text-ink/58 transition duration-500 hover:bg-ink/[0.055] hover:text-ink"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-ink/72 transition duration-500 hover:bg-ink/[0.055] hover:text-ink"
               >
                 {item.label}
               </a>
@@ -377,14 +396,14 @@ function Hero() {
           <h1 className="text-balance text-[clamp(3.7rem,8vw,7.8rem)] font-black leading-[0.88] tracking-tight text-white drop-shadow-[0_22px_50px_rgba(0,0,0,0.28)]">
             Tu scrivi. Lui fa il lavoro.
           </h1>
-          <p className="mt-7 max-w-[58ch] text-lg leading-8 text-white/76 md:text-xl">
+          <p className="mt-7 max-w-[58ch] text-lg leading-8 text-white/88 md:text-xl">
             Email, appuntamenti, fatture, documenti, post e promemoria: chiedi in parole semplici e il tuo assistente digitale prepara tutto al posto tuo.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <ButtonLink href="#pricing">Voglio il mio assistente</ButtonLink>
             <ButtonLink href="#demo" variant="secondary">Fammi vedere esempi</ButtonLink>
           </div>
-          <p className="mt-5 max-w-[52ch] text-sm font-bold leading-6 text-white/72">
+          <p className="mt-5 max-w-[52ch] text-sm font-bold leading-6 text-white/84">
             Valuta quanto vale il tuo tempo: se ti libera anche poche ore ogni settimana, inizia a ripagarsi con il lavoro che non devi piu fare tu.
           </p>
         </motion.div>
@@ -397,16 +416,16 @@ function Hero() {
         >
           <div className="absolute -inset-8 -z-10 rounded-[44px] bg-white/20 blur-3xl" />
           <div className="relative overflow-hidden rounded-[34px] border border-white/20 bg-white p-4 shadow-[0_44px_150px_rgba(0,0,0,0.34)]">
-            <div className="grid min-h-[430px] place-items-center rounded-[26px] bg-[radial-gradient(circle_at_70%_20%,rgba(0,71,255,0.14),transparent_28%),linear-gradient(145deg,#ffffff,#e7efff)] p-8">
-              <Logo className="w-full max-w-[520px] drop-shadow-[0_20px_30px_rgba(1,19,56,0.14)]" />
+            <div className="grid min-h-[500px] place-items-center rounded-[26px] bg-[radial-gradient(circle_at_70%_20%,rgba(3,71,255,0.12),transparent_30%),linear-gradient(145deg,#ffffff,#e7efff)] p-8 sm:p-12">
+              <Logo className="w-full max-w-[560px] drop-shadow-[0_22px_34px_rgba(1,19,56,0.16)]" />
             </div>
-            <div className="absolute bottom-6 left-6 right-6 grid grid-cols-2 gap-2 rounded-[22px] border border-blue/25 bg-white/96 p-4 shadow-[0_22px_70px_rgba(0,71,255,0.22)] backdrop-blur-xl sm:grid-cols-4">
-              {["Email", "Agenda", "Documenti", "Fatture", "Post", "Clienti", "Promemoria", "Molto altro"].map((item) => (
-                <div key={item} className="rounded-[16px] bg-blue px-3 py-3 text-center text-sm font-black text-white shadow-[0_12px_30px_rgba(0,71,255,0.24)]">
-                  {item}
-                </div>
-              ))}
-            </div>
+          </div>
+          <div className="relative z-10 mx-auto -mt-5 grid w-[92%] grid-cols-2 gap-2 rounded-[24px] border border-blue/25 bg-white p-4 shadow-[0_26px_80px_rgba(3,71,255,0.26)] sm:grid-cols-4">
+            {["Email", "Agenda", "Documenti", "Fatture", "Post", "Clienti", "Promemoria", "Molto altro"].map((item) => (
+              <div key={item} className="rounded-[16px] bg-blue px-3 py-3 text-center text-sm font-black text-white shadow-[0_12px_30px_rgba(3,71,255,0.24)]">
+                {item}
+              </div>
+            ))}
           </div>
         </motion.div>
       </div>
@@ -428,7 +447,7 @@ function TrustStrip() {
         {stats.map(([value, label]) => (
           <div key={label} className="px-2 py-7 md:border-l md:border-white/14 md:first:border-l-0">
             <p className="text-5xl font-black tracking-tight text-white">{value}</p>
-            <p className="mt-2 text-sm font-semibold text-white/62">{label}</p>
+            <p className="mt-2 text-sm font-semibold text-white/78">{label}</p>
           </div>
         ))}
       </div>
@@ -440,7 +459,7 @@ function ValueProof() {
   return (
     <MotionSection className="bg-ink px-4 pb-28 pt-10 text-white md:pb-36">
       <div className="mx-auto grid max-w-[1180px] gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch">
-        <div className="rounded-[34px] border border-white/12 bg-white/[0.06] p-6 shadow-[0_32px_120px_rgba(0,0,0,0.28)] md:p-9">
+        <div className="rounded-[34px] border border-white/16 bg-white/[0.09] p-6 shadow-[0_32px_120px_rgba(0,0,0,0.28)] md:p-9">
           <div className="mb-7 flex items-center gap-3">
             <IconWrap>
               <Clock3 />
@@ -450,12 +469,12 @@ function ValueProof() {
           <h2 className="text-balance text-5xl font-black leading-[0.94] tracking-tight md:text-7xl">
             Quanto vale un&apos;ora tua?
           </h2>
-          <p className="mt-6 max-w-[58ch] text-lg leading-8 text-white/66">
+          <p className="mt-6 max-w-[58ch] text-lg leading-8 text-white/82">
             Se ogni settimana perdi ore tra email, appuntamenti, documenti e messaggi, l&apos;assistente non e una spesa da guardare da sola. E tempo che torna disponibile per clienti, vendite e famiglia.
           </p>
           <div className="mt-8 rounded-[24px] bg-blue p-5 shadow-halo">
             <p className="text-2xl font-black leading-tight">Si ripaga quando smetti di fare a mano il lavoro che non porta valore.</p>
-            <p className="mt-3 leading-7 text-white/76">
+            <p className="mt-3 leading-7 text-white/86">
               Valuta il tuo tempo: anche poche ore risparmiate ogni settimana cambiano il conto.
             </p>
           </div>
@@ -486,10 +505,10 @@ function AgentTeam() {
       <div className="mx-auto max-w-[1180px]">
         <div className="max-w-[760px]">
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
-            Tre persone digitali, ognuna con un compito facile da capire.
+            Tre persone digitali, molti lavori collegati tra loro.
           </h2>
-          <p className="mt-6 text-lg leading-8 text-ink/62">
-            Non devi sapere come funziona l&apos;AI. Devi solo sapere a chi chiedere: Roberta per organizzare, Luca per scrivere, Simone per mettere ordine.
+          <p className="mt-6 text-lg leading-8 text-ink/76">
+            Non lavorano a compartimenti stagni. Una richiesta puo partire da Telegram, leggere Gmail, salvare un file in Drive, creare un promemoria e preparare il messaggio giusto.
           </p>
         </div>
 
@@ -509,16 +528,28 @@ function AgentTeam() {
                 <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/58 to-transparent" />
                 <div className="absolute bottom-5 left-5 right-5 text-white">
                   <p className="text-4xl font-black tracking-tight">{agent.name}</p>
-                  <p className="mt-1 text-sm font-bold text-white/78">{agent.role}</p>
+                  <p className="mt-1 text-sm font-bold text-white/90">{agent.role}</p>
                 </div>
               </div>
               <div className="p-5">
-                <p className="text-base leading-7 text-ink/68">{agent.promise}</p>
+                <p className="text-base leading-7 text-ink/78">{agent.promise}</p>
+                <div className="mt-5 rounded-[18px] bg-ink px-4 py-3 text-white">
+                  <p className="text-xs font-black text-electric">Si collega a</p>
+                  <p className="mt-1 text-sm font-bold leading-6 text-white/88">{agent.connected}</p>
+                </div>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {agent.tasks.map((task) => (
-                    <span key={task} className="rounded-full border border-blue/12 bg-blue/[0.055] px-3 py-1.5 text-xs font-bold text-blue">
+                    <span key={task} className="rounded-full border border-blue/20 bg-blue/[0.09] px-3 py-1.5 text-xs font-bold text-blue">
                       {task}
                     </span>
+                  ))}
+                </div>
+                <div className="mt-5 grid gap-2">
+                  {agent.workflows.map((workflow) => (
+                    <div key={workflow} className="flex gap-3 rounded-[16px] bg-paper px-3 py-3 text-sm font-semibold leading-6 text-ink/78">
+                      <Check className="mt-1 size-4 shrink-0 text-blue" />
+                      <span>{workflow}</span>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -541,7 +572,7 @@ function DemoShowcase() {
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
             Scrivi una richiesta. Vedi lavoro finito.
           </h2>
-          <p className="mt-6 text-lg leading-8 text-ink/62">
+          <p className="mt-6 text-lg leading-8 text-ink/76">
             La differenza e concreta: mandi un messaggio e ricevi una cosa utile, pronta da controllare o usare.
           </p>
           <div className="mt-8 grid gap-2">
@@ -571,7 +602,7 @@ function DemoShowcase() {
                 <IconWrap>{demo.icon}</IconWrap>
                 <div>
                   <p className="font-black">{demo.agent}</p>
-                  <p className="text-sm text-white/52">Telegram operativo</p>
+                  <p className="text-sm text-white/82">Telegram operativo</p>
                 </div>
               </div>
               <Sparkles className="size-5 text-electric" />
@@ -590,11 +621,11 @@ function DemoShowcase() {
                   <p className="text-sm font-bold text-blue">Tu</p>
                   <p className="mt-2 leading-7">{demo.request}</p>
                 </div>
-                <div className="max-w-[86%] rounded-[22px] border border-white/10 bg-white/[0.08] px-5 py-4">
+                <div className="max-w-[86%] rounded-[22px] border border-white/14 bg-white/[0.11] px-5 py-4">
                   <p className="text-sm font-bold text-electric">{demo.agent}</p>
-                  <p className="mt-2 leading-7 text-white/82">{demo.result}</p>
+                  <p className="mt-2 leading-7 text-white/92">{demo.result}</p>
                 </div>
-                <div className="mt-4 grid gap-3 rounded-[22px] border border-white/10 bg-white/[0.055] p-4 sm:grid-cols-3">
+                <div className="mt-4 grid gap-3 rounded-[22px] border border-white/14 bg-white/[0.09] p-4 sm:grid-cols-3">
                   {["Capisce", "Esegue", "Conferma"].map((step) => (
                     <div key={step} className="rounded-[16px] bg-white px-4 py-4 text-sm font-black text-ink">
                       {step}
@@ -618,14 +649,14 @@ function SimpleExamples() {
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
             Frasi normali. Risultati utili.
           </h2>
-          <p className="text-lg font-semibold leading-8 text-ink/62">
+          <p className="text-lg font-semibold leading-8 text-ink/76">
             Chi compra non deve imparare prompt strani. Deve solo chiedere quello che chiederebbe a una persona.
           </p>
         </div>
         <div className="grid gap-px overflow-hidden rounded-[32px] bg-ink shadow-[0_34px_120px_rgba(1,19,56,0.16)] md:grid-cols-2 lg:grid-cols-3">
           {examples.map(([label, text]) => (
             <div key={label} className="group bg-white p-6 transition duration-500 hover:bg-blue">
-              <p className="text-sm font-black text-blue transition duration-500 group-hover:text-white/70">{label}</p>
+              <p className="text-sm font-black text-blue transition duration-500 group-hover:text-white/86">{label}</p>
               <p className="mt-4 text-xl font-black leading-snug tracking-tight text-ink transition duration-500 group-hover:text-white">{text}</p>
             </div>
           ))}
@@ -663,16 +694,16 @@ function FeatureGrid() {
               <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">
                 Facile per te. Operativo per lui.
               </h2>
-              <p className="mt-6 text-lg leading-8 text-white/64">
+          <p className="mt-6 text-lg leading-8 text-white/82">
                 Non vendiamo un pannello da imparare. Ti diamo un assistente che capisce richieste normali e restituisce lavoro pronto.
               </p>
             </div>
             <div className="grid gap-4">
               {features.map((feature) => (
-                <div key={feature.title} className="rounded-[22px] border border-white/10 bg-white/[0.07] p-5">
+                <div key={feature.title} className="rounded-[22px] border border-white/14 bg-white/[0.11] p-5">
                   <div className="mb-5 text-electric [&_svg]:size-6 [&_svg]:stroke-[1.5]">{feature.icon}</div>
                   <h3 className="text-2xl font-black">{feature.title}</h3>
-                  <p className="mt-3 leading-7 text-white/62">{feature.copy}</p>
+                  <p className="mt-3 leading-7 text-white/80">{feature.copy}</p>
                 </div>
               ))}
             </div>
@@ -691,7 +722,7 @@ function OnboardingFlow() {
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
             Parti anche se non sei tecnico.
           </h2>
-          <p className="text-lg leading-8 text-ink/62">
+          <p className="text-lg leading-8 text-ink/76">
             Ti guidiamo noi. Alla fine sai solo la cosa che conta: apri Telegram, chiedi, controlli il risultato.
           </p>
         </div>
@@ -704,7 +735,7 @@ function OnboardingFlow() {
                 <span className="text-5xl font-black tracking-tight text-ink/10">{index + 1}</span>
               </div>
               <h3 className="text-2xl font-black tracking-tight text-ink">{step.title}</h3>
-              <p className="mt-4 leading-7 text-ink/62">{step.copy}</p>
+              <p className="mt-4 leading-7 text-ink/76">{step.copy}</p>
             </div>
           ))}
         </div>
@@ -721,12 +752,12 @@ function Pricing() {
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
             Scegli quanto lavoro vuoi toglierti.
           </h2>
-          <p className="mt-6 text-lg leading-8 text-ink/62">
+          <p className="mt-6 text-lg leading-8 text-ink/76">
             Ti aiutiamo a configurare l&apos;assistente e a usarlo sui lavori di ogni giorno. Niente abbonamento obbligatorio da parte nostra.
           </p>
-          <div className="mt-7 rounded-[24px] border border-blue/18 bg-blue/[0.07] p-5 text-ink shadow-[0_18px_70px_rgba(0,71,255,0.10)]">
+          <div className="mt-7 rounded-[24px] border border-blue/24 bg-blue/[0.10] p-5 text-ink shadow-[0_18px_70px_rgba(0,71,255,0.14)]">
             <p className="text-xl font-black tracking-tight">Non guardare solo il prezzo. Guarda le ore che smetti di perdere.</p>
-            <p className="mt-3 leading-7 text-ink/64">
+            <p className="mt-3 leading-7 text-ink/78">
               Email, appuntamenti, documenti e messaggi rubano tempo ogni settimana. Valuta il tuo tempo e ti rendi conto di quanto puoi risparmiare delegando quei compiti.
             </p>
           </div>
@@ -754,25 +785,25 @@ function Pricing() {
                     </p>
                   ) : null}
                   <h3 className="text-3xl font-black tracking-tight">{item.name}</h3>
-                  <p className={`mt-3 leading-7 ${item.highlighted ? "text-white/70" : "text-ink/62"}`}>{item.description}</p>
+                  <p className={`mt-3 leading-7 ${item.highlighted ? "text-white/84" : "text-ink/76"}`}>{item.description}</p>
                 </div>
                 <WalletCards className="size-7 shrink-0 stroke-[1.5]" />
               </div>
               <div className="flex items-end gap-3">
                 <p className="text-5xl font-black tracking-tight">{item.price}</p>
-                <p className={`pb-2 text-sm font-bold ${item.highlighted ? "text-white/64" : "text-ink/52"}`}>{item.billing}</p>
+                <p className={`pb-2 text-sm font-bold ${item.highlighted ? "text-white/80" : "text-ink/68"}`}>{item.billing}</p>
               </div>
               <div className="mt-8 grid gap-3">
                 {item.items.map((benefit) => (
-                  <div key={benefit} className={`flex items-center gap-3 rounded-[16px] px-4 py-3 text-sm font-bold ${item.highlighted ? "bg-white/12" : "bg-ink/[0.045]"}`}>
+                  <div key={benefit} className={`flex items-center gap-3 rounded-[16px] px-4 py-3 text-sm font-bold ${item.highlighted ? "bg-white/16" : "bg-ink/[0.06]"}`}>
                     <Check className="size-4 shrink-0 stroke-[1.8]" />
                     <span>{benefit}</span>
                   </div>
                 ))}
               </div>
-              <div className={`mt-6 rounded-[20px] p-4 ${item.highlighted ? "bg-blue/16 text-white" : "bg-blue/[0.07] text-ink"}`}>
-                <p className="text-sm font-black text-blue">{item.highlighted ? "Tempo recuperato" : "Perche ha senso"}</p>
-                <p className={`mt-2 text-sm font-bold leading-6 ${item.highlighted ? "text-white/74" : "text-ink/68"}`}>{item.payback}</p>
+              <div className={`mt-6 rounded-[20px] p-4 ${item.highlighted ? "bg-blue/22 text-white" : "bg-blue/[0.10] text-ink"}`}>
+                <p className={`text-sm font-black ${item.highlighted ? "text-electric" : "text-blue"}`}>{item.highlighted ? "Tempo recuperato" : "Perche ha senso"}</p>
+                <p className={`mt-2 text-sm font-bold leading-6 ${item.highlighted ? "text-white/86" : "text-ink/78"}`}>{item.payback}</p>
               </div>
               <div className="mt-auto pt-8">
                 <ButtonLink href="#enterprise" variant={item.highlighted ? "secondary" : "primary"}>
@@ -802,7 +833,7 @@ function SalesCTA() {
             <h2 className="text-balance text-5xl font-black leading-[0.94] tracking-tight md:text-7xl">
               Smetti di pagarti per fare lavori da assistente.
             </h2>
-            <p className="mt-6 max-w-[62ch] text-lg leading-8 text-white/72">
+            <p className="mt-6 max-w-[62ch] text-lg leading-8 text-white/86">
               Ogni ora spesa tra email, agenda, fatture e messaggi e un&apos;ora tolta a clienti, vendite e decisioni. Fatti aiutare dove perdi piu tempo.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -825,7 +856,7 @@ function MaintenanceAssistance() {
             <h2 className="text-balance text-4xl font-black leading-tight tracking-tight text-ink md:text-6xl">
               Se vuoi cambiare qualcosa, ci siamo.
             </h2>
-            <p className="mt-5 leading-8 text-ink/62">
+            <p className="mt-5 leading-8 text-ink/76">
               Dopo il setup puoi continuare da solo o chiederci una mano quando vuoi aggiungere funzioni, sistemare collegamenti o migliorare l&apos;assistente.
             </p>
           </div>
@@ -835,8 +866,8 @@ function MaintenanceAssistance() {
                 <ShieldCheck />
               </IconWrap>
               <h3 className="mt-6 text-2xl font-black">Piano Protezione AI</h3>
-              <p className="mt-3 text-4xl font-black">29 euro/mese</p>
-              <p className="mt-4 leading-7 text-white/64">2 ore di aiuto ogni mese, piccoli aggiornamenti e priorita sui nuovi agenti.</p>
+              <p className="mt-3 text-4xl font-black">39 euro/mese</p>
+              <p className="mt-4 leading-7 text-white/82">1 ora di sviluppo custom ogni mese, aggiornamenti periodici e priorita sui nuovi agenti.</p>
             </div>
             <div className="rounded-[24px] border border-ink/10 bg-paper p-5">
               <IconWrap>
@@ -844,7 +875,7 @@ function MaintenanceAssistance() {
               </IconWrap>
               <h3 className="mt-6 text-2xl font-black text-ink">Intervento singolo</h3>
               <p className="mt-3 text-4xl font-black text-ink">59 euro/ora</p>
-              <p className="mt-4 leading-7 text-ink/62">Una mano quando serve, senza abbonamenti e senza vincoli.</p>
+              <p className="mt-4 leading-7 text-ink/76">Una mano quando serve, senza abbonamenti e senza vincoli.</p>
             </div>
           </div>
         </div>
@@ -854,14 +885,6 @@ function MaintenanceAssistance() {
 }
 
 function EnterpriseForm() {
-  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("loading");
-    window.setTimeout(() => setStatus("success"), 900);
-  }
-
   return (
     <MotionSection id="enterprise" className="px-4 py-24 md:py-32">
       <div className="mx-auto grid max-w-[1180px] gap-8 lg:grid-cols-[0.82fr_1.18fr]">
@@ -869,7 +892,7 @@ function EnterpriseForm() {
           <h2 className="text-balance text-5xl font-black leading-[0.95] tracking-tight text-ink md:text-7xl">
             Raccontaci cosa ti fa perdere tempo.
           </h2>
-          <p className="mt-6 text-lg leading-8 text-ink/62">
+          <p className="mt-6 text-lg leading-8 text-ink/76">
             Anche se non sai ancora cosa automatizzare, basta descrivere le cose che ripeti ogni settimana. Ti aiutiamo a capire da dove partire.
           </p>
           <div className="mt-8 grid gap-3">
@@ -887,36 +910,35 @@ function EnterpriseForm() {
           </div>
         </aside>
 
-        <form onSubmit={handleSubmit} className="rounded-[32px] border border-ink/10 bg-white p-5 shadow-[0_30px_110px_rgba(1,19,56,0.12)] md:p-8">
+        <form
+          action="mailto:personaleAI@cborsani.it?subject=Richiesta%20informazioni%20PersonaleArtificiale"
+          method="post"
+          encType="text/plain"
+          className="rounded-[32px] border border-ink/10 bg-white p-5 shadow-[0_30px_110px_rgba(1,19,56,0.12)] md:p-8"
+        >
           <div className="mb-7 flex items-center gap-3">
             <IconWrap>
-              <Building2 />
+              <MessageCircle />
             </IconWrap>
             <div>
-              <p className="text-xl font-black text-ink">Richiesta semplice</p>
-              <p className="text-sm font-semibold text-ink/52">Scrivi quello che ti serve, anche in modo imperfetto.</p>
+              <p className="text-xl font-black text-ink">Richiedi informazioni</p>
+              <p className="text-sm font-semibold text-ink/68">Per privati, professionisti e piccole attivita.</p>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Nome" name="name" placeholder="Mario Rossi" />
-            <Field label="Email aziendale" name="email" type="email" placeholder="mario@azienda.it" />
+            <Field label="Email" name="email" type="email" placeholder="mario@email.it" />
             <Field label="Telefono" name="phone" placeholder="+39 333 000 0000" />
-            <Field label="Partita IVA" name="vat" placeholder="IT00000000000" />
-            <SelectField label="Dimensione azienda" name="company_size" options={["1 - 5 persone", "6 - 20 persone", "21 - 50 persone", "50+ persone"]} />
-            <SelectField
-              label="Cosa vuoi delegare"
-              name="complexity"
-              options={["Email e appuntamenti", "Documenti e fatture", "Post e messaggi", "Ordini e clienti"]}
-            />
+            <Field label="Citta" name="city" placeholder="Milano" />
             <label className="md:col-span-2">
-              <span className="mb-2 block text-sm font-bold text-ink/68">Cosa vorresti fargli fare?</span>
+              <span className="mb-2 block text-sm font-bold text-ink/78">Che tipo di aiuto ti serve?</span>
               <textarea
-                name="description"
+                name="message"
                 required
                 rows={6}
-                placeholder="Esempio: vorrei che leggesse le email importanti, mi ricordasse gli appuntamenti e preparasse risposte per i clienti."
-                className="w-full resize-none rounded-[18px] border border-ink/12 bg-paper px-4 py-3 text-ink outline-none transition duration-500 placeholder:text-ink/35 focus:border-blue/55 focus:bg-white"
+                placeholder="Esempio: vorrei farmi aiutare con email, appuntamenti, documenti, promemoria o contenuti social."
+                className="w-full resize-none rounded-[18px] border border-ink/16 bg-paper px-4 py-3 text-ink outline-none transition duration-500 placeholder:text-ink/60 focus:border-blue/70 focus:bg-white"
               />
             </label>
           </div>
@@ -924,24 +946,14 @@ function EnterpriseForm() {
           <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
             <button
               type="submit"
-              disabled={status === "loading"}
               className="inline-flex min-h-12 items-center justify-center gap-3 rounded-full bg-ink px-5 text-sm font-bold text-white transition duration-500 hover:bg-blue active:translate-y-px disabled:cursor-wait disabled:opacity-70"
             >
-              <span>{status === "loading" ? "Invio in corso..." : "Voglio essere ricontattato"}</span>
+              <span>Invia richiesta informazioni</span>
               <ArrowUpRight className="size-4 stroke-[1.8]" />
             </button>
-            <AnimatePresence>
-              {status === "success" ? (
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="text-sm font-bold text-blue"
-                >
-                  Richiesta ricevuta. Ti ricontattiamo a breve.
-                </motion.p>
-              ) : null}
-            </AnimatePresence>
+            <p className="text-sm font-bold leading-6 text-ink/68">
+              Il messaggio verra preparato per personaleAI@cborsani.it.
+            </p>
           </div>
         </form>
       </div>
@@ -962,32 +974,14 @@ function Field({
 }) {
   return (
     <label>
-      <span className="mb-2 block text-sm font-bold text-ink/68">{label}</span>
+      <span className="mb-2 block text-sm font-bold text-ink/78">{label}</span>
       <input
         name={name}
         type={type}
         required
         placeholder={placeholder}
-        className="w-full rounded-[18px] border border-ink/12 bg-paper px-4 py-3 text-ink outline-none transition duration-500 placeholder:text-ink/35 focus:border-blue/55 focus:bg-white"
+        className="w-full rounded-[18px] border border-ink/16 bg-paper px-4 py-3 text-ink outline-none transition duration-500 placeholder:text-ink/60 focus:border-blue/70 focus:bg-white"
       />
-    </label>
-  );
-}
-
-function SelectField({ label, name, options }: { label: string; name: string; options: string[] }) {
-  return (
-    <label>
-      <span className="mb-2 block text-sm font-bold text-ink/68">{label}</span>
-      <select
-        name={name}
-        required
-        className="w-full rounded-[18px] border border-ink/12 bg-paper px-4 py-3 text-ink outline-none transition duration-500 focus:border-blue/55 focus:bg-white"
-      >
-        <option value="">Seleziona</option>
-        {options.map((option) => (
-          <option key={option}>{option}</option>
-        ))}
-      </select>
     </label>
   );
 }
@@ -1020,7 +1014,7 @@ function FAQ() {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.32, ease: [0.22, 0.86, 0.18, 1] }}
                   >
-                    <p className="px-5 pb-5 leading-7 text-ink/62">{faq.answer}</p>
+                    <p className="px-5 pb-5 leading-7 text-ink/76">{faq.answer}</p>
                   </motion.div>
                 ) : null}
               </AnimatePresence>
@@ -1050,7 +1044,7 @@ export default function LandingPage() {
       <EnterpriseForm />
       <FAQ />
       <footer className="border-t border-ink/10 px-4 py-10">
-        <div className="mx-auto flex max-w-[1180px] flex-col justify-between gap-6 text-sm font-semibold text-ink/52 md:flex-row md:items-center">
+        <div className="mx-auto flex max-w-[1180px] flex-col justify-between gap-6 text-sm font-semibold text-ink/68 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
             <span className="grid size-12 place-items-center rounded-full bg-white shadow-[inset_0_0_0_1px_rgba(1,19,56,0.08)]">
               <Logo className="h-9 w-12 object-contain" />

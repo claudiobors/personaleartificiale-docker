@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  background: #f4f7fb;
+  background: #eef4ff;
 }
 
 * {
@@ -18,9 +18,9 @@ html {
 body {
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 86% 10%, rgba(0, 71, 255, 0.26), transparent 26%),
-    linear-gradient(180deg, #ffffff 0%, #f2f6ff 42%, #e7efff 100%);
-  color: #020712;
+    radial-gradient(circle at 86% 10%, rgba(3, 71, 255, 0.28), transparent 26%),
+    linear-gradient(180deg, #ffffff 0%, #eef4ff 42%, #dce8ff 100%);
+  color: #05060b;
 }
 
 body::before {
@@ -29,7 +29,7 @@ body::before {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.16;
+  opacity: 0.12;
   background-image:
     linear-gradient(rgba(2, 7, 18, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(2, 7, 18, 0.08) 1px, transparent 1px);
@@ -43,7 +43,7 @@ body::after {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.38;
+  opacity: 0.18;
   background:
     linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.56), transparent),
     linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.42), transparent);
