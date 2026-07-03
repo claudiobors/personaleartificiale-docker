@@ -1,0 +1,122 @@
+# Personale Artificiale — Docker Stack
+# Deploy: docker compose up -d
+
+services:
+
+  # ─── Reverse Proxy ───────────────────────────────
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - www-dist:/var/www/html:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - pa-net
+
+  # ─── App (Dashboard + API + Agenti) ─────────────
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://pa:${POSTGRES_PASSWORD}@postgres:5432/personale_artificiale
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
+      - EVOLUTION_API_URL=http://evolution:8080
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - APP_URL=https://app.personaleartificiale.it
+      - WWW_URL=https://www.personaleartificiale.it
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - pa-net
+    volumes:
+      - app-uploads:/app/uploads
+      - app-logs:/app/.run
+
+  # ─── PostgreSQL ─────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: personale_artificiale
+      POSTGRES_USER: pa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pa -d personale_artificiale"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pa-net
+
+  # ─── Redis (coda messaggi) ──────────────────────
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - pa-net
+
+  # ─── Qdrant (Vector DB per RAG) ────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - pa-net
+
+  # ─── Evolution API (WhatsApp bridge) ────────────
+  evolution:
+    image: atendimento/evolution-api:latest
+    environment:
+      - SERVER_URL=http://evolution:8080
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - DATABASE_PROVIDE=postgresql
+      - DATABASE_URL=postgresql://pa:${POSTGRES_PASSWORD}@postgres:5432/evolution
+      - REDIS_URI=redis://redis:6379
+    volumes:
+      - ./evolution/config.json:/evolution/config.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - pa-net
+
+volumes:
+  postgres-data:
+  redis-data:
+  qdrant-data:
+  app-uploads:
+  app-logs:
+  www-dist:
+
+networks:
+  pa-net:
+    driver: bridge
