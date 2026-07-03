@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "start": "bun run serve.ts",
-    "publish": "bash ./publish.sh",
+    "start": "node server.mjs",
+    "publish": "node server.mjs",
     "format": "prettier --write ."
   },
   "dependencies": {
