@@ -105,6 +105,43 @@ function Home() {
   const [isTyping, setIsTyping] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
+  // Stripe Checkout Modal States
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"assistente-esecutivo" | "ufficio-digitale">("assistente-esecutivo");
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleCheckoutOpen = (plan: "assistente-esecutivo" | "ufficio-digitale") => {
+    setSelectedPlan(plan);
+    setCheckoutModalOpen(true);
+  };
+
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError("");
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: selectedPlan, name: customerName, email: customerEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Errore nella creazione della sessione di checkout");
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("Impossibile procedere al pagamento: link mancante.");
+      }
+    } catch (err: any) {
+      setError(err.message || "Errore di rete");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Run simulated chat on active demo change
   useEffect(() => {
     setVisibleMessages([]);
