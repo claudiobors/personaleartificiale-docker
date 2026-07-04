@@ -332,10 +332,10 @@ function Dashboard() {
   // GATE SCREEN: Stripe Checkout Paywall
   if (!token || !user) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between relative overflow-hidden">
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between relative overflow-x-clip">
         {/* Decorative Blurs */}
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-[-10%] right-[-10%] h-80 w-80 sm:h-[500px] sm:w-[500px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-[-10%] left-[-10%] h-80 w-80 sm:h-[500px] sm:w-[500px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Header */}
         <header className="bg-zinc-900/30 backdrop-blur-md border-b border-zinc-900 px-3 py-3 sm:px-6">
@@ -362,7 +362,7 @@ function Dashboard() {
         </header>
 
         {/* Gate Form */}
-        <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-12 flex flex-col lg:flex-row items-center justify-center gap-12">
+        <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-10 sm:px-6 sm:py-12 flex flex-col lg:flex-row items-center justify-center gap-12">
           {/* Info Side */}
           <div className="flex-1 space-y-6 text-center lg:text-left">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold">
@@ -541,7 +541,7 @@ function Dashboard() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-zinc-900 py-6 px-6 bg-zinc-950 text-center text-xs text-zinc-500">
+        <footer className="border-t border-zinc-900 py-6 px-4 sm:px-6 bg-zinc-950 text-center text-xs text-zinc-500">
           <p>© 2026 Personale Artificiale. Tutti i diritti riservati.</p>
         </footer>
       </div>
@@ -562,10 +562,10 @@ function Dashboard() {
 
   // DASHBOARD SCREEN: Active paid user has access to full wizard!
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between relative overflow-x-clip">
       {/* Decorative Blur */}
-      <div className="absolute top-0 right-10 w-[400px] h-[400px] bg-blue-900/5 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-blue-900/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 right-10 h-80 w-80 sm:h-[400px] sm:w-[400px] bg-blue-900/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 left-10 h-80 w-80 sm:h-[400px] sm:w-[400px] bg-blue-900/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
       <header className="bg-zinc-900/50 backdrop-blur-md border-b border-zinc-900 px-3 py-3 sm:px-6">
@@ -602,7 +602,7 @@ function Dashboard() {
       </header>
 
       {/* Main Panel */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-12 flex flex-col items-stretch">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-10 sm:px-6 sm:py-12 flex flex-col items-stretch">
         {/* Configurazione Wizard Header */}
         <div className="mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -1164,7 +1164,7 @@ function Dashboard() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-900 py-6 px-6 bg-zinc-950">
+      <footer className="border-t border-zinc-900 py-6 px-4 sm:px-6 bg-zinc-950">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
           <p>© 2026 Personale Artificiale. Area riservata.</p>
           <div className="flex gap-4">

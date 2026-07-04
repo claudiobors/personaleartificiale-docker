@@ -1,68 +1,62 @@
 #!/usr/bin/env bash
-# Personale Artificiale — Deploy script per VPS
-# Usa: bash scripts/deploy.sh
+# Deploy coerente di sito pubblico, app e reverse proxy.
 set -euo pipefail
 
 REPO="https://github.com/claudiobors/personaleartificiale-docker.git"
 DIR="/opt/personale-artificiale"
 
-echo "🚀 Personale Artificiale — Deploy"
-
-# Check prerequisites
-for cmd in docker docker compose git; do
-  if ! command -v $cmd &>/dev/null; then
-    echo "❌ $cmd non trovato. Installa prima."
+for cmd in docker git curl; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Comando richiesto non trovato: $cmd"
     exit 1
   fi
 done
 
-# Clone or pull
-if [ -d "$DIR" ]; then
-  echo "📦 Aggiorno repo..."
-  cd "$DIR" && git pull
+if [ -d "$DIR/.git" ]; then
+  cd "$DIR"
+  git pull --ff-only
 else
-  echo "📦 Clono repo..."
   git clone "$REPO" "$DIR"
   cd "$DIR"
 fi
 
-# Check .env
 if [ ! -f ".env" ]; then
-  echo "⚠️  Crea il file .env da .env.example prima di continuare!"
-  echo "   cp .env.example .env && nano .env"
+  echo "Manca $DIR/.env. Crealo prima del deploy."
   exit 1
 fi
 
-# Ensure SSL certs
 SSL_DIR="./nginx/ssl"
-if [ ! -f "$SSL_DIR/fullchain.pem" ]; then
-  echo "🔐 Genero certificato self-signed (placeholder)..."
-  mkdir -p "$SSL_DIR"
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout "$SSL_DIR/privkey.pem" \
-    -out "$SSL_DIR/fullchain.pem" \
-    -subj "/CN=personaleartificiale.it" 2>/dev/null || true
-  echo "⚠️  Sostituisci con certificati Let's Encrypt per produzione!"
+if [ ! -s "$SSL_DIR/fullchain.pem" ] || [ ! -s "$SSL_DIR/privkey.pem" ]; then
+  echo "Mancano certificati TLS validi in $SSL_DIR."
+  echo "Installa un certificato reale per personaleartificiale.it, www e app prima del deploy."
+  exit 1
 fi
 
-# Pull latest images
-echo "📥 Scarico immagini Docker..."
-docker compose pull
+echo "Valido la configurazione Docker Compose..."
+docker compose config --quiet
 
-# Build
-echo "🔨 Build dei container..."
-docker compose build --no-cache app
+echo "Ricostruisco separatamente sito pubblico e app..."
+docker compose build --no-cache --pull www app
 
-# Deploy
-echo "🐳 Avvio stack..."
-docker compose up -d
+echo "Ricreo i due frontend e Nginx per evitare container o proxy obsoleti..."
+docker compose up -d --force-recreate www app nginx
 
-# Check
-echo "✅ Stack avviato! Verifica:"
+echo "Controllo la configurazione Nginx..."
+docker compose exec -T nginx nginx -t
+
+echo "Controllo i due domini..."
+PUBLIC_HEADER="$(curl -ksSI https://personaleartificiale.it | tr -d '\r' | grep -i '^X-Personale-Artificiale-Site:' || true)"
+APP_HEADER="$(curl -ksSI https://app.personaleartificiale.it | tr -d '\r' | grep -i '^X-Personale-Artificiale-Site:' || true)"
+
+if [[ "$PUBLIC_HEADER" != *"public"* ]]; then
+  echo "Errore: personaleartificiale.it non sta servendo il sito pubblico."
+  exit 1
+fi
+
+if [[ "$APP_HEADER" != *"app"* ]]; then
+  echo "Errore: app.personaleartificiale.it non sta servendo l'app."
+  exit 1
+fi
+
 docker compose ps
-echo ""
-echo "🌐 Siti:"
-echo "   https://www.personaleartificiale.it"
-echo "   https://app.personaleartificiale.it"
-echo ""
-echo "📋 Log: docker compose logs -f"
+echo "Deploy completato: domini e container sono associati correttamente."

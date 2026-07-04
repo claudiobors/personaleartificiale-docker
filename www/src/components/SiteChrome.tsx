@@ -37,7 +37,7 @@ export function SiteHeader() {
 
   useEffect(() => {
     const closeOnWide = () => {
-      if (window.innerWidth >= 768) setOpen(false);
+      if (window.innerWidth >= 1024) setOpen(false);
     };
     window.addEventListener("resize", closeOnWide);
     return () => window.removeEventListener("resize", closeOnWide);
@@ -50,7 +50,7 @@ export function SiteHeader() {
           <Brand compact />
         </div>
         <nav
-          className="hidden items-center gap-6 md:flex"
+          className="hidden items-center gap-5 lg:flex"
           aria-label="Navigazione principale"
         >
           {navItems.map((item) => (
@@ -68,7 +68,7 @@ export function SiteHeader() {
         </nav>
         <button
           type="button"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 text-white md:hidden"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 text-white lg:hidden"
           aria-label={open ? "Chiudi menu" : "Apri menu"}
           aria-expanded={open}
           aria-controls="mobile-navigation"
@@ -85,7 +85,7 @@ export function SiteHeader() {
         <nav
           id="mobile-navigation"
           aria-label="Navigazione mobile"
-          className="fixed left-0 top-[72px] max-h-[calc(100dvh-72px)] w-[100vw] overflow-x-hidden overflow-y-auto border-b border-white/10 bg-[#080b11] px-3 py-4 shadow-2xl md:hidden"
+          className="fixed inset-x-0 top-[72px] max-h-[calc(100dvh-72px)] w-full max-w-full overflow-x-hidden overflow-y-auto border-b border-white/10 bg-[#080b11] px-3 py-4 shadow-2xl lg:hidden"
         >
           <div className="mx-auto flex w-full max-w-xl flex-col gap-1">
             {navItems.map((item) => (

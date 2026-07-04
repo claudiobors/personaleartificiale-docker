@@ -23,9 +23,22 @@ html {
 }
 body {
   margin: 0;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   overflow-x: clip;
   background: #05070b;
+}
+img,
+svg,
+video {
+  max-width: 100%;
+}
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: break-word;
 }
 button,
 input,
@@ -50,6 +63,8 @@ select {
 
 .pa-page {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
   overflow-x: clip;
   background:
     radial-gradient(
@@ -61,13 +76,19 @@ select {
 }
 
 .pa-container {
-  width: min(100% - 2rem, 76rem);
+  width: calc(100% - 2rem);
+  max-width: 70rem;
+  min-width: 0;
   margin-inline: auto;
 }
+.pa-container > * {
+  min-width: 0;
+}
 .pa-section {
-  padding-block: clamp(4rem, 8vw, 7rem);
+  padding-block: clamp(3.5rem, 7vw, 6rem);
 }
 .pa-card {
+  min-width: 0;
   border: 1px solid var(--pa-border);
   border-radius: 1.5rem;
   background: rgba(13, 17, 26, 0.82);
@@ -77,6 +98,7 @@ select {
 .pa-button,
 .pa-button-secondary {
   display: inline-flex;
+  max-width: 100%;
   min-height: 44px;
   align-items: center;
   justify-content: center;
@@ -125,10 +147,10 @@ select {
   text-transform: uppercase;
 }
 .pa-title {
-  font-size: clamp(2.4rem, 6vw, 5rem);
+  font-size: clamp(2.15rem, 5.2vw, 4rem);
   font-weight: 850;
-  letter-spacing: -0.055em;
-  line-height: 1.02;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
 }
 .pa-gradient-text {
   background: linear-gradient(90deg, #ffffff 0%, #8caaff 58%, #1557ff 100%);
@@ -164,7 +186,10 @@ select {
 
 @media (max-width: 639px) {
   .pa-container {
-    width: min(100% - 1.25rem, 76rem);
+    width: calc(100% - 1.25rem);
+  }
+  .pa-container > * {
+    min-width: 0;
   }
   .pa-section {
     padding-block: 4rem;

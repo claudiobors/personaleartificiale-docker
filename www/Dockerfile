@@ -2,8 +2,8 @@
 FROM node:22-alpine AS builder
 
 WORKDIR /app
-COPY package.json ./
-RUN npm install --legacy-peer-deps --ignore-scripts
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps --ignore-scripts
 
 COPY . .
 RUN npm run build
