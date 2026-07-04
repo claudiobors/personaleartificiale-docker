@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Cpu,
   CheckCircle2,
   Sparkles,
   Upload,
@@ -11,10 +10,8 @@ import {
   Lock,
   Database,
   Shield,
-  Settings,
   User,
   QrCode,
-  Phone,
   ArrowLeft,
   ExternalLink,
   FileText,
@@ -59,15 +56,17 @@ function Dashboard() {
 
   // Wizard States (for verified active paid users)
   const [activeStep, setActiveStep] = useState(1);
-  const [formSaved, setFormSaved] = useState(false);
+  const [, setFormSaved] = useState(false);
 
   // Step 1: Agent Setup Form States
   const [agentName, setAgentName] = useState("");
   const [agentRole, setAgentRole] = useState("Assistente Esecutivo");
   const [agentTone, setAgentTone] = useState("Professionale");
-  const [uploadedFiles, setUploadedFiles] = useState<Array<{ name: string; size: string }>>([
+  const [uploadedFiles, setUploadedFiles] = useState<
+    Array<{ name: string; size: string }>
+  >([
     { name: "listino_prezzi_2026.pdf", size: "1.2 MB" },
-    { name: "domande_frequenti_faq.pdf", size: "480 KB" }
+    { name: "domande_frequenti_faq.pdf", size: "480 KB" },
   ]);
   const [newFileName, setNewFileName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -90,8 +89,14 @@ function Dashboard() {
     const queryPlan = params.get("plan");
 
     // Pre-select plan if passed in query (for checkout form)
-    if (queryPlan && (queryPlan === "assistente-esecutivo" || queryPlan === "ufficio-digitale" || queryPlan === "executive")) {
-      const canonicalPlan = queryPlan === "executive" ? "assistente-esecutivo" : queryPlan;
+    if (
+      queryPlan &&
+      (queryPlan === "assistente-esecutivo" ||
+        queryPlan === "ufficio-digitale" ||
+        queryPlan === "executive")
+    ) {
+      const canonicalPlan =
+        queryPlan === "executive" ? "assistente-esecutivo" : queryPlan;
       setGatePlan(canonicalPlan);
       setSelectedPlan(canonicalPlan);
     }
@@ -103,12 +108,16 @@ function Dashboard() {
       activeToken = queryToken;
       localStorage.setItem("pa_token", queryToken);
       setToken(queryToken);
-      
+
       // Clean up URL query parameters
       const url = new URL(window.location.href);
       url.searchParams.delete("token");
       url.searchParams.delete("session_id");
-      window.history.replaceState({}, document.title, url.pathname + url.search);
+      window.history.replaceState(
+        {},
+        document.title,
+        url.pathname + url.search,
+      );
     } else if (activeToken) {
       setToken(activeToken);
     }
@@ -150,7 +159,7 @@ function Dashboard() {
           planName: data.planName,
         });
         setSelectedPlan(data.planId);
-        
+
         // Also load the existing agent config if any
         fetchAgentConfig(authToken);
       } else {
@@ -175,7 +184,10 @@ function Dashboard() {
         },
       });
       if (res.ok) {
-        const config = await res.json() as { toneOfVoice: string; roleDescription: string };
+        const config = (await res.json()) as {
+          toneOfVoice: string;
+          roleDescription: string;
+        };
         setAgentTone(config.toneOfVoice.split(" ")[0] || "Professionale");
         setAgentRole(config.roleDescription);
       }
@@ -195,7 +207,9 @@ function Dashboard() {
     }
 
     if (!gateTermsAccepted) {
-      setGateTermsError("È necessario accettare i Termini di Servizio e l'Informativa sulla Privacy.");
+      setGateTermsError(
+        "È necessario accettare i Termini di Servizio e l'Informativa sulla Privacy.",
+      );
       return;
     }
 
@@ -214,16 +228,20 @@ function Dashboard() {
         }),
       });
 
-      const data = await res.json() as { url?: string; error?: string };
+      const data = (await res.json()) as { url?: string; error?: string };
 
       if (!res.ok || !data.url) {
-        throw new Error(data.error || "Errore nella creazione della sessione di pagamento");
+        throw new Error(
+          data.error || "Errore nella creazione della sessione di pagamento",
+        );
       }
 
       // Redirect immediately to Stripe Checkout page
       window.location.href = data.url;
     } catch (err) {
-      setGateTermsError(err instanceof Error ? err.message : "Internal Server Error");
+      setGateTermsError(
+        err instanceof Error ? err.message : "Internal Server Error",
+      );
       setCheckoutLoading(false);
     }
   };
@@ -234,7 +252,9 @@ function Dashboard() {
       setIsGeneratingQr(true);
       const timer = setTimeout(() => {
         setIsGeneratingQr(false);
-        setQrCodeData("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=PersonaleArtificialeActivationFlowMock");
+        setQrCodeData(
+          "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=PersonaleArtificialeActivationFlowMock",
+        );
       }, 1500);
 
       // Simulate a real scanning event after some seconds
@@ -253,15 +273,17 @@ function Dashboard() {
   const handleUploadFile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFileName.trim()) return;
-    
+
     setIsUploading(true);
     setTimeout(() => {
       setUploadedFiles((prev) => [
         ...prev,
         {
-          name: newFileName.endsWith(".pdf") ? newFileName : `${newFileName}.pdf`,
-          size: `${Math.floor(Math.random() * 800 + 200)} KB`
-        }
+          name: newFileName.endsWith(".pdf")
+            ? newFileName
+            : `${newFileName}.pdf`,
+          size: `${Math.floor(Math.random() * 800 + 200)} KB`,
+        },
       ]);
       setNewFileName("");
       setIsUploading(false);
@@ -291,7 +313,7 @@ function Dashboard() {
   const planTitles: Record<string, string> = {
     "assistente-esecutivo": "Assistente Esecutivo",
     "ufficio-digitale": "L'Ufficio Digitale",
-    "executive": "Assistente Esecutivo",
+    executive: "Assistente Esecutivo",
     "digital-office": "L'Ufficio Digitale",
   };
 
@@ -299,8 +321,10 @@ function Dashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-semibold tracking-wider text-purple-400">Verifica sessione sicura...</p>
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-semibold tracking-wider text-blue-400">
+          Verifica sessione sicura...
+        </p>
       </div>
     );
   }
@@ -310,21 +334,30 @@ function Dashboard() {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between relative overflow-hidden">
         {/* Decorative Blurs */}
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Header */}
-        <header className="bg-zinc-900/30 backdrop-blur-md border-b border-zinc-900 px-6 py-4">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <header className="bg-zinc-900/30 backdrop-blur-md border-b border-zinc-900 px-3 py-3 sm:px-6">
+          <div className="max-w-7xl mx-auto flex min-w-0 items-center justify-between gap-2">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center">
-                <Cpu className="w-4.5 h-4.5 text-white" />
-              </div>
-              <span className="text-base font-bold text-white">Personale Artificiale</span>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1">
+                <img
+                  src="/logo-pa-transparent.png"
+                  alt=""
+                  className="h-full w-full object-contain"
+                />
+              </span>
+              <span className="max-w-[10rem] truncate text-sm font-bold text-white min-[375px]:text-base">
+                Personale Artificiale
+              </span>
             </Link>
-            <Link to="/" className="text-xs text-zinc-400 hover:text-white transition-colors">
+            <a
+              href="https://www.personaleartificiale.it"
+              className="text-xs text-zinc-400 hover:text-white transition-colors"
+            >
               Torna al sito
-            </Link>
+            </a>
           </div>
         </header>
 
@@ -332,29 +365,33 @@ function Dashboard() {
         <main className="flex-1 max-w-4xl w-full mx-auto px-6 py-12 flex flex-col lg:flex-row items-center justify-center gap-12">
           {/* Info Side */}
           <div className="flex-1 space-y-6 text-center lg:text-left">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold">
               <Lock className="w-3.5 h-3.5" /> Pagamento Sicuro SSL via Stripe
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight">
               Sblocca il tuo <br />
-              <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">Collaboratore Virtuale AI</span>
+              <span className="bg-gradient-to-r from-blue-400 to-blue-400 bg-clip-text text-transparent">
+                aiuto digitale
+              </span>
             </h1>
             <p className="text-sm text-zinc-400 leading-relaxed max-w-md mx-auto lg:mx-0">
-              Per accedere alla configurazione dell'agente virtuale e abilitarlo sul tuo numero WhatsApp/Telegram, completa l'acquisto del piano. Verrai reindirizzato all'istante sulla procedura di setup guidato.
+              Per accedere alla configurazione dell'agente virtuale e abilitarlo
+              sul tuo numero WhatsApp/Telegram, completa l'acquisto del piano.
+              Verrai reindirizzato all'istante sulla procedura di setup guidato.
             </p>
 
             <div className="space-y-3 max-w-sm mx-auto lg:mx-0">
               <div className="flex items-center gap-3 text-xs text-zinc-300">
-                <Check className="w-4 h-4 text-purple-400" />
+                <Check className="w-4 h-4 text-blue-400" />
                 <span>Nessun vincolo, annulli quando vuoi</span>
               </div>
               <div className="flex items-center gap-3 text-xs text-zinc-300">
-                <Check className="w-4 h-4 text-purple-400" />
-                <span>Onboarding completo assistito in 15 minuti</span>
+                <Check className="w-4 h-4 text-blue-400" />
+                <span>Configurazione completo assistito in 15 minuti</span>
               </div>
               <div className="flex items-center gap-3 text-xs text-zinc-300">
-                <Check className="w-4 h-4 text-purple-400" />
-                <span>Integrazioni ufficiali Google OAuth 2.0</span>
+                <Check className="w-4 h-4 text-blue-400" />
+                <span>Collegamento guidato agli strumenti di lavoro</span>
               </div>
             </div>
           </div>
@@ -363,8 +400,13 @@ function Dashboard() {
           <div className="w-full max-w-md bg-zinc-900/40 border border-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
             <form onSubmit={handleInitiateCheckout} className="space-y-5">
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-white">Iscriviti e Attiva</h3>
-                <p className="text-xs text-zinc-500">I dati inseriti saranno usati per creare la tua area riservata.</p>
+                <h3 className="text-lg font-bold text-white">
+                  Iscriviti e Attiva
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  I dati inseriti saranno usati per creare la tua area
+                  riservata.
+                </p>
               </div>
 
               {gateError && (
@@ -376,45 +418,56 @@ function Dashboard() {
 
               {/* Name */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Nome Completo</label>
+                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Nome Completo
+                </label>
                 <input
                   type="text"
                   required
                   value={gateName}
                   onChange={(e) => setGateName(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 text-white"
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 text-white"
                   placeholder="es. Mario Rossi"
                 />
               </div>
 
               {/* Email */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Indirizzo Email</label>
+                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Indirizzo Email
+                </label>
                 <input
                   type="email"
                   required
                   value={gateEmail}
                   onChange={(e) => setGateEmail(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 text-white"
+                  className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 text-white"
                   placeholder="mario.rossi@azienda.com"
                 />
               </div>
 
               {/* Interactive Plan Selector */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Seleziona Piano</label>
+                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Seleziona Piano
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => { setGatePlan("assistente-esecutivo"); setSelectedPlan("assistente-esecutivo"); }}
+                    onClick={() => {
+                      setGatePlan("assistente-esecutivo");
+                      setSelectedPlan("assistente-esecutivo");
+                    }}
                     className={`p-3 rounded-xl border text-left transition-all ${
                       gatePlan === "assistente-esecutivo"
-                        ? "bg-purple-600/10 border-purple-500 text-white"
+                        ? "bg-blue-600/10 border-blue-500 text-white"
                         : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-800"
                     }`}
                   >
                     <div className="text-xs font-bold">A. Esecutivo</div>
-                    <div className="text-[10px] text-zinc-500 mt-1">€97/mo + €399 setup</div>
+                    <div className="text-[10px] text-zinc-500 mt-1">
+                      €97/mo + €399 setup
+                    </div>
                   </button>
 
                   <button
@@ -424,12 +477,14 @@ function Dashboard() {
                     type="button"
                     className={`p-3 rounded-xl border text-left transition-all ${
                       gatePlanSelected()
-                        ? "bg-purple-600/10 border-purple-500 text-white"
+                        ? "bg-blue-600/10 border-blue-500 text-white"
                         : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:border-zinc-800"
                     }`}
                   >
                     <div className="text-xs font-bold">Ufficio Digitale</div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">€297/mo + €999 setup</div>
+                    <div className="text-[10px] text-zinc-500 mt-0.5">
+                      €297/mo + €999 setup
+                    </div>
                   </button>
                 </div>
               </div>
@@ -441,10 +496,25 @@ function Dashboard() {
                     type="checkbox"
                     checked={gateTermsAccepted}
                     onChange={(e) => setGateTermsAccepted(e.target.checked)}
-                    className="mt-0.5 accent-purple-600 rounded bg-zinc-950 border-zinc-850"
+                    className="mt-0.5 accent-blue-600 rounded bg-zinc-950 border-zinc-850"
                   />
                   <span>
-                    Accetto i <Link to="/termini-servizio" className="text-purple-400 hover:underline">Termini di Servizio</Link> ed esprimo il consenso al trattamento dei dati descritto nella <Link to="/privacy" className="text-purple-400 hover:underline">Privacy Policy</Link> (GDPR).
+                    Accetto i{" "}
+                    <a
+                      href="https://www.personaleartificiale.it/termini-servizio"
+                      className="text-blue-400 hover:underline"
+                    >
+                      Termini di servizio
+                    </a>{" "}
+                    ed esprimo il consenso al trattamento dei dati descritto
+                    nella{" "}
+                    <a
+                      href="https://www.personaleartificiale.it/privacy"
+                      className="text-blue-400 hover:underline"
+                    >
+                      Privacy
+                    </a>{" "}
+                    (GDPR).
                   </span>
                 </label>
               </div>
@@ -452,7 +522,7 @@ function Dashboard() {
               <button
                 type="submit"
                 disabled={checkoutLoading}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white font-bold text-sm shadow-xl shadow-purple-500/10 flex items-center justify-center gap-2 transition-all"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold text-sm shadow-xl shadow-blue-500/10 flex items-center justify-center gap-2 transition-all"
               >
                 {checkoutLoading ? (
                   <>
@@ -472,7 +542,7 @@ function Dashboard() {
 
         {/* Footer */}
         <footer className="border-t border-zinc-900 py-6 px-6 bg-zinc-950 text-center text-xs text-zinc-500">
-          <p>© 2026 Personale Artificiale S.r.l. Tutti i diritti riservati. P.IVA IT12345678901</p>
+          <p>© 2026 Personale Artificiale. Tutti i diritti riservati.</p>
         </footer>
       </div>
     );
@@ -494,23 +564,31 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col justify-between">
       {/* Decorative Blur */}
-      <div className="absolute top-0 right-10 w-[400px] h-[400px] bg-purple-900/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 right-10 w-[400px] h-[400px] bg-blue-900/5 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-10 left-10 w-[400px] h-[400px] bg-blue-900/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="bg-zinc-900/50 backdrop-blur-md border-b border-zinc-900 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <header className="bg-zinc-900/50 backdrop-blur-md border-b border-zinc-900 px-3 py-3 sm:px-6">
+        <div className="max-w-7xl mx-auto flex min-w-0 items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center">
-              <Cpu className="w-4.5 h-4.5 text-white" />
-            </div>
-            <span className="text-base font-bold text-white">Personale Artificiale</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white p-1">
+              <img
+                src="/logo-pa-transparent.png"
+                alt=""
+                className="h-full w-full object-contain"
+              />
+            </span>
+            <span className="max-w-[10rem] truncate text-sm font-bold text-white min-[375px]:text-base">
+              Personale Artificiale
+            </span>
           </Link>
 
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs">
-              <UserCheck className="w-3.5 h-3.5 text-purple-400" />
-              <span className="text-zinc-300 font-semibold">{planTitles[selectedPlan] || selectedPlan}</span>
+              <UserCheck className="w-3.5 h-3.5 text-blue-400" />
+              <span className="text-zinc-300 font-semibold">
+                {planTitles[selectedPlan] || selectedPlan}
+              </span>
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse ml-1" />
             </div>
             <button
@@ -525,22 +603,29 @@ function Dashboard() {
 
       {/* Main Panel */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-12 flex flex-col items-stretch">
-        {/* Onboarding Wizard Header */}
+        {/* Configurazione Wizard Header */}
         <div className="mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <span className="text-xs uppercase font-bold tracking-widest text-purple-400">Onboarding Cliente Riservato</span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">Configura il tuo Dipendente AI</h1>
+              <span className="text-xs uppercase font-bold tracking-widest text-blue-400">
+                Configurazione Cliente Riservato
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                Configura il tuo Dipendente AI
+              </h1>
             </div>
             <div className="text-xs text-zinc-500 sm:text-right">
-              Passo {activeStep} di 3 • <span className="text-zinc-300 font-semibold">{progressPercent}% completato</span>
+              Passo {activeStep} di 3 •{" "}
+              <span className="text-zinc-300 font-semibold">
+                {progressPercent}% completato
+              </span>
             </div>
           </div>
 
           {/* Progress Tracker Bar */}
           <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden mb-6">
-            <div 
-              className="h-full bg-gradient-to-r from-purple-600 to-blue-500 transition-all duration-500"
+            <div
+              className="h-full bg-gradient-to-r from-blue-600 to-blue-500 transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -551,7 +636,7 @@ function Dashboard() {
               onClick={() => setActiveStep(1)}
               className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
                 activeStep === 1
-                  ? "bg-purple-600/10 border-purple-500 text-purple-300"
+                  ? "bg-blue-600/10 border-blue-500 text-blue-300"
                   : "bg-zinc-900/40 border-zinc-900 text-zinc-400 hover:border-zinc-800 hover:text-white"
               }`}
             >
@@ -561,7 +646,7 @@ function Dashboard() {
               onClick={() => setActiveStep(2)}
               className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
                 activeStep === 2
-                  ? "bg-purple-600/10 border-purple-500 text-purple-300"
+                  ? "bg-blue-600/10 border-blue-500 text-blue-300"
                   : "bg-zinc-900/40 border-zinc-900 text-zinc-400 hover:border-zinc-800 hover:text-white"
               }`}
             >
@@ -571,7 +656,7 @@ function Dashboard() {
               onClick={() => setActiveStep(3)}
               className={`p-3 rounded-xl border text-xs font-bold text-center transition-all ${
                 activeStep === 3
-                  ? "bg-purple-600/10 border-purple-500 text-purple-300"
+                  ? "bg-blue-600/10 border-blue-500 text-blue-300"
                   : "bg-zinc-900/40 border-zinc-900 text-zinc-400 hover:border-zinc-800 hover:text-white"
               }`}
             >
@@ -594,49 +679,61 @@ function Dashboard() {
               >
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                    <User className="w-5 h-5 text-purple-400" />
+                    <User className="w-5 h-5 text-blue-400" />
                     1. Definisci il Carattere del Dipendente
                   </h2>
                   <p className="text-xs text-zinc-400">
-                    Definisci il nome, il ruolo e il comportamento verbale del tuo collaboratore. Saranno la base del suo stile comunicativo.
+                    Definisci il nome, il ruolo e il comportamento verbale del
+                    tuo collaboratore. Saranno la base del suo stile
+                    comunicativo.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Name field */}
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wide">Nome dell'Agente</label>
+                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wide">
+                      Nome dell'Agente
+                    </label>
                     <input
                       type="text"
                       value={agentName}
                       onChange={(e) => setAgentName(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 text-white font-medium"
+                      className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 text-white font-medium"
                       placeholder="es. Marco"
                     />
                   </div>
 
                   {/* Role field */}
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wide">Ruolo / Mansionario</label>
+                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wide">
+                      Ruolo / Mansionario
+                    </label>
                     <input
                       type="text"
                       value={agentRole}
                       onChange={(e) => setAgentRole(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 text-white font-medium"
+                      className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 text-white font-medium"
                       placeholder="es. Assistente Esecutivo"
                     />
                   </div>
 
                   {/* Tone field */}
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wide">Tono di Voce</label>
+                    <label className="text-xs font-bold text-zinc-300 uppercase tracking-wide">
+                      Tono di Voce
+                    </label>
                     <select
                       value={agentTone}
                       onChange={(e) => setAgentTone(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 text-white font-medium"
+                      className="w-full bg-zinc-950 border border-zinc-850 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-blue-500 text-white font-medium"
                     >
-                      <option value="Professionale">💼 Professionale e Sobrio</option>
-                      <option value="Amichevole">😊 Amichevole ed Empatico</option>
+                      <option value="Professionale">
+                        💼 Professionale e Sobrio
+                      </option>
+                      <option value="Amichevole">
+                        😊 Amichevole ed Empatico
+                      </option>
                       <option value="Formale">👔 Formale e Rispettoso</option>
                       <option value="Tecnico">💻 Tecnico e Diretto</option>
                     </select>
@@ -647,11 +744,13 @@ function Dashboard() {
                 <div className="border-t border-zinc-900 pt-8">
                   <div className="mb-4">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                      <Database className="w-5 h-5 text-purple-400" />
+                      <Database className="w-5 h-5 text-blue-400" />
                       Addestra con la Conoscenza Aziendale (PDF)
                     </h2>
                     <p className="text-xs text-zinc-400">
-                      Carica listini, istruzioni, listati prodotti, listino prezzi o brochure FAQ. Il dipendente virtuale utilizzerà questi PDF come manuali d'istruzione esclusivi.
+                      Carica listini, istruzioni, listati prodotti, listino
+                      prezzi o brochure FAQ. Il dipendente virtuale utilizzerà
+                      questi PDF come manuali d'istruzione esclusivi.
                     </p>
                   </div>
 
@@ -662,7 +761,7 @@ function Dashboard() {
                         type="text"
                         value={newFileName}
                         onChange={(e) => setNewFileName(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-850 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-purple-500 text-white"
+                        className="w-full bg-zinc-950 border border-zinc-850 rounded-xl pl-10 pr-4 py-3 text-base focus:outline-none focus:border-blue-500 text-white"
                         placeholder="Nome file PDF da caricare (es. catalogo_servizi)"
                       />
                       <FileText className="absolute left-3.5 top-3.5 w-4 h-4 text-zinc-500" />
@@ -670,9 +769,15 @@ function Dashboard() {
                     <button
                       type="submit"
                       disabled={isUploading}
-                      className="px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 text-white font-bold text-sm flex items-center gap-2 transition-all shrink-0"
+                      className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white font-bold text-sm flex items-center gap-2 transition-all shrink-0"
                     >
-                      {isUploading ? "Caricamento..." : <><Upload className="w-4 h-4" /> Aggiungi PDF</>}
+                      {isUploading ? (
+                        "Caricamento..."
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" /> Aggiungi PDF
+                        </>
+                      )}
                     </button>
                   </form>
 
@@ -681,16 +786,27 @@ function Dashboard() {
                     {uploadedFiles.length === 0 ? (
                       <div className="text-center py-6 text-sm text-zinc-500 flex flex-col items-center gap-2">
                         <AlertCircle className="w-8 h-8 text-zinc-700" />
-                        Nessun PDF caricato. L'AI userà le sue conoscenze generali.
+                        Nessun PDF caricato. L'AI userà le sue conoscenze
+                        generali.
                       </div>
                     ) : (
                       uploadedFiles.map((file, idx) => (
-                        <div key={idx} className="py-3 flex items-center justify-between text-xs first:pt-0 last:pb-0">
+                        <div
+                          key={idx}
+                          className="py-3 flex items-center justify-between text-xs first:pt-0 last:pb-0"
+                        >
                           <div className="flex items-center gap-3">
-                            <FileText className="w-4 h-4 text-purple-400" />
+                            <FileText className="w-4 h-4 text-blue-400" />
                             <div>
-                              <p className="font-semibold text-zinc-200">{file.name}</p>
-                              <p className="text-[10px] text-zinc-500">{file.size} • Stato: <span className="text-emerald-400 font-medium">Indicizzato RAG</span></p>
+                              <p className="font-semibold text-zinc-200">
+                                {file.name}
+                              </p>
+                              <p className="text-[10px] text-zinc-500">
+                                {file.size} • Stato:{" "}
+                                <span className="text-emerald-400 font-medium">
+                                  Indicizzato RAG
+                                </span>
+                              </p>
                             </div>
                           </div>
                           <button
@@ -707,7 +823,8 @@ function Dashboard() {
 
                 <div className="flex justify-between items-center border-t border-zinc-900 pt-8 mt-4">
                   <div className="flex items-center gap-2 text-xs text-emerald-400">
-                    <CheckCircle2 className="w-4 h-4" /> Dati allineati con Turso DB
+                    <CheckCircle2 className="w-4 h-4" /> Dati allineati con
+                    Turso DB
                   </div>
                   <button
                     onClick={async () => {
@@ -729,7 +846,7 @@ function Dashboard() {
                       setFormSaved(true);
                       setActiveStep(2);
                     }}
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-bold text-sm flex items-center gap-2 hover:from-purple-500 hover:to-blue-400 transition-all shadow-lg"
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm flex items-center gap-2 hover:from-blue-500 hover:to-blue-400 transition-all shadow-lg"
                   >
                     Salva e Continua <ArrowRight className="w-4 h-4" />
                   </button>
@@ -748,11 +865,13 @@ function Dashboard() {
               >
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                    <Shield className="w-5 h-5 text-purple-400" />
+                    <Shield className="w-5 h-5 text-blue-400" />
                     2. Collega i tuoi Strumenti Google
                   </h2>
                   <p className="text-xs text-zinc-400">
-                    Autorizza l'agente a operare per tuo conto su Gmail, Calendario e Drive. Usiamo l'integrazione ufficiale Google OAuth 2.0 sicura e certificata.
+                    Autorizza l'agente a operare per tuo conto su Gmail,
+                    Calendario e Drive. Usiamo l'integrazione ufficiale Google
+                    OAuth 2.0 sicura e certificata.
                   </p>
                 </div>
 
@@ -762,11 +881,16 @@ function Dashboard() {
                     <div className="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mb-4 text-red-400">
                       <Mail className="w-6 h-6" />
                     </div>
-                    <h4 className="text-sm font-bold text-zinc-100 mb-1">Email (Gmail)</h4>
+                    <h4 className="text-sm font-bold text-zinc-100 mb-1">
+                      Email (Gmail)
+                    </h4>
                     <p className="text-[11px] text-zinc-400 mb-4">
-                      Scrive bozze, monitora mittenti urgenti e ti invia resoconti.
+                      Scrive bozze, monitora mittenti urgenti e ti invia
+                      resoconti.
                     </p>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${googleConnected ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-900 text-zinc-500"}`}>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${googleConnected ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-900 text-zinc-500"}`}
+                    >
                       {googleConnected ? "Connesso" : "In attesa"}
                     </span>
                   </div>
@@ -776,11 +900,15 @@ function Dashboard() {
                     <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 text-blue-400">
                       <Calendar className="w-6 h-6" />
                     </div>
-                    <h4 className="text-sm font-bold text-zinc-100 mb-1">Google Calendar</h4>
+                    <h4 className="text-sm font-bold text-zinc-100 mb-1">
+                      Google Calendar
+                    </h4>
                     <p className="text-[11px] text-zinc-400 mb-4">
                       Inserisce eventi, controlla orari ed invia inviti mail.
                     </p>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${googleConnected ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-900 text-zinc-500"}`}>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${googleConnected ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-900 text-zinc-500"}`}
+                    >
                       {googleConnected ? "Connesso" : "In attesa"}
                     </span>
                   </div>
@@ -790,11 +918,15 @@ function Dashboard() {
                     <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-4 text-yellow-400">
                       <Folder className="w-6 h-6" />
                     </div>
-                    <h4 className="text-sm font-bold text-zinc-100 mb-1">Google Drive</h4>
+                    <h4 className="text-sm font-bold text-zinc-100 mb-1">
+                      Google Drive
+                    </h4>
                     <p className="text-[11px] text-zinc-400 mb-4">
                       Archivia fatture, contratti o PDF inoltrati via chat.
                     </p>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${googleConnected ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-900 text-zinc-500"}`}>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${googleConnected ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-900 text-zinc-500"}`}
+                    >
                       {googleConnected ? "Connesso" : "In attesa"}
                     </span>
                   </div>
@@ -805,8 +937,13 @@ function Dashboard() {
                   <div className="flex items-start gap-3">
                     <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div className="text-xs text-zinc-400 leading-relaxed">
-                      <p className="font-bold text-zinc-200 mb-1">Informativa sulla Sicurezza dei Dati</p>
-                      La connessione avviene sul server sicuro Google. Non conserviamo le tue password. Puoi scollegare il dipendente AI o revocare i permessi in qualsiasi momento con un solo clic.
+                      <p className="font-bold text-zinc-200 mb-1">
+                        Informativa sulla Sicurezza dei Dati
+                      </p>
+                      La connessione avviene sul server sicuro Google. Non
+                      conserviamo le tue password. Puoi scollegare il dipendente
+                      AI o revocare i permessi in qualsiasi momento con un solo
+                      clic.
                     </div>
                   </div>
 
@@ -822,9 +959,14 @@ function Dashboard() {
                     {isConnectingGoogle ? (
                       "Connessione in corso..."
                     ) : googleConnected ? (
-                      <><Check className="w-4 h-4" /> Google Connesso</>
+                      <>
+                        <Check className="w-4 h-4" /> Google Connesso
+                      </>
                     ) : (
-                      <><ExternalLink className="w-4 h-4" /> Autorizza Google Workspace</>
+                      <>
+                        <ExternalLink className="w-4 h-4" /> Autorizza Google
+                        Workspace
+                      </>
                     )}
                   </button>
                 </div>
@@ -838,7 +980,7 @@ function Dashboard() {
                   </button>
                   <button
                     onClick={() => setActiveStep(3)}
-                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-500 text-white font-bold text-sm flex items-center gap-2 hover:from-purple-500 hover:to-blue-400 transition-all shadow-lg"
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-sm flex items-center gap-2 hover:from-blue-500 hover:to-blue-400 transition-all shadow-lg"
                   >
                     Allinea e Continua <ArrowRight className="w-4 h-4" />
                   </button>
@@ -857,11 +999,13 @@ function Dashboard() {
               >
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                    <QrCode className="w-5 h-5 text-purple-400" />
+                    <QrCode className="w-5 h-5 text-blue-400" />
                     3. Collega l'Agente a WhatsApp
                   </h2>
                   <p className="text-xs text-zinc-400">
-                    Scansiona il codice QR per attivare la sessione WhatsApp Business. L'agente virtuale abiterà il tuo numero e risponderà all'istante.
+                    Scansiona il codice QR per attivare la sessione WhatsApp
+                    Business. L'agente virtuale abiterà il tuo numero e
+                    risponderà all'istante.
                   </p>
                 </div>
 
@@ -869,36 +1013,43 @@ function Dashboard() {
                   {/* Instructions */}
                   <div className="md:col-span-7 space-y-4">
                     <div className="flex gap-3">
-                      <div className="w-6 h-6 rounded-full bg-purple-600/10 border border-purple-500/20 flex items-center justify-center font-bold text-xs text-purple-300 shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center font-bold text-xs text-blue-300 shrink-0">
                         a
                       </div>
                       <p className="text-xs text-zinc-300 leading-relaxed">
-                        Apri <strong>WhatsApp</strong> sul tuo telefono cellulare aziendale o personale.
+                        Apri <strong>WhatsApp</strong> sul tuo telefono
+                        cellulare aziendale o personale.
                       </p>
                     </div>
 
                     <div className="flex gap-3">
-                      <div className="w-6 h-6 rounded-full bg-purple-600/10 border border-purple-500/20 flex items-center justify-center font-bold text-xs text-purple-300 shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center font-bold text-xs text-blue-300 shrink-0">
                         b
                       </div>
                       <p className="text-xs text-zinc-300 leading-relaxed">
-                        Tocca <strong>Menu</strong> o <strong>Impostazioni</strong> e seleziona <strong>Dispositivi Collegati</strong>.
+                        Tocca <strong>Menu</strong> o{" "}
+                        <strong>Impostazioni</strong> e seleziona{" "}
+                        <strong>Dispositivi Collegati</strong>.
                       </p>
                     </div>
 
                     <div className="flex gap-3">
-                      <div className="w-6 h-6 rounded-full bg-purple-600/10 border border-purple-500/20 flex items-center justify-center font-bold text-xs text-purple-300 shrink-0">
+                      <div className="w-6 h-6 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center font-bold text-xs text-blue-300 shrink-0">
                         c
                       </div>
                       <p className="text-xs text-zinc-300 leading-relaxed">
-                        Inquadra il codice QR visualizzato a destra. La connessione richiede solo pochi secondi.
+                        Inquadra il codice QR visualizzato a destra. La
+                        connessione richiede solo pochi secondi.
                       </p>
                     </div>
 
                     <div className="p-4 bg-zinc-950 border border-zinc-900 rounded-xl flex items-start gap-2 text-[11px] text-zinc-400 leading-relaxed">
-                      <Info className="w-4.5 h-4.5 text-purple-400 shrink-0" />
+                      <Info className="w-4.5 h-4.5 text-blue-400 shrink-0" />
                       <div>
-                        <strong>Nota importante:</strong> Una volta inquadrato, non scollegare il dispositivo dal cellulare. Se la sessione scade, potrai rigenerare il codice QR da questa sezione.
+                        <strong>Nota importante:</strong> Una volta inquadrato,
+                        non scollegare il dispositivo dal cellulare. Se la
+                        sessione scade, potrai rigenerare il codice QR da questa
+                        sezione.
                       </div>
                     </div>
                   </div>
@@ -908,11 +1059,13 @@ function Dashboard() {
                     <div className="bg-zinc-950 p-6 rounded-3xl border border-zinc-850 flex flex-col items-center justify-center relative w-[240px] aspect-square shadow-2xl">
                       {isGeneratingQr ? (
                         <div className="text-center space-y-2">
-                          <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                          <p className="text-[10px] text-zinc-500">Generazione codice QR...</p>
+                          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                          <p className="text-[10px] text-zinc-500">
+                            Generazione codice QR...
+                          </p>
                         </div>
                       ) : whatsAppConnected ? (
-                        <motion.div 
+                        <motion.div
                           initial={{ scale: 0.9, opacity: 0 }}
                           animate={{ scale: 1, opacity: 1 }}
                           className="text-center space-y-3"
@@ -921,30 +1074,38 @@ function Dashboard() {
                             <Check className="w-8 h-8" />
                           </div>
                           <div>
-                            <p className="text-xs font-bold text-white">Agente Attivato! 🎉</p>
-                            <p className="text-[9px] text-zinc-500 mt-0.5">Operativo su WhatsApp Business</p>
+                            <p className="text-xs font-bold text-white">
+                              Agente Attivato! 🎉
+                            </p>
+                            <p className="text-[9px] text-zinc-500 mt-0.5">
+                              Operativo su WhatsApp Business
+                            </p>
                           </div>
                         </motion.div>
                       ) : (
-                        <motion.div 
+                        <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           className="relative"
                         >
-                          <img 
-                            src={qrCodeData || ""} 
-                            alt="WhatsApp Activation QR Code" 
+                          <img
+                            src={qrCodeData || ""}
+                            alt="WhatsApp Activation QR Code"
                             className="w-[180px] h-[180px] rounded-xl bg-white p-2"
                           />
-                          <div className="absolute top-0 left-0 w-full h-[2px] bg-purple-500 shadow shadow-purple-500 animate-bounce" />
+                          <div className="absolute top-0 left-0 w-full h-[2px] bg-blue-500 shadow shadow-blue-500 animate-bounce" />
                         </motion.div>
                       )}
                     </div>
 
                     <div className="mt-4 flex items-center gap-2 text-[10px]">
-                      <span className={`w-2 h-2 rounded-full ${whatsAppConnected ? "bg-emerald-500" : "bg-yellow-500 animate-pulse"}`} />
+                      <span
+                        className={`w-2 h-2 rounded-full ${whatsAppConnected ? "bg-emerald-500" : "bg-yellow-500 animate-pulse"}`}
+                      />
                       <span className="text-zinc-500">
-                        {whatsAppConnected ? "Agente Virtuale Attivo e Pronto" : "In attesa di scansione..."}
+                        {whatsAppConnected
+                          ? "Agente Virtuale Attivo e Pronto"
+                          : "In attesa di scansione..."}
                       </span>
                     </div>
                   </div>
@@ -952,20 +1113,24 @@ function Dashboard() {
 
                 {/* Finish Success screen if connected */}
                 {whatsAppConnected && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="p-6 bg-emerald-950/10 border border-emerald-500/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4"
                   >
                     <div className="text-left">
                       <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-emerald-400 animate-spin" /> Onboarding Completato con Successo!
+                        <Sparkles className="w-4 h-4 text-emerald-400 animate-spin" />{" "}
+                        Configurazione Completato con Successo!
                       </h4>
                       <p className="text-xs text-zinc-400 mt-1">
-                        Il tuo dipendente virtuale <strong>{agentName || "Marco"}</strong> è ora attivo e collegato a Gmail, Google Calendar e Google Drive. Inviali un messaggio per testarlo!
+                        Il tuo dipendente virtuale{" "}
+                        <strong>{agentName || "Marco"}</strong> è ora attivo e
+                        collegato a Gmail, Google Calendar e Google Drive.
+                        Inviali un messaggio per testarlo!
                       </p>
                     </div>
-                    <Link 
+                    <Link
                       to="/"
                       className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shrink-0 transition-all text-center"
                     >
@@ -981,13 +1146,14 @@ function Dashboard() {
                   >
                     <ArrowLeft className="w-4 h-4" /> Indietro
                   </button>
-                  
+
                   {!whatsAppConnected && (
                     <button
                       onClick={() => setWhatsAppConnected(true)}
                       className="px-6 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-850 text-white font-bold text-sm flex items-center gap-2 border border-zinc-850 hover:border-zinc-700 transition-all shadow"
                     >
-                      Simula Scansione Codice <QrCode className="w-4 h-4 text-purple-400" />
+                      Simula Scansione Codice{" "}
+                      <QrCode className="w-4 h-4 text-blue-400" />
                     </button>
                   )}
                 </div>
@@ -1000,12 +1166,24 @@ function Dashboard() {
       {/* Footer */}
       <footer className="border-t border-zinc-900 py-6 px-6 bg-zinc-950">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
-          <p>© 2026 Personale Artificiale. Area Onboarding Cliente Riservata.</p>
+          <p>© 2026 Personale Artificiale. Area riservata.</p>
           <div className="flex gap-4">
-            <Link to="/" className="hover:text-zinc-300 transition-colors">Sito Pubblico</Link>
-            <Link to="/privacy" className="hover:text-zinc-300 transition-colors">Privacy Policy</Link>
+            <a
+              href="https://www.personaleartificiale.it"
+              className="hover:text-zinc-300 transition-colors"
+            >
+              Sito pubblico
+            </a>
+            <a
+              href="https://www.personaleartificiale.it/privacy"
+              className="hover:text-zinc-300 transition-colors"
+            >
+              Privacy
+            </a>
             <span className="text-zinc-850">|</span>
-            <span className="flex items-center gap-1"><Shield className="w-3.5 h-3.5" /> Connessione Crittografata SSL</span>
+            <span className="flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5" /> Connessione Crittografata SSL
+            </span>
           </div>
         </div>
       </footer>

@@ -1,98 +1,143 @@
 import {
   HeadContent,
+  Link,
   Outlet,
   Scripts,
   createRootRoute,
-  Link,
 } from "@tanstack/react-router";
-import { type ReactNode, useState, useEffect } from "react";
-import { Cookie, X, Check, Shield } from "lucide-react";
-
+import { ShieldCheck } from "lucide-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import appCss from "~/styles/app.css?url";
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Personale Artificiale - Dipendenti Virtuali AI per la tua Azienda" },
-      { name: "description", content: "Assumi collaboratori virtuali basati su AI che lavorano direttamente su WhatsApp e Telegram. Collega Gmail, Calendario, CRM, Drive e Trello in pochi minuti." },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+      },
+      { title: "Personale Artificiale | Area riservata" },
+      {
+        name: "description",
+        content:
+          "Configura e gestisci il tuo aiuto digitale Personale Artificiale.",
+      },
+      { name: "theme-color", content: "#05070b" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/png", href: "/logo-pa-transparent.png" },
+      { rel: "apple-touch-icon", href: "/logo-pa-transparent.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" }
+      {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap",
+      },
     ],
   }),
-  notFoundComponent: () => <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-6 text-center">
-    <h1 className="text-3xl font-extrabold mb-2">404 - Pagina non trovata</h1>
-    <p className="text-zinc-400 text-sm mb-6">La risorsa che stai cercando non esiste o è stata spostata.</p>
-    <Link to="/" className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 font-bold text-sm transition-all">Torna alla Home</Link>
-  </div>,
+  notFoundComponent: () => (
+    <div className="pa-page flex min-h-screen flex-col items-center justify-center p-6 text-center">
+      <img
+        src="/logo-pa-transparent.png"
+        alt=""
+        className="mb-5 h-16 w-16 rounded-2xl bg-white object-contain p-1.5"
+      />
+      <h1 className="mb-2 text-3xl font-extrabold">Pagina non trovata</h1>
+      <p className="pa-muted mb-6 text-sm">
+        La pagina che cerchi non è disponibile.
+      </p>
+      <Link to="/" className="pa-button">
+        Torna all’area riservata
+      </Link>
+    </div>
+  ),
   component: RootComponent,
 });
 
 function RootComponent() {
-  const [showBanner, setShowBanner] = useState(false);
+  const [showSheet, setShowSheet] = useState(false);
+  const acceptButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Check if consent has already been given
-    const consent = localStorage.getItem("pa_cookie_consent");
-    if (!consent) {
-      // Delay display slightly for better UX
-      const timer = setTimeout(() => {
-        setShowBanner(true);
-      }, 1500);
-      return () => clearTimeout(timer);
+    if (!localStorage.getItem("pa_cookie_consent")) {
+      const timer = window.setTimeout(() => setShowSheet(true), 500);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
-  const handleAcceptAll = () => {
-    localStorage.setItem("pa_cookie_consent", "all");
-    setShowBanner(false);
-  };
+  useEffect(() => {
+    if (showSheet) acceptButtonRef.current?.focus();
+  }, [showSheet]);
 
-  const handleRejectAll = () => {
+  const closeSheet = () => {
     localStorage.setItem("pa_cookie_consent", "necessary");
-    setShowBanner(false);
+    setShowSheet(false);
   };
 
   return (
     <RootDocument>
       <Outlet />
-
-      {/* Cookie Banner (GDPR compliant) */}
-      {showBanner && (
-        <div className="fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md bg-zinc-900/95 border border-purple-500/20 rounded-2xl p-6 shadow-2xl z-[99999] backdrop-blur-md animate-in slide-in-from-bottom-5 duration-500">
-          <div className="flex items-start gap-4 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
-              <Cookie className="w-5 h-5 animate-pulse" />
+      {showSheet && (
+        <div className="fixed inset-0 z-[100] flex items-end bg-black/70 px-0 sm:p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="app-cookie-title"
+            aria-describedby="app-cookie-description"
+            className="mx-auto max-h-[calc(100dvh-1rem)] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-[#2b3953] bg-[#0d111a] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl sm:p-7"
+          >
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-300">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="app-cookie-title" className="text-lg font-extrabold">
+                  Solo tecnologie necessarie
+                </h2>
+                <p
+                  id="app-cookie-description"
+                  className="pa-muted mt-1 text-sm leading-6"
+                >
+                  Usiamo solo tecnologie necessarie per far funzionare l’area
+                  riservata e ricordare questa scelta. Nessun cookie
+                  pubblicitario.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-                Rispetto della tua Privacy (GDPR)
-              </h4>
-              <p className="text-xs text-zinc-400 leading-relaxed mt-1">
-                Utilizziamo i cookie per migliorare il funzionamento del sito, gestire il checkout di Stripe ed elaborare analisi statistiche anonime. Puoi decidere quali accettare. Consulta la nostra <Link to="/privacy" className="text-purple-400 hover:underline">Privacy Policy</Link> e <Link to="/cookie-policy" className="text-purple-400 hover:underline">Cookie Policy</Link> per maggiori dettagli.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2.5 justify-end">
+            <p className="pa-muted mb-5 text-sm">
+              Leggi la{" "}
+              <a
+                href="https://www.personaleartificiale.it/privacy"
+                onClick={() => setShowSheet(false)}
+                className="text-blue-300 underline"
+              >
+                Privacy
+              </a>{" "}
+              e la{" "}
+              <a
+                href="https://www.personaleartificiale.it/cookie-policy"
+                onClick={() => setShowSheet(false)}
+                className="text-blue-300 underline"
+              >
+                Cookie Policy
+              </a>
+              .
+            </p>
             <button
-              onClick={handleRejectAll}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white border border-zinc-800 hover:bg-zinc-850 transition-all text-center"
+              ref={acceptButtonRef}
+              type="button"
+              onClick={closeSheet}
+              className="pa-button w-full"
             >
-              Solo Necessari
+              Ho capito
             </button>
-            <button
-              onClick={handleAcceptAll}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 shadow shadow-purple-500/10 transition-all text-center"
-            >
-              Accetta Tutti
-            </button>
-          </div>
+          </section>
         </div>
       )}
     </RootDocument>

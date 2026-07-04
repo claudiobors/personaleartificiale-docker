@@ -1,37 +1,188 @@
 @import "tailwindcss";
 
-@layer base {
-  html,
-  body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    scroll-behavior: smooth;
-    @apply bg-zinc-950 text-zinc-100 antialiased;
+:root {
+  color-scheme: dark;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  background: #05070b;
+  color: #f8fafc;
+  --pa-blue: #1557ff;
+  --pa-blue-light: #4d7dff;
+  --pa-surface: #0d111a;
+  --pa-border: #202838;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+  background: #05070b;
+}
+body {
+  margin: 0;
+  min-width: 0;
+  overflow-x: clip;
+  background: #05070b;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input,
+select {
+  touch-action: manipulation;
+}
+:focus-visible {
+  outline: 3px solid #4d7dff;
+  outline-offset: 3px;
+}
+::selection {
+  background: #1557ff;
+  color: white;
+}
+
+.pa-page {
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(
+      circle at 85% 5%,
+      rgba(21, 87, 255, 0.14),
+      transparent 25rem
+    ),
+    #05070b;
+}
+
+.pa-container {
+  width: min(100% - 2rem, 76rem);
+  margin-inline: auto;
+}
+.pa-section {
+  padding-block: clamp(4rem, 8vw, 7rem);
+}
+.pa-card {
+  border: 1px solid var(--pa-border);
+  border-radius: 1.5rem;
+  background: rgba(13, 17, 26, 0.82);
+  box-shadow: 0 1.25rem 4rem rgba(0, 0, 0, 0.22);
+}
+
+.pa-button,
+.pa-button-secondary {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border-radius: 0.85rem;
+  padding: 0.8rem 1.15rem;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+  transition: 180ms ease;
+}
+
+.pa-button {
+  border: 1px solid #1557ff;
+  background: #1557ff;
+  color: white;
+  box-shadow: 0 0.75rem 2.5rem rgba(21, 87, 255, 0.22);
+}
+.pa-button:hover {
+  background: #2b67ff;
+  transform: translateY(-1px);
+}
+.pa-button-secondary {
+  border: 1px solid #344056;
+  background: rgba(13, 17, 26, 0.72);
+  color: #f8fafc;
+}
+.pa-button-secondary:hover {
+  border-color: #4d7dff;
+  background: #111827;
+}
+
+.pa-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(77, 125, 255, 0.38);
+  border-radius: 999px;
+  background: rgba(21, 87, 255, 0.1);
+  padding: 0.45rem 0.75rem;
+  color: #9ab5ff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.pa-title {
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  line-height: 1.02;
+}
+.pa-gradient-text {
+  background: linear-gradient(90deg, #ffffff 0%, #8caaff 58%, #1557ff 100%);
+  background-clip: text;
+  color: transparent;
+}
+.pa-muted {
+  color: #a8b0bf;
+}
+.pa-input {
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid #344056;
+  border-radius: 0.85rem;
+  background: #090d14;
+  padding: 0.75rem 0.9rem;
+  color: white;
+  font-size: 16px;
+}
+.pa-input:focus {
+  border-color: #4d7dff;
+  outline: 3px solid rgba(77, 125, 255, 0.2);
+}
+.pa-glow {
+  position: absolute;
+  width: min(34rem, 80vw);
+  height: min(34rem, 80vw);
+  border-radius: 999px;
+  background: rgba(21, 87, 255, 0.13);
+  filter: blur(7rem);
+  pointer-events: none;
+}
+
+@media (max-width: 639px) {
+  .pa-container {
+    width: min(100% - 1.25rem, 76rem);
   }
-  
-  /* Custom scrollbar */
-  ::-webkit-scrollbar {
-    width: 8px;
+  .pa-section {
+    padding-block: 4rem;
   }
-  ::-webkit-scrollbar-track {
-    background: #09090b; /* zinc-950 */
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #27272a; /* zinc-800 */
-    border-radius: 4px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #3f3f46; /* zinc-700 */
+  .pa-card {
+    border-radius: 1.15rem;
   }
 }
 
-@utility glow-purple {
-  box-shadow: 0 0 40px -5px rgba(168, 85, 247, 0.15);
-}
-
-@utility glow-blue {
-  box-shadow: 0 0 40px -5px rgba(59, 130, 246, 0.15);
-}
-
-@utility text-glow {
-  text-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

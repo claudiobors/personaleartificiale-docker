@@ -1,1006 +1,583 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
-  Check,
-  Zap,
-  Cpu,
-  Mail,
-  Calendar,
-  Folder,
-  MessageSquare,
   ArrowRight,
-  Lock,
-  Database,
-  Shield,
-  Plus,
-  Minus,
-  HelpCircle,
-  Menu,
-  X,
+  CalendarDays,
+  Check,
   ChevronDown,
-  Workflow,
+  Clock3,
   FileText,
-  Brain,
-  Phone,
-  CheckCircle2,
+  FolderCheck,
+  Mail,
+  MessageCircle,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
 } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SiteFooter, SiteHeader } from "~/components/SiteChrome";
 
-// Custom SVG for Trello
-const Trello = (props: any) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-    <rect width="3" height="9" x="7" y="7" rx="1" />
-    <rect width="3" height="5" x="14" y="7" rx="1" />
-  </svg>
-);
+export const Route = createFileRoute("/")({ component: Home });
 
-export const Route = createFileRoute("/")({
-  component: Home,
-});
+type ChatMessage = { id: number; sender: "user" | "agent"; text: string };
 
-// Mock conversations for the interactive WhatsApp simulator
-const CHAT_DEMOS = [
+const demoStart: ChatMessage[] = [
+  { id: 1, sender: "user", text: "Ci sono email importanti stamattina?" },
   {
-    id: "calendar",
-    label: "Organizza Agenda",
-    icon: Calendar,
-    messages: [
-      { sender: "user", text: "Ciao Marco, fissa un incontro con Giulia per domani alle 15:30 e inviale un invito mail." },
-      { sender: "agent", status: "thinking", text: "Analizzo la richiesta e controllo la disponibilità..." },
-      { sender: "agent", status: "acting", text: "📅 Ricerca slot su Google Calendar..." },
-      { sender: "agent", text: "Perfetto! Ho bloccato domani alle 15:30 sul tuo calendario. Invito email inviato con successo a Giulia (giulia@azienda.it). Ho salvato l'evento come 'Allineamento Personale Artificiale'." },
-    ]
+    id: 2,
+    sender: "agent",
+    text: "Ne vedo due da controllare: una richiesta di preventivo e un cambio appuntamento. Vuoi che prepari le risposte?",
   },
-  {
-    id: "email",
-    label: "Triage & Email",
-    icon: Mail,
-    messages: [
-      { sender: "user", text: "Controlla se ci sono email importanti arrivate stamattina e fammi un riassunto veloce." },
-      { sender: "agent", status: "thinking", text: "Accedo alla casella Gmail aziendale..." },
-      { sender: "agent", status: "acting", text: "🔍 Scansione email ricevute nelle ultime 6 ore..." },
-      { sender: "agent", text: "Hai ricevuto 14 email. Solo 1 richiede attenzione immediata:\n\n**Mittente:** Studio Legale Rossi\n**Oggetto:** Firma Contratto MVP\n**Sintesi:** Chiedono se possiamo anticipare la firma a venerdì mattina.\n\nVuoi che risponda proponendo le ore 10:00?" },
-    ]
-  },
-  {
-    id: "document",
-    label: "Archivia Documento",
-    icon: FileText,
-    messages: [
-      { sender: "user", text: "Ti inoltro questa fattura PDF ricevuta dal fornitore. Archiviala in Drive nella cartella corretta e segna la scadenza." },
-      { sender: "agent", status: "thinking", text: "Ricezione file 'fattura-2026-894.pdf'..." },
-      { sender: "agent", status: "acting", text: "📂 Estrazione dati con AI e caricamento in Google Drive..." },
-      { sender: "agent", text: "Ricevuto! Ho estratto i dati:\n• **Fornitore:** CloudTech SRL\n• **Importo:** €1.240,00\n• **Scadenza:** 30/07/2026\n\nFattura archiviata nella cartella 'Acquisti 2026' su Google Drive. Ho anche aggiunto un promemoria sul tuo calendario per la scadenza di pagamento." },
-    ]
-  },
-  {
-    id: "trello",
-    label: "Aggiorna Trello / CRM",
-    icon: Trello,
-    messages: [
-      { sender: "user", text: "Abbiamo chiuso l'accordo con l'azienda SolarFuture! Crea una scheda su Trello per avviare il progetto." },
-      { sender: "agent", status: "thinking", text: "Elaborazione lead e aggiornamento flussi..." },
-      { sender: "agent", status: "acting", text: "📋 Creazione scheda su Trello (Bacheca Clienti)..." },
-      { sender: "agent", text: "Congratulazioni per la firma! 🎉\nHo creato la scheda **'SolarFuture - Kickoff'** nella lista 'In Corso' su Trello. Ho inserito la checklist iniziale, assegnato il project manager e allegato il link del contratto." },
-    ]
-  }
 ];
 
-function Home() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeDemo, setActiveDemo] = useState(CHAT_DEMOS[0]);
-  const [visibleMessages, setVisibleMessages] = useState<any[]>([]);
-  const [msgIndex, setMsgIndex] = useState(0);
-  const [isTyping, setIsTyping] = useState(false);
-  const [faqOpen, setFaqOpen] = useState<number | null>(null);
+const demoContinuation: Omit<ChatMessage, "id">[] = [
+  {
+    sender: "user",
+    text: "Sì, prepara le bozze e sposta l'appuntamento a giovedì.",
+  },
+  {
+    sender: "agent",
+    text: "Fatto. Ho preparato entrambe le bozze e trovato due orari liberi per giovedì. Te li mostro prima di inviare qualsiasi cosa.",
+  },
+];
 
-  // Stripe Checkout Modal States
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"assistente-esecutivo" | "ufficio-digitale">("assistente-esecutivo");
-  const [customerName, setCustomerName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
+function contextualReply(text: string) {
+  const value = text.toLowerCase();
+  if (/email|mail|posta|rispost/.test(value)) {
+    return "Posso filtrare i messaggi, segnalare le priorità e preparare risposte. Prima dell'invio, decidi tu cosa approvare.";
+  }
+  if (/agenda|appuntament|calendar|incontro|riunione/.test(value)) {
+    return "Posso controllare le disponibilità, proporre orari e preparare gli inviti. Ti chiedo conferma prima delle azioni importanti.";
+  }
+  if (/document|fattur|pdf|file|archiv/.test(value)) {
+    return "Posso leggere i documenti, estrarre i dati utili e proporre dove archiviarli, mantenendo tutto ordinato.";
+  }
+  if (/cliente|crm|trello|scheda|avanzament/.test(value)) {
+    return "Posso aggiornare clienti, schede e avanzamenti a partire dai tuoi messaggi, così le informazioni restano allineate.";
+  }
+  return "Possiamo combinare email, agenda, documenti e aggiornamenti in un unico flusso. Dimmi cosa ti porta via più tempo e partiamo da lì.";
+}
 
-  const handleCheckoutOpen = (plan: "assistente-esecutivo" | "ufficio-digitale") => {
-    setSelectedPlan(plan);
-    setCheckoutModalOpen(true);
-  };
+function ChatDemo() {
+  const [messages, setMessages] = useState<ChatMessage[]>(demoStart);
+  const [input, setInput] = useState("");
+  const [automaticStep, setAutomaticStep] = useState(0);
+  const [userHasWritten, setUserHasWritten] = useState(false);
+  const [replying, setReplying] = useState(false);
+  const messageId = useRef(10);
+  const scrollArea = useRef<HTMLDivElement>(null);
 
-  const handleCheckoutSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: selectedPlan, name: customerName, email: customerEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Errore nella creazione della sessione di checkout");
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("Impossibile procedere al pagamento: link mancante.");
-      }
-    } catch (err: any) {
-      setError(err.message || "Errore di rete");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Run simulated chat on active demo change
   useEffect(() => {
-    setVisibleMessages([]);
-    setMsgIndex(0);
-    setIsTyping(false);
-    
-    let timer: any;
-    const loadNextMessage = () => {
-      if (msgIndex < activeDemo.messages.length) {
-        const nextMsg = activeDemo.messages[msgIndex];
-        if (nextMsg.sender === "agent" && (nextMsg.status === "thinking" || nextMsg.status === "acting")) {
-          setIsTyping(true);
-          timer = setTimeout(() => {
-            setVisibleMessages((prev) => [...prev, nextMsg]);
-            setIsTyping(false);
-            setMsgIndex((prev) => prev + 1);
-          }, 1500);
-        } else {
-          setIsTyping(true);
-          timer = setTimeout(() => {
-            setVisibleMessages((prev) => [...prev, nextMsg]);
-            setIsTyping(false);
-            setMsgIndex((prev) => prev + 1);
-          }, 2000);
-        }
-      }
-    };
+    if (userHasWritten || automaticStep >= demoContinuation.length) return;
+    const timer = window.setTimeout(() => {
+      const next = demoContinuation[automaticStep];
+      setMessages((current) => [
+        ...current,
+        { ...next, id: messageId.current++ },
+      ]);
+      setAutomaticStep((step) => step + 1);
+    }, 2400);
+    return () => window.clearTimeout(timer);
+  }, [automaticStep, userHasWritten]);
 
-    loadNextMessage();
-    return () => clearTimeout(timer);
-  }, [activeDemo, msgIndex]);
+  useEffect(() => {
+    const area = scrollArea.current;
+    if (area) area.scrollTo({ top: area.scrollHeight, behavior: "smooth" });
+  }, [messages, replying]);
 
-  const toggleFaq = (index: number) => {
-    setFaqOpen(faqOpen === index ? null : index);
+  const sendMessage = (event: FormEvent) => {
+    event.preventDefault();
+    const text = input.trim();
+    if (!text || replying) return;
+    setUserHasWritten(true);
+    setInput("");
+    setMessages((current) => [
+      ...current,
+      { id: messageId.current++, sender: "user", text },
+    ]);
+    setReplying(true);
+    window.setTimeout(() => {
+      setMessages((current) => [
+        ...current,
+        {
+          id: messageId.current++,
+          sender: "agent",
+          text: contextualReply(text),
+        },
+      ]);
+      setReplying(false);
+    }, 700);
+  };
+
+  const tryExample = (text: string) => {
+    setUserHasWritten(true);
+    setInput(text);
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 overflow-x-hidden selection:bg-purple-500 selection:text-white">
-      
-      {/* Decorative Glow Elements */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-[800px] right-1/4 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[1000px] left-10 w-[400px] h-[400px] bg-purple-900/5 rounded-full blur-[100px] pointer-events-none" />
-
-      {/* Navigation */}
-      <header className="fixed top-0 left-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform duration-300">
-              <Cpu className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-              Personale Artificiale
-            </span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
-            <a href="#come-funziona" className="text-sm text-zinc-400 hover:text-white transition-colors">Come Funziona</a>
-            <a href="#caratteristiche" className="text-sm text-zinc-400 hover:text-white transition-colors">Integrazioni</a>
-            <a href="#prezzi" className="text-sm text-zinc-400 hover:text-white transition-colors">Prezzi</a>
-            <a href="#faq" className="text-sm text-zinc-400 hover:text-white transition-colors">FAQ</a>
-          </nav>
-
-          <div className="hidden md:flex items-center gap-4">
-            <Link 
-              to="/dashboard"
-              className="px-5 py-2.5 rounded-xl text-sm font-medium border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50 transition-all"
-            >
-              Accedi
-            </Link>
-            <a 
-              href="#prezzi"
-              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-300"
-            >
-              Assumi un Agente
-            </a>
+    <div className="mx-auto w-full max-w-[390px] rounded-[2.5rem] border border-slate-700 bg-[#111722] p-2.5 shadow-2xl shadow-blue-950/40">
+      <div className="overflow-hidden rounded-[2rem] border border-white/5 bg-[#e9f0ea]">
+        <div className="flex h-16 items-center gap-3 bg-[#0b1713] px-4 text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white p-1">
+            <img
+              src="/logo-pa-transparent.png"
+              alt=""
+              className="h-full w-full object-contain"
+            />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold">Personale Artificiale</p>
+            <p className="text-[11px] text-emerald-300">pronto ad aiutarti</p>
           </div>
-
-          {/* Mobile Menu Button */}
-          <button 
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
-
-        {/* Mobile Navigation */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="md:hidden absolute top-20 left-0 w-full bg-zinc-950 border-b border-zinc-900 py-6 px-6 flex flex-col gap-5 shadow-2xl"
+        <div
+          ref={scrollArea}
+          className="flex h-[390px] flex-col gap-3 overflow-y-auto overscroll-contain p-3"
+          aria-live="polite"
+        >
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-[13px] leading-5 shadow-sm ${
+                message.sender === "user"
+                  ? "ml-auto rounded-tr-sm bg-[#d7ffc9] text-slate-900"
+                  : "mr-auto rounded-tl-sm bg-white text-slate-900"
+              }`}
             >
-              <a 
-                href="#come-funziona" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-base text-zinc-400 hover:text-white transition-colors"
+              {message.text}
+            </div>
+          ))}
+          {replying && (
+            <div className="mr-auto rounded-2xl rounded-tl-sm bg-white px-4 py-2 text-slate-500">
+              Sto preparando una risposta…
+            </div>
+          )}
+        </div>
+        <div className="border-t border-slate-300 bg-[#f4f6f5] p-2.5">
+          <form onSubmit={sendMessage} className="flex items-center gap-2">
+            <label htmlFor="chat-message" className="sr-only">
+              Scrivi un messaggio nella demo
+            </label>
+            <input
+              id="chat-message"
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+                if (event.target.value) setUserHasWritten(true);
+              }}
+              placeholder="Scrivi un messaggio…"
+              className="h-12 min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-4 text-[16px] text-slate-900 outline-none focus:border-blue-500"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || replying}
+              aria-label="Invia messaggio"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white disabled:opacity-45"
+            >
+              <Send className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </form>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1 text-[11px]">
+            {[
+              "Aiutami con le email",
+              "Organizza un appuntamento",
+              "Archivia una fattura",
+              "Aggiorna un cliente",
+            ].map((text) => (
+              <button
+                key={text}
+                type="button"
+                onClick={() => tryExample(text)}
+                className="min-h-11 shrink-0 rounded-full border border-slate-300 bg-white px-3 font-semibold text-slate-700"
               >
-                Come Funziona
-              </a>
-              <a 
-                href="#caratteristiche" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-base text-zinc-400 hover:text-white transition-colors"
-              >
-                Integrazioni
-              </a>
-              <a 
-                href="#prezzi" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-base text-zinc-400 hover:text-white transition-colors"
-              >
-                Prezzi
-              </a>
-              <a 
-                href="#faq" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-base text-zinc-400 hover:text-white transition-colors"
-              >
-                FAQ
-              </a>
-              <div className="h-[1px] bg-zinc-900 my-2" />
-              <div className="flex flex-col gap-3">
-                <Link 
-                  to="/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-3 rounded-xl text-sm font-medium border border-zinc-800 hover:bg-zinc-900 transition-all"
-                >
-                  Accedi
+                {text}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const featureCards = [
+  {
+    icon: Mail,
+    title: "Ti aiuta con le email.",
+    text: "Separa le priorità, riassume i messaggi e prepara risposte da controllare.",
+  },
+  {
+    icon: CalendarDays,
+    title: "Organizza l’agenda.",
+    text: "Controlla le disponibilità, propone orari e prepara inviti e promemoria.",
+  },
+  {
+    icon: FolderCheck,
+    title: "Mette in ordine i documenti.",
+    text: "Legge i file, raccoglie i dati utili e li archivia seguendo le tue regole.",
+  },
+  {
+    icon: UsersRound,
+    title: "Aggiorna clienti e attività.",
+    text: "Tiene allineate schede, elenchi e avanzamenti partendo dalle tue istruzioni.",
+  },
+  {
+    icon: FileText,
+    title: "Impara dai tuoi documenti.",
+    text: "Usa listini, procedure e materiali che scegli tu per darti risposte più pertinenti.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Sei tu a decidere cosa può fare.",
+    text: "Stabilisci permessi, conferme e limiti. Le decisioni importanti restano tue.",
+  },
+];
+
+const included = [
+  "server e VPS",
+  "hosting e infrastruttura",
+  "accesso ai modelli di intelligenza artificiale",
+  "token e consumi previsti dal piano",
+  "manutenzione tecnica",
+  "correzioni e continuità del servizio",
+  "aggiornamenti periodici",
+  "nuove funzioni disponibili per il piano",
+];
+
+const plans = [
+  {
+    name: "Assistente",
+    audience: "Per professionisti e piccole attività",
+    price: "97 €",
+    initialCost: "Configurazione iniziale: 399 € una tantum",
+    features: [
+      "Un aiuto configurato sulle tue priorità",
+      "Email, agenda e documenti",
+      "Uso tramite WhatsApp o chat",
+      "Infrastruttura, modelli di intelligenza artificiale, token, manutenzione e aggiornamenti inclusi",
+    ],
+  },
+  {
+    name: "Ufficio Digitale",
+    audience: "Per studi e gruppi di lavoro",
+    price: "297 €",
+    initialCost: "Configurazione iniziale: 999 € una tantum",
+    features: [
+      "Più attività coordinate nello stesso servizio",
+      "Email, agenda, documenti e aggiornamenti clienti",
+      "Regole e documenti condivisi",
+      "Infrastruttura, modelli di intelligenza artificiale, token, manutenzione e aggiornamenti inclusi",
+    ],
+  },
+  {
+    name: "Su misura",
+    audience: "Per esigenze e processi più articolati",
+    price: "Preventivo",
+    initialCost: "Configurazione iniziale definita nel preventivo",
+    features: [
+      "Flussi costruiti sulle procedure aziendali",
+      "Collegamenti con gli strumenti già usati",
+      "Permessi e controlli personalizzati",
+      "Infrastruttura, modelli di intelligenza artificiale, token, manutenzione e aggiornamenti inclusi",
+    ],
+  },
+];
+
+const faqs = [
+  {
+    q: "Devo essere esperto di tecnologia?",
+    a: "No. Usi il servizio scrivendo in chat come faresti con un collaboratore. La preparazione tecnica viene gestita per te.",
+  },
+  {
+    q: "Cosa è compreso nel canone?",
+    a: "Per l’utilizzo previsto dal piano sono compresi server, infrastruttura, accesso ai modelli di intelligenza artificiale, token, manutenzione, correzioni, continuità del servizio e aggiornamenti. Non devi aprire account tecnici o pagare fatture separate per questi elementi.",
+  },
+  {
+    q: "Il servizio agisce senza chiedere?",
+    a: "Decidi tu permessi e regole. Può preparare un’azione e chiederti conferma prima di completarla, soprattutto quando è importante.",
+  },
+  {
+    q: "Quanto tempo posso recuperare?",
+    a: "Dipende dalle attività e dal modo in cui lavori. Il calcolatore fornisce una stima indicativa, non una promessa di risultato.",
+  },
+  {
+    q: "Il costo iniziale è incluso nel canone?",
+    a: "No. Quando previsto, il costo di configurazione iniziale è mostrato separatamente dal canone mensile.",
+  },
+];
+
+function Home() {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  return (
+    <div className="pa-page">
+      <SiteHeader />
+      <main>
+        <section className="relative overflow-hidden pb-20 pt-32 sm:pt-40 lg:pb-28">
+          <div className="pa-glow -right-40 top-10" />
+          <div className="pa-container relative grid items-center gap-14 lg:grid-cols-[1.15fr_0.85fr]">
+            <div>
+              <span className="pa-kicker">
+                <Sparkles className="h-3.5 w-3.5" /> Aiuto concreto, in chat
+              </span>
+              <h1 className="pa-title mt-6 max-w-4xl">
+                Un aiuto concreto che ti restituisce{" "}
+                <span className="pa-gradient-text">ore ogni settimana.</span> Tu
+                resti al comando.
+              </h1>
+              <p className="pa-muted mt-6 max-w-2xl text-lg leading-8">
+                Personale Artificiale riceve istruzioni in chat come un
+                collaboratore. Ti aiuta con email, appuntamenti, documenti e
+                aggiornamenti, mentre tu mantieni il controllo.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link to="/calcolatore" className="pa-button">
+                  Calcola le ore che puoi liberare{" "}
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-                <a 
-                  href="#prezzi"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-3 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-blue-500 text-white transition-all"
-                >
-                  Assumi un Agente
+                <a href="#cosa-fa" className="pa-button-secondary">
+                  Scopri come ti aiuta
                 </a>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </header>
-
-      {/* Hero Section */}
-      <section className="pt-32 pb-24 md:pt-40 md:pb-32 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-          
-          {/* Hero Left */}
-          <div className="lg:col-span-7 flex flex-col items-start text-left">
-            <motion.div 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-6 uppercase tracking-wider"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-              La Rivoluzione del Lavoro Digitale
-            </motion.div>
-
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-[1.1] mb-6"
-            >
-              Assumi il tuo primo{" "}
-              <span className="bg-gradient-to-r from-purple-400 via-purple-500 to-blue-400 bg-clip-text text-transparent">
-                Dipendente Virtuale
-              </span>{" "}
-              su WhatsApp
-            </motion.h1>
-
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg text-zinc-400 mb-10 max-w-2xl leading-relaxed"
-            >
-              Operativi h24, con zero curva di apprendimento. Comunica a voce o via testo proprio come faresti con un collaboratore umano. L'AI gestisce le tue email, organizza il calendario, aggiorna il CRM e archivia file su Drive. **Risparmia fino a mezza giornata di lavoro al giorno.**
-            </motion.p>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto"
-            >
-              <a 
-                href="#prezzi"
-                className="px-8 py-4 rounded-xl text-base font-semibold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white shadow-xl shadow-purple-500/20 hover:shadow-purple-500/30 flex items-center justify-center gap-2.5 transition-all duration-300 group"
-              >
-                Inizia Ora
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </a>
-              <a 
-                href="#come-funziona"
-                className="px-8 py-4 rounded-xl text-base font-medium border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50 flex items-center justify-center gap-2 transition-all"
-              >
-                Come funziona
-              </a>
-            </motion.div>
-
-            {/* Quick trust metrics */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 0.5 }}
-              className="grid grid-cols-3 gap-8 mt-12 pt-8 border-t border-zinc-900 w-full max-w-md"
-            >
-              <div>
-                <p className="text-2xl font-bold text-white">15 Min</p>
-                <p className="text-xs text-zinc-500 uppercase font-semibold mt-1">Tempo di attivazione</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">4.5 Ore</p>
-                <p className="text-xs text-zinc-500 uppercase font-semibold mt-1">Risparmiate al giorno</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">Zero</p>
-                <p className="text-xs text-zinc-500 uppercase font-semibold mt-1">Software da imparare</p>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Hero Right - Interactive Mobile Emulator */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8 }}
-            className="lg:col-span-5 flex flex-col items-center justify-center"
-          >
-            {/* Phone Frame */}
-            <div className="w-full max-w-[360px] aspect-[9/19] rounded-[48px] bg-zinc-900 p-3.5 border-4 border-zinc-800 shadow-2xl relative ring-1 ring-white/10 glow-purple">
-              {/* Speaker & Sensor Notch */}
-              <div className="absolute top-0 left-1/2 transform -translate-x-1/2 h-5 w-32 bg-zinc-900 rounded-b-2xl z-20 flex items-center justify-center">
-                <div className="w-12 h-1 bg-zinc-800 rounded-full mb-1" />
-              </div>
-
-              {/* Screen Inner */}
-              <div className="w-full h-full rounded-[38px] bg-zinc-950 overflow-hidden relative flex flex-col">
-                
-                {/* Chat App Header */}
-                <div className="bg-zinc-900/95 border-b border-zinc-850 px-4 pt-6 pb-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs shadow">
-                      PA
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-zinc-200">Personale Artificiale</h4>
-                      <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                        <span className="text-[10px] text-zinc-400">Online • Agente Attivo</span>
-                      </div>
-                    </div>
+              <div className="mt-8 grid max-w-2xl grid-cols-1 gap-3 min-[430px]:grid-cols-3">
+                {[
+                  ["Una chat", "per dare istruzioni"],
+                  ["Più tempo", "per il lavoro importante"],
+                  ["Tu decidi", "permessi e conferme"],
+                ].map(([value, label]) => (
+                  <div
+                    key={value}
+                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                  >
+                    <p className="font-extrabold text-white">{value}</p>
+                    <p className="mt-1 text-xs text-slate-400">{label}</p>
                   </div>
-                  <Phone className="w-4 h-4 text-zinc-400" />
-                </div>
-
-                {/* Chat Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs flex flex-col justify-end">
-                  
-                  {/* System greeting */}
-                  <div className="text-center text-[10px] text-zinc-500 py-1 bg-zinc-900/40 rounded-lg mx-6 mb-2">
-                    🔒 Chat crittografata con WhatsApp Business API
-                  </div>
-
-                  {visibleMessages.map((msg, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`flex flex-col max-w-[85%] ${msg.sender === "user" ? "self-end items-end" : "self-start items-start"}`}
-                    >
-                      <div 
-                        className={`p-3 rounded-2xl ${
-                          msg.sender === "user" 
-                            ? "bg-purple-600 text-white rounded-tr-none" 
-                            : msg.status === "thinking" 
-                            ? "bg-zinc-900 text-purple-300 italic border border-purple-950 rounded-tl-none animate-pulse"
-                            : msg.status === "acting"
-                            ? "bg-blue-950 text-blue-300 font-medium border border-blue-900 rounded-tl-none"
-                            : "bg-zinc-900 text-zinc-200 border border-zinc-800 rounded-tl-none"
-                        }`}
-                        style={{ whiteSpace: "pre-line" }}
-                      >
-                        {msg.text}
-                      </div>
-                      <span className="text-[9px] text-zinc-500 mt-1 px-1">
-                        {msg.sender === "user" ? "Tu" : "Agente AI"}
-                      </span>
-                    </div>
-                  ))}
-
-                  {/* Typing Indicator */}
-                  {isTyping && (
-                    <div className="bg-zinc-900 text-zinc-400 border border-zinc-800 p-3 rounded-2xl rounded-tl-none self-start flex items-center gap-1 max-w-[80%] animate-pulse">
-                      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                    </div>
-                  )}
-                </div>
-
-                {/* Simulated Input */}
-                <div className="p-3 bg-zinc-900/90 border-t border-zinc-850 flex items-center gap-2">
-                  <div className="flex-1 bg-zinc-950 rounded-full px-3 py-2 text-[11px] text-zinc-500 border border-zinc-850">
-                    Messaggio...
-                  </div>
-                  <div className="w-7 h-7 rounded-full bg-purple-600 flex items-center justify-center text-white">
-                    <MessageSquare className="w-3.5 h-3.5" />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
+            <ChatDemo />
+          </div>
+        </section>
 
-            {/* Quick Select Buttons */}
-            <div className="mt-8 flex flex-wrap justify-center gap-2 max-w-sm">
-              {CHAT_DEMOS.map((demo) => {
-                const IconComp = demo.icon;
-                return (
-                  <button
-                    key={demo.id}
-                    onClick={() => setActiveDemo(demo)}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all duration-300 ${
-                      activeDemo.id === demo.id
-                        ? "bg-purple-600/20 border-purple-500 text-purple-300 shadow-md shadow-purple-500/10"
-                        : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
-                    }`}
+        <section
+          id="come-funziona"
+          className="pa-section border-y border-white/10 bg-white/[0.02]"
+        >
+          <div className="pa-container">
+            <div className="max-w-2xl">
+              <span className="pa-kicker">Tre passaggi</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Semplice da iniziare, naturale da usare.
+              </h2>
+            </div>
+            <div className="mt-12 grid gap-5 md:grid-cols-3">
+              {[
+                [
+                  "1",
+                  "Scegli cosa delegare.",
+                  "Partiamo dalle attività ripetitive che assorbono più tempo.",
+                ],
+                [
+                  "2",
+                  "Prepariamo il servizio sul tuo modo di lavorare.",
+                  "Impostiamo regole, documenti e conferme insieme a te.",
+                ],
+                [
+                  "3",
+                  "Cominci a usarlo in chat.",
+                  "Scrivi o invia un vocale per assegnare un’attività, proprio come fai ogni giorno.",
+                ],
+              ].map(([number, title, text]) => (
+                <article key={number} className="pa-card p-6">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 font-extrabold">
+                    {number}
+                  </span>
+                  <h3 className="mt-5 text-xl font-extrabold">{title}</h3>
+                  <p className="pa-muted mt-3 text-sm leading-6">{text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="cosa-fa" className="pa-section">
+          <div className="pa-container">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="pa-kicker">Nel lavoro di ogni giorno</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Meno rincorse. Più tempo utile.
+              </h2>
+              <p className="pa-muted mt-4 text-lg">
+                Cominci da ciò che ti serve davvero e aggiungi nuove attività
+                quando vuoi.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {featureCards.map(({ icon: Icon, title, text }) => (
+                <article key={title} className="pa-card p-6">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-blue-500/25 bg-blue-500/10 text-blue-300">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <h3 className="mt-5 text-lg font-extrabold">{title}</h3>
+                  <p className="pa-muted mt-2 text-sm leading-6">{text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="pa-section border-y border-blue-500/15 bg-blue-600/[0.07]">
+          <div className="pa-container grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <span className="pa-kicker">Canone tutto incluso</span>
+              <h2 className="mt-5 text-4xl font-extrabold tracking-tight sm:text-5xl">
+                Non devi comprare nient’altro.
+              </h2>
+              <p className="mt-5 text-lg font-bold text-white">
+                Tu paghi il piano scelto. Alla tecnologia pensiamo noi.
+              </p>
+              <p className="pa-muted mt-3 leading-7">
+                Per l’utilizzo previsto dal piano non servono account tecnici né
+                fatture separate da altri fornitori.
+              </p>
+              <a href="#prezzi" className="pa-button mt-7">
+                Scopri il canone tutto incluso
+              </a>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {included.map((item) => (
+                <li
+                  key={item}
+                  className="flex min-h-14 items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-4 text-sm font-semibold"
+                >
+                  <Check
+                    className="h-5 w-5 shrink-0 text-blue-300"
+                    aria-hidden="true"
+                  />{" "}
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section id="prezzi" className="pa-section">
+          <div className="pa-container">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="pa-kicker">Piani separati, scelta tua</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Confronta e scegli con calma.
+              </h2>
+              <p className="pa-muted mt-5 leading-7">
+                Ogni canone include infrastruttura, modelli di intelligenza
+                artificiale, token e consumi previsti, manutenzione e
+                aggiornamenti. L’eventuale configurazione iniziale è indicata a
+                parte.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-6 lg:grid-cols-3">
+              {plans.map((plan) => (
+                <article
+                  key={plan.name}
+                  className="pa-card flex flex-col p-6 sm:p-7"
+                >
+                  <div>
+                    <h3 className="text-2xl font-extrabold">{plan.name}</h3>
+                    <p className="pa-muted mt-2 text-sm">{plan.audience}</p>
+                    <p className="mt-7 text-4xl font-extrabold">{plan.price}</p>
+                    {plan.price !== "Preventivo" && (
+                      <p className="mt-1 text-sm text-slate-400">al mese</p>
+                    )}
+                    <p className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/10 p-3 text-sm font-semibold text-blue-200">
+                      {plan.initialCost}
+                    </p>
+                    <ul className="mt-6 space-y-4">
+                      {plan.features.map((feature) => (
+                        <li
+                          key={feature}
+                          className="flex gap-3 text-sm leading-6 text-slate-300"
+                        >
+                          <Check className="mt-0.5 h-5 w-5 shrink-0 text-blue-300" />{" "}
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <a
+                    href={`mailto:info@personaleartificiale.it?subject=Informazioni%20piano%20${encodeURIComponent(plan.name)}`}
+                    className="pa-button-secondary mt-8 w-full"
                   >
-                    <IconComp className="w-3.5 h-3.5" />
-                    {demo.label}
-                  </button>
+                    Chiedi informazioni
+                  </a>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="faq"
+          className="pa-section border-t border-white/10 bg-white/[0.02]"
+        >
+          <div className="pa-container max-w-4xl">
+            <div className="text-center">
+              <span className="pa-kicker">Domande frequenti</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Risposte chiare, senza gergo.
+              </h2>
+            </div>
+            <div className="mt-10 space-y-3">
+              {faqs.map((item, index) => {
+                const open = openFaq === index;
+                return (
+                  <div key={item.q} className="pa-card overflow-hidden">
+                    <button
+                      type="button"
+                      className="flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left font-bold sm:px-6"
+                      aria-expanded={open}
+                      aria-controls={`faq-${index}`}
+                      onClick={() => setOpenFaq(open ? null : index)}
+                    >
+                      <span>{item.q}</span>
+                      <ChevronDown
+                        className={`h-5 w-5 shrink-0 text-blue-300 transition ${open ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                    {open && (
+                      <p
+                        id={`faq-${index}`}
+                        className="pa-muted border-t border-white/10 px-5 py-5 text-sm leading-7 sm:px-6"
+                      >
+                        {item.a}
+                      </p>
+                    )}
+                  </div>
                 );
               })}
             </div>
-          </motion.div>
-
-        </div>
-      </section>
-
-      {/* Trust Banner (Integrazioni) */}
-      <section className="py-12 border-t border-b border-zinc-900 bg-zinc-950/50">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-xs uppercase font-semibold tracking-widest text-zinc-500 mb-8">
-            Si collega all'istante con i tuoi strumenti di lavoro quotidiano
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-300">
-            <span className="text-sm font-bold tracking-wider text-white flex items-center gap-2">
-              <Mail className="w-4 h-4 text-red-400" /> Gmail
-            </span>
-            <span className="text-sm font-bold tracking-wider text-white flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-blue-400" /> Google Calendar
-            </span>
-            <span className="text-sm font-bold tracking-wider text-white flex items-center gap-2">
-              <Folder className="w-4 h-4 text-yellow-500" /> Google Drive
-            </span>
-            <span className="text-sm font-bold tracking-wider text-white flex items-center gap-2">
-              <Trello className="w-4 h-4 text-blue-500" /> Trello
-            </span>
-            <span className="text-sm font-bold tracking-wider text-white flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-green-500" /> WhatsApp
-            </span>
-            <span className="text-sm font-bold tracking-wider text-white flex items-center gap-2">
-              <Brain className="w-4 h-4 text-purple-500" /> Telegram
-            </span>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Come Funziona - Onboarding Zero-Touch */}
-      <section id="come-funziona" className="py-24 md:py-32 px-6">
-        <div className="max-w-5xl mx-auto text-center">
-          
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold mb-6 uppercase tracking-wider">
-            Onboarding Fulmineo
-          </div>
-          
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 tracking-tight">
-            Pronto a lavorare in 3 semplici passi
-          </h2>
-          <p className="text-zinc-400 text-lg mb-20 max-w-2xl mx-auto">
-            Nessuna programmazione, nessuna configurazione server. Scegli un piano, inserisci i file di conoscenza ed inquadra il codice QR.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative">
-            {/* Connecting line */}
-            <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-[2px] bg-gradient-to-r from-purple-500/50 to-blue-500/50 -z-10" />
-
-            {/* Step 1 */}
-            <div className="flex flex-col items-center bg-zinc-900/40 border border-zinc-900 rounded-3xl p-8 relative hover:border-purple-500/20 transition-all duration-300 group">
-              <div className="absolute -top-5 w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-sm text-purple-400 group-hover:scale-110 transition-transform">
-                1
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center mb-6">
-                <Lock className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-lg font-bold text-zinc-100 mb-3">Scegli e Acquista</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Completa l'acquisto sicuro con Stripe. Verrai reindirizzato all'istante sulla dashboard utente.
+        <section className="pa-section">
+          <div className="pa-container">
+            <div className="pa-card relative overflow-hidden border-blue-500/25 p-7 text-center sm:p-12">
+              <div className="pa-glow -right-40 -top-40" />
+              <MessageCircle className="relative mx-auto h-10 w-10 text-blue-300" />
+              <h2 className="relative mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Quanto tempo potresti recuperare?
+              </h2>
+              <p className="pa-muted relative mx-auto mt-4 max-w-2xl">
+                Inserisci pochi dati e ottieni una stima indicativa basata sulle
+                tue attività ripetitive.
               </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="flex flex-col items-center bg-zinc-900/40 border border-zinc-900 rounded-3xl p-8 relative hover:border-blue-500/20 transition-all duration-300 group">
-              <div className="absolute -top-5 w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-sm text-blue-400 group-hover:scale-110 transition-transform">
-                2
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center mb-6">
-                <Brain className="w-6 h-6 text-blue-400" />
-              </div>
-              <h3 className="text-lg font-bold text-zinc-100 mb-3">Configura & Allena</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Seleziona il tono di voce e carica PDF (listini, FAQ, cataloghi) per formare l'AI sul tuo business.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex flex-col items-center bg-zinc-900/40 border border-zinc-900 rounded-3xl p-8 relative hover:border-purple-500/20 transition-all duration-300 group">
-              <div className="absolute -top-5 w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-sm text-purple-400 group-hover:scale-110 transition-transform">
-                3
-              </div>
-              <div className="w-16 h-16 rounded-2xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center mb-6">
-                <Zap className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-lg font-bold text-zinc-100 mb-3">Scansiona e Attiva</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Inquadra il codice QR con WhatsApp per collegare l'agente. Da questo momento è operativo h24.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* Caratteristiche / Integrazioni - Futuristic grid */}
-      <section id="caratteristiche" className="py-24 bg-zinc-900/30 border-t border-b border-zinc-900 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-6 uppercase tracking-wider">
-              Cosa Può Fare Per Te
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 tracking-tight">
-              Un assistente completo per liberare il tuo tempo
-            </h2>
-            <p className="text-zinc-400 text-lg leading-relaxed">
-              Il tuo dipendente virtuale non si limita a rispondere: agisce direttamente sui tuoi applicativi, automatizzando i flussi quotidiani ripetitivi.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            
-            {/* Feat 1 */}
-            <div className="bg-zinc-900/50 border border-zinc-850 rounded-3xl p-8 hover:border-purple-500/20 hover:bg-zinc-900 transition-all duration-300">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-6 text-purple-400">
-                <Mail className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-3">Triage & Gestione Email</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Filtra la posta in arrivo, individua le priorità urgenti, scrive bozze di risposta professionali e ti aggiorna via chat sulle novità.
-              </p>
-            </div>
-
-            {/* Feat 2 */}
-            <div className="bg-zinc-900/50 border border-zinc-850 rounded-3xl p-8 hover:border-purple-500/20 hover:bg-zinc-900 transition-all duration-300">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-6 text-purple-400">
-                <Calendar className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-3">Pianificazione Agenda</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Gestisce prenotazioni, fissa riunioni di allineamento su Google Calendar, invia inviti email automatici ed evita conflitti di orari.
-              </p>
-            </div>
-
-            {/* Feat 3 */}
-            <div className="bg-zinc-900/50 border border-zinc-850 rounded-3xl p-8 hover:border-purple-500/20 hover:bg-zinc-900 transition-all duration-300">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-6 text-purple-400">
-                <Folder className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-3">Archiviazione Intelligente</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Inoltra file, fatture o PDF via WhatsApp. L'agente li analizza, estrae i dati chiave e li cataloga con ordine su Google Drive.
-              </p>
-            </div>
-
-            {/* Feat 4 */}
-            <div className="bg-zinc-900/50 border border-zinc-850 rounded-3xl p-8 hover:border-blue-500/20 hover:bg-zinc-900 transition-all duration-300">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-6 text-blue-400">
-                <Trello className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-3">Aggiornamento CRM & Trello</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Monitora lo stato di avanzamento delle attività, crea e muove schede su Trello o Asana, e aggiorna i dettagli dei clienti sul CRM aziendale.
-              </p>
-            </div>
-
-            {/* Feat 5 */}
-            <div className="bg-zinc-900/50 border border-zinc-850 rounded-3xl p-8 hover:border-blue-500/20 hover:bg-zinc-900 transition-all duration-300">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-6 text-blue-400">
-                <Database className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-3">Memoria e Conoscenza RAG</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Carica listini prezzi e file PDF. Grazie al sistema di memoria RAG a lungo termine, l'AI risponde con estrema precisione basandosi sui tuoi dati.
-              </p>
-            </div>
-
-            {/* Feat 6 */}
-            <div className="bg-zinc-900/50 border border-zinc-850 rounded-3xl p-8 hover:border-blue-500/20 hover:bg-zinc-900 transition-all duration-300">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-6 text-blue-400">
-                <Shield className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-3">Massima Sicurezza e Privacy</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Integrazioni certificate OAuth 2.0. I dati aziendali e della chat sono crittografati e protetti, senza rivendita a terze parti.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="prezzi" className="py-24 md:py-32 px-6 relative">
-        <div className="max-w-7xl mx-auto">
-          
-          <div className="text-center max-w-3xl mx-auto mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-6 uppercase tracking-wider">
-              Piani Semplici, Senza Sorprese
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 tracking-tight text-white">
-              Scegli il livello del tuo collaboratore AI
-            </h2>
-            <p className="text-zinc-400 text-lg leading-relaxed">
-              Tutti i piani includono un periodo di attivazione assistito. Prezzi trasparenti con setup una tantum + abbonamento mensile.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 items-stretch">
-            
-            {/* Plan 1 */}
-            <div className="bg-zinc-900/40 border border-zinc-850 rounded-3xl p-8 flex flex-col justify-between hover:border-zinc-750 transition-all relative">
-              <div>
-                <h3 className="text-xl font-bold text-zinc-200 mb-2">Assistente Esecutivo</h3>
-                <p className="text-zinc-500 text-xs mb-6">Ideale per Freelance, Artigiani e Professionisti.</p>
-                
-                <div className="border-b border-zinc-850 pb-6 mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-white">€97</span>
-                    <span className="text-zinc-500 text-sm font-medium">/ mese</span>
-                  </div>
-                  <div className="text-xs text-purple-400 font-semibold mt-1">
-                    + €399 costo di setup iniziale
-                  </div>
-                </div>
-
-                <ul className="space-y-4 mb-8 text-sm text-zinc-300">
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span><strong>1 Agente Virtuale</strong> dedicato</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>Integrazione Google Calendar & Gmail</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>Archiviazione Documenti Drive</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>Connessione WhatsApp o Telegram</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-zinc-500">
-                    <Minus className="w-5 h-5 shrink-0 mt-0.5" />
-                    <span>Memoria RAG (knowledge base PDF)</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-zinc-500">
-                    <Minus className="w-5 h-5 shrink-0 mt-0.5" />
-                    <span>Supporto prioritario 1-to-1</span>
-                  </li>
-                </ul>
-              </div>
-
-              <Link 
-                to="/dashboard" 
-                search={{ plan: "executive" }}
-                className="w-full text-center py-3.5 px-4 rounded-xl text-sm font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-all shadow-md"
-              >
-                Inizia Ora
+              <Link to="/calcolatore" className="pa-button relative mt-7">
+                Calcola le ore che puoi liberare <Clock3 className="h-4 w-4" />
               </Link>
             </div>
-
-            {/* Plan 2 - Best Seller */}
-            <div className="bg-zinc-900/60 border-2 border-purple-500 rounded-3xl p-8 flex flex-col justify-between hover:scale-[1.02] transition-all relative shadow-xl shadow-purple-500/5 glow-purple">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow">
-                Il Più Popolare 🔥
-              </div>
-              
-              <div>
-                <h3 className="text-2xl font-bold text-white mb-2 mt-2">L'Ufficio Digitale</h3>
-                <p className="text-purple-300 text-xs mb-6 font-medium">Ottimo per PMI, Agenzie, Studi Professionali.</p>
-                
-                <div className="border-b border-zinc-850 pb-6 mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-5xl font-extrabold text-white">€297</span>
-                    <span className="text-zinc-400 text-sm font-medium">/ mese</span>
-                  </div>
-                  <div className="text-sm text-purple-400 font-bold mt-1">
-                    + €999 costo di setup iniziale
-                  </div>
-                </div>
-
-                <ul className="space-y-4 mb-8 text-sm text-zinc-200">
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                    <span><strong>Fino a 3 Agenti Cooperatori</strong></span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                    <span>Integrazione Google Workspace completa</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                    <span>Integrazione Trello, Asana & CRM</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                    <span>Connessione WhatsApp + Telegram</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                    <span><strong>Memoria RAG & caricamento PDF</strong> (Allena l'AI)</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                    <span>Supporto prioritario e Setup guidato</span>
-                  </li>
-                </ul>
-              </div>
-
-              <Link 
-                to="/dashboard" 
-                search={{ plan: "digital-office" }}
-                className="w-full text-center py-4 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white transition-all shadow-lg shadow-purple-500/20"
-              >
-                Inizia Setup Assistito
-              </Link>
-            </div>
-
-            {/* Plan 3 */}
-            <div className="bg-zinc-900/40 border border-zinc-850 rounded-3xl p-8 flex flex-col justify-between hover:border-zinc-750 transition-all relative">
-              <div>
-                <h3 className="text-xl font-bold text-zinc-200 mb-2">Enterprise</h3>
-                <p className="text-zinc-500 text-xs mb-6">Per aziende strutturate con flussi ed ERP personalizzati.</p>
-                
-                <div className="border-b border-zinc-850 pb-6 mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-medium text-zinc-400">Canone personalizzato</span>
-                    <span className="text-2xl font-bold text-white">~€500</span>
-                    <span className="text-zinc-500 text-xs">/mo</span>
-                  </div>
-                  <div className="text-xs text-purple-400 font-semibold mt-1">
-                    Setup personalizzato a partire da €3.500
-                  </div>
-                </div>
-
-                <ul className="space-y-4 mb-8 text-sm text-zinc-300">
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span><strong>Agenti Virtuali Illimitati</strong></span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>Integrazioni ERP, Database e CRM aziendali (Hubspot, Salesforce, SAP)</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>Knowledge Base custom integrata</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>Hosting dedicato su server privato</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>SLA di risposta e supporto 24/7 dedicato</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
-                    <span>Sviluppo di strumenti su misura</span>
-                  </li>
-                </ul>
-              </div>
-
-              <Link 
-                to="/dashboard" 
-                search={{ plan: "enterprise" }}
-                className="w-full text-center py-3.5 px-4 rounded-xl text-sm font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-all shadow-md"
-              >
-                Contatta per Preventivo
-              </Link>
-            </div>
-
           </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section id="faq" className="py-24 md:py-32 bg-zinc-900/10 border-t border-zinc-900 px-6">
-        <div className="max-w-4xl mx-auto">
-          
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold mb-6 uppercase tracking-wider">
-              Domande Frequenti
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 tracking-tight">
-              Hai domande? Abbiamo risposte
-            </h2>
-            <p className="text-zinc-400 text-base max-w-lg mx-auto">
-              Ecco le risposte ad alcune delle domande più comuni che i nostri clienti ci rivolgono prima di iniziare.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              {
-                q: "Come fa il Dipendente Virtuale ad accedere ai miei dati aziendali?",
-                a: "L'accesso avviene in modo completamente sicuro tramite OAuth 2.0 (l'autenticazione ufficiale Google). Tu decidi quali strumenti collegare. L'AI leggerà solo ciò che è necessario per eseguire i tuoi ordini e i dati non verranno mai usati per addestrare modelli esterni."
-              },
-              {
-                q: "Devo configurare un nuovo numero di telefono?",
-                a: "No! Puoi utilizzare il tuo numero di telefono aziendale WhatsApp o Telegram esistente. L'attivazione richiede solo la scansione di un codice QR tramite la dashboard, esattamente come faresti per collegare WhatsApp Web."
-              },
-              {
-                q: "Qual è la precisione dell'AI? Risponde in modo corretto?",
-                a: "La precisione è estremamente elevata perché integriamo la tecnologia RAG (Retrieval-Augmented Generation). Caricando i tuoi listini, cataloghi o FAQ in PDF, l'agente risponderà attenendosi esclusivamente a quelle informazioni. Se una domanda esula dalle sue conoscenze, ti inoltrerà la conversazione chiedendoti istruzioni."
-              },
-              {
-                q: "Quanto tempo richiede la configurazione?",
-                a: "L'attivazione tecnica richiede meno di 15 minuti. Una volta effettuato il pagamento, la nostra dashboard ti guiderà passo-passo nel setup del tono di voce, caricamento PDF, autorizzazione Google e scansione QR code. Sarà pronto all'istante."
-              },
-              {
-                q: "È previsto un contratto di vincolo temporale?",
-                a: "Nessun vincolo! Puoi decidere di disattivare l'abbonamento mensile in qualsiasi momento direttamente dalla tua area clienti. Il setup iniziale copre il nostro affiancamento dedicato e l'attivazione dell'infrastruttura di memoria."
-              }
-            ].map((item, idx) => (
-              <div 
-                key={idx}
-                className="bg-zinc-900/30 border border-zinc-900 rounded-2xl overflow-hidden hover:border-zinc-800 transition-all duration-300"
-              >
-                <button
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full px-6 py-5 text-left flex items-center justify-between font-bold text-zinc-200 hover:text-white transition-colors"
-                >
-                  <span className="flex items-center gap-3">
-                    <HelpCircle className="w-5 h-5 text-purple-400 shrink-0" />
-                    {item.q}
-                  </span>
-                  <ChevronDown className={`w-5 h-5 text-zinc-500 transition-transform duration-300 shrink-0 ${faqOpen === idx ? "rotate-180 text-purple-400" : ""}`} />
-                </button>
-                <AnimatePresence initial={false}>
-                  {faqOpen === idx && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <div className="px-6 pb-6 text-sm text-zinc-400 border-t border-zinc-950/20 pt-3 leading-relaxed">
-                        {item.a}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 md:py-32 px-6 bg-gradient-to-b from-zinc-950 to-zinc-900 relative">
-        <div className="max-w-5xl mx-auto rounded-[32px] bg-gradient-to-tr from-purple-900/30 via-zinc-900/80 to-blue-900/10 border border-purple-500/20 p-8 md:p-16 text-center relative overflow-hidden shadow-2xl glow-purple">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px]" />
-          
-          <Sparkles className="w-12 h-12 text-purple-400 mx-auto mb-6 animate-pulse" />
-          
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight leading-[1.2]">
-            Fai il salto di qualità.<br />Assumi Personale Artificiale.
-          </h2>
-          <p className="text-zinc-300 text-base md:text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
-            Smetti di perdere ore dietro a compiti ripetitivi. Affida l'agenda, l'archiviazione e le email ad un dipendente virtuale efficiente, puntuale e instancabile.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4">
-            <a 
-              href="#prezzi"
-              className="px-8 py-4 rounded-xl text-base font-bold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white shadow-xl shadow-purple-500/20 flex items-center justify-center gap-2 group transition-all"
-            >
-              Guarda i Piani & Prezzi
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </a>
-            <Link 
-              to="/dashboard"
-              className="px-8 py-4 rounded-xl text-base font-medium border border-zinc-800 hover:border-zinc-750 text-zinc-300 hover:text-white transition-all"
-            >
-              Prova Demo Onboarding
-            </Link>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 mt-8 text-xs text-zinc-500">
-            <Shield className="w-4 h-4 text-zinc-600" />
-            Pagamenti sicuri gestiti da Stripe • Nessun vincolo di rinnovo • Attivazione in 15 minuti
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-zinc-900 py-12 px-6 bg-zinc-950 text-zinc-400">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center">
-                <Cpu className="w-4 h-4 text-white" />
-              </div>
-              <span className="text-base font-bold text-zinc-200">Personale Artificiale</span>
-            </div>
-            <p className="text-[11px] text-zinc-500 max-w-sm text-center md:text-left mt-1">
-              Personale Artificiale S.r.l. • Via della Scrofa 104, 00186 Roma (RM) • Cap. Soc. €10.000 i.v. • P.IVA / C.F. IT12345678901 • Numero REA RM-9876543
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center md:items-end gap-4">
-            <div className="flex flex-wrap justify-center gap-6 text-xs text-zinc-500 font-medium">
-              <a href="#come-funziona" className="hover:text-zinc-300 transition-colors">Come funziona</a>
-              <a href="#caratteristiche" className="hover:text-zinc-300 transition-colors">Integrazioni</a>
-              <a href="#prezzi" className="hover:text-zinc-300 transition-colors">Prezzi</a>
-              <a href="#faq" className="hover:text-zinc-300 transition-colors">FAQ</a>
-              <Link to="/dashboard" className="hover:text-zinc-300 transition-colors">Dashboard</Link>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-4 text-xs text-zinc-500 border-t border-zinc-900/50 pt-3 w-full md:w-auto md:justify-end">
-              <Link to="/privacy" className="hover:text-zinc-300 transition-colors underline">Privacy Policy</Link>
-              <span>•</span>
-              <Link to="/cookie-policy" className="hover:text-zinc-300 transition-colors underline">Cookie Policy</Link>
-              <span>•</span>
-              <Link to="/termini-servizio" className="hover:text-zinc-300 transition-colors underline">Termini di Servizio</Link>
-            </div>
-
-            <p className="text-[10px] text-zinc-600 mt-1">
-              © 2026 Personale Artificiale. Tutti i diritti riservati. Realizzato con <a href="https://cto.new" className="underline hover:text-zinc-400">cto.new</a>
-            </p>
-          </div>
-        </div>
-      </footer>
-
+        </section>
+      </main>
+      <SiteFooter />
     </div>
   );
 }
