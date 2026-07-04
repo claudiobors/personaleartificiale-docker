@@ -105,43 +105,6 @@ function Home() {
   const [isTyping, setIsTyping] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
-  // Stripe Checkout Modal States
-  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"assistente-esecutivo" | "ufficio-digitale">("assistente-esecutivo");
-  const [customerName, setCustomerName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleCheckoutOpen = (plan: "assistente-esecutivo" | "ufficio-digitale") => {
-    setSelectedPlan(plan);
-    setCheckoutModalOpen(true);
-  };
-
-  const handleCheckoutSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId: selectedPlan, name: customerName, email: customerEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Errore nella creazione della sessione di checkout");
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("Impossibile procedere al pagamento: link mancante.");
-      }
-    } catch (err: any) {
-      setError(err.message || "Errore di rete");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Run simulated chat on active demo change
   useEffect(() => {
     setVisibleMessages([]);
@@ -207,12 +170,12 @@ function Home() {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            <Link 
-              to="/dashboard"
+            <a 
+              href="https://app.personaleartificiale.it"
               className="px-5 py-2.5 rounded-xl text-sm font-medium border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50 transition-all"
             >
               Accedi
-            </Link>
+            </a>
             <a 
               href="#prezzi"
               className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-300"
@@ -269,13 +232,13 @@ function Home() {
               </a>
               <div className="h-[1px] bg-zinc-900 my-2" />
               <div className="flex flex-col gap-3">
-                <Link 
-                  to="/dashboard"
+                <a 
+                  href="https://app.personaleartificiale.it"
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full text-center py-3 rounded-xl text-sm font-medium border border-zinc-800 hover:bg-zinc-900 transition-all"
                 >
                   Accedi
-                </Link>
+                </a>
                 <a 
                   href="#prezzi"
                   onClick={() => setMobileMenuOpen(false)}
@@ -334,17 +297,17 @@ function Home() {
               className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto"
             >
               <a 
-                href="#prezzi"
-                className="px-8 py-4 rounded-xl text-base font-semibold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white shadow-xl shadow-purple-500/20 hover:shadow-purple-500/30 flex items-center justify-center gap-2.5 transition-all duration-300 group"
+                href="https://app.personaleartificiale.it"
+                className="px-8 py-4 rounded-xl text-base font-semibold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white shadow-xl shadow-purple-500/20 hover:shadow-purple-500/30 flex items-center justify-center gap-2.5 transition-all duration-300 group whitespace-nowrap"
               >
-                Inizia Ora
+                Registrati / Inizia Gratis
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </a>
               <a 
-                href="#come-funziona"
-                className="px-8 py-4 rounded-xl text-base font-medium border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/50 flex items-center justify-center gap-2 transition-all"
+                href="https://app.personaleartificiale.it"
+                className="px-8 py-4 rounded-xl text-base font-medium border border-zinc-800 hover:border-zinc-750 hover:bg-zinc-900/50 flex items-center justify-center gap-2 transition-all text-zinc-300 hover:text-white whitespace-nowrap"
               >
-                Come funziona
+                Accedi al tuo Account
               </a>
             </motion.div>
 
@@ -694,9 +657,7 @@ function Home() {
                     <span className="text-4xl font-extrabold text-white">€97</span>
                     <span className="text-zinc-500 text-sm font-medium">/ mese</span>
                   </div>
-                  <div className="text-xs text-purple-400 font-semibold mt-1">
-                    + €399 costo di setup iniziale
-                  </div>
+                  {/* Prezzo setup nascosto */}
                 </div>
 
                 <ul className="space-y-4 mb-8 text-sm text-zinc-300">
@@ -727,19 +688,18 @@ function Home() {
                 </ul>
               </div>
 
-              <Link 
-                to="/dashboard" 
-                search={{ plan: "executive" }}
+              <a 
+                href="https://app.personaleartificiale.it?plan=assistente-esecutivo" 
                 className="w-full text-center py-3.5 px-4 rounded-xl text-sm font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-all shadow-md"
               >
-                Inizia Ora
-              </Link>
+                Seleziona piano
+              </a>
             </div>
 
             {/* Plan 2 - Best Seller */}
             <div className="bg-zinc-900/60 border-2 border-purple-500 rounded-3xl p-8 flex flex-col justify-between hover:scale-[1.02] transition-all relative shadow-xl shadow-purple-500/5 glow-purple">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow">
-                Il Più Popolare 🔥
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wider shadow whitespace-nowrap">
+                Offerta speciale - Risparmia il 40% 🔥
               </div>
               
               <div>
@@ -751,9 +711,7 @@ function Home() {
                     <span className="text-5xl font-extrabold text-white">€297</span>
                     <span className="text-zinc-400 text-sm font-medium">/ mese</span>
                   </div>
-                  <div className="text-sm text-purple-400 font-bold mt-1">
-                    + €999 costo di setup iniziale
-                  </div>
+                  {/* Prezzo setup nascosto */}
                 </div>
 
                 <ul className="space-y-4 mb-8 text-sm text-zinc-200">
@@ -784,13 +742,12 @@ function Home() {
                 </ul>
               </div>
 
-              <Link 
-                to="/dashboard" 
-                search={{ plan: "digital-office" }}
+              <a 
+                href="https://app.personaleartificiale.it?plan=ufficio-digitale" 
                 className="w-full text-center py-4 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-500 hover:to-blue-400 text-white transition-all shadow-lg shadow-purple-500/20"
               >
-                Inizia Setup Assistito
-              </Link>
+                Seleziona piano
+              </a>
             </div>
 
             {/* Plan 3 */}
@@ -805,9 +762,7 @@ function Home() {
                     <span className="text-2xl font-bold text-white">~€500</span>
                     <span className="text-zinc-500 text-xs">/mo</span>
                   </div>
-                  <div className="text-xs text-purple-400 font-semibold mt-1">
-                    Setup personalizzato a partire da €3.500
-                  </div>
+                  {/* Prezzo setup nascosto */}
                 </div>
 
                 <ul className="space-y-4 mb-8 text-sm text-zinc-300">
@@ -838,13 +793,12 @@ function Home() {
                 </ul>
               </div>
 
-              <Link 
-                to="/dashboard" 
-                search={{ plan: "enterprise" }}
+              <a 
+                href="https://app.personaleartificiale.it?plan=enterprise" 
                 className="w-full text-center py-3.5 px-4 rounded-xl text-sm font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-all shadow-md"
               >
                 Contatta per Preventivo
-              </Link>
+              </a>
             </div>
 
           </div>
@@ -947,12 +901,12 @@ function Home() {
               Guarda i Piani & Prezzi
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </a>
-            <Link 
-              to="/dashboard"
+            <a 
+              href="https://app.personaleartificiale.it"
               className="px-8 py-4 rounded-xl text-base font-medium border border-zinc-800 hover:border-zinc-750 text-zinc-300 hover:text-white transition-all"
             >
-              Prova Demo Onboarding
-            </Link>
+              Prova l'App / Accedi
+            </a>
           </div>
 
           <div className="flex items-center justify-center gap-2 mt-8 text-xs text-zinc-500">
@@ -983,7 +937,7 @@ function Home() {
               <a href="#caratteristiche" className="hover:text-zinc-300 transition-colors">Integrazioni</a>
               <a href="#prezzi" className="hover:text-zinc-300 transition-colors">Prezzi</a>
               <a href="#faq" className="hover:text-zinc-300 transition-colors">FAQ</a>
-              <Link to="/dashboard" className="hover:text-zinc-300 transition-colors">Dashboard</Link>
+              <a href="https://app.personaleartificiale.it" className="hover:text-zinc-300 transition-colors">Dashboard</a>
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 text-xs text-zinc-500 border-t border-zinc-900/50 pt-3 w-full md:w-auto md:justify-end">
