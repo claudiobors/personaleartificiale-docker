@@ -35,7 +35,7 @@ export const APIRoute = createAPIFileRoute("/api/auth/register")({
         );
       }
 
-      ensureTables();
+      await ensureTables();
 
       const user = await findOrCreateUser({
         email: body.email,
@@ -43,7 +43,7 @@ export const APIRoute = createAPIFileRoute("/api/auth/register")({
         planId: body.planId,
       });
 
-      const token = createSession(user.id);
+      const token = await createSession(user.id);
 
       return new Response(
         JSON.stringify({

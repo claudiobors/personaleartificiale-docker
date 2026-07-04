@@ -1,5 +1,5 @@
 import { createAPIFileRoute } from "@tanstack/start/api";
-import { validateSession } from "~/lib/auth";
+import { getUserBySession } from "~/lib/auth";
 
 /**
  * GET /api/auth/me
@@ -18,7 +18,7 @@ export const APIRoute = createAPIFileRoute("/api/auth/me")({
       }
 
       const token = authHeader.slice(7);
-      const user = validateSession(token);
+      const user = await getUserBySession(token);
 
       if (!user) {
         return new Response(
