@@ -52,6 +52,17 @@ services:
       - app-uploads:/app/uploads
       - app-logs:/app/.run
 
+  # ─── www (sito vetrina - build statica) ─────────
+  www:
+    build:
+      context: ./www
+      dockerfile: Dockerfile
+    volumes:
+      - www-dist:/usr/share/nginx/html
+    restart: "no"
+    networks:
+      - pa-net
+
   # ─── PostgreSQL ─────────────────────────────────
   postgres:
     image: postgres:16-alpine
