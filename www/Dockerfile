@@ -9,5 +9,6 @@ COPY . .
 RUN npm run build
 
 # ─── Copia static files nella cartella del volume ─
-FROM scratch
+FROM alpine:latest
 COPY --from=builder /app/dist/client /usr/share/nginx/html
+CMD ["true"]
