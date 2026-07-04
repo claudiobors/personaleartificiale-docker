@@ -31,8 +31,9 @@ async function getSSRHandler() {
   if (ssrHandler) return ssrHandler;
   try {
     const mod = await import("./dist/server/server.js");
-    // TanStack Start exports a default handler that accepts (req, res) or Web API
-    ssrHandler = mod.default || mod;
+    // TanStack Start exports { server: { fetch() } } as default
+    const entry = mod.default || mod;
+    ssrHandler = entry.fetch ? entry : { fetch: entry };
     return ssrHandler;
   } catch (e) {
     console.error("Failed to load SSR handler:", e.message);
@@ -45,11 +46,21 @@ function nodeReqToWebRequest(req, url) {
   const host = req.headers.host || "localhost";
   const requestUrl = new URL(url.pathname + url.search, `${protocol}://${host}`);
 
+  // Convert Node.js req to ReadableStream for body
+  let body = undefined;
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    body = new ReadableStream({
+      start(controller) {
+        req.on("data", (chunk) => controller.enqueue(chunk));
+        req.on("end", () => controller.close());
+      },
+    });
+  }
+
   return new Request(requestUrl, {
     method: req.method,
     headers: new Headers(req.headers),
-    body: req.method !== "GET" && req.method !== "HEAD" ? req : undefined,
-    duplex: req.method !== "GET" && req.method !== "HEAD" ? "half" : undefined,
+    body,
   });
 }
 
@@ -99,7 +110,7 @@ const server = http.createServer(async (req, res) => {
     const handler = await getSSRHandler();
     if (handler) {
       const webRequest = nodeReqToWebRequest(req, url);
-      const webResponse = await handler(webRequest);
+      const webResponse = await handler.fetch(webRequest);
       await webResponseToNode(res, webResponse);
       return;
     }
