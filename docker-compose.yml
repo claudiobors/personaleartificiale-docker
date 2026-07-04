@@ -91,12 +91,19 @@ services:
 
   # ─── Evolution API (WhatsApp bridge) ────────────
   evolution:
-    image: atendimento/evolution-api:latest
+    build:
+      context: https://github.com/EvolutionAPI/evolution-api.git
+      dockerfile: Dockerfile
+      args:
+        - SERVER_URL=http://evolution:8080
+        - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
     environment:
       - SERVER_URL=http://evolution:8080
       - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+      - DATABASE_ENABLED=true
       - DATABASE_PROVIDE=postgresql
       - DATABASE_URL=postgresql://pa:${POSTGRES_PASSWORD}@postgres:5432/evolution
+      - REDIS_ENABLED=true
       - REDIS_URI=redis://redis:6379
     volumes:
       - ./evolution/config.json:/evolution/config.json
