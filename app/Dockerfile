@@ -6,7 +6,7 @@ COPY package.json ./
 RUN npm install --ignore-scripts --legacy-peer-deps
 
 COPY . .
-RUN npm run build && npm prune --omit=dev
+RUN npm run build && npm prune --omit=dev --legacy-peer-deps
 
 # ─── Production image ────────────────────────────
 FROM node:22-alpine
