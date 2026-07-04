@@ -1,4 +1,4 @@
-# Personale Artificiale — www static build
+# Personale Artificiale — www SSR server
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -8,9 +8,18 @@ RUN npm install --legacy-peer-deps --ignore-scripts
 COPY . .
 RUN npm run build
 
-# ─── Copia static files con permessi corretti ────
-FROM alpine:latest
-COPY --from=builder /app/dist/client /usr/share/nginx/html
-RUN chmod -R 755 /usr/share/nginx/html && \
-    chown -R 101:101 /usr/share/nginx/html
-CMD ["true"]
+# ─── Production server ───────────────────────────
+FROM node:22-alpine
+
+WORKDIR /app
+RUN addgroup -S app && adduser -S app -G app
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/server.mjs ./
+
+USER app
+EXPOSE 3000
+
+CMD ["node", "server.mjs"]

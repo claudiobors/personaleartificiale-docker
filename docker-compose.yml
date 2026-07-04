@@ -52,14 +52,15 @@ services:
       - app-uploads:/app/uploads
       - app-logs:/app/.run
 
-  # ─── www (sito vetrina - build statica) ─────────
+  # ─── www (sito vetrina - SSR) ───────────────────
   www:
     build:
       context: ./www
       dockerfile: Dockerfile
-    volumes:
-      - www-dist:/usr/share/nginx/html
-    restart: "no"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
     networks:
       - pa-net
 
