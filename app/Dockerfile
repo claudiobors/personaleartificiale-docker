@@ -5,6 +5,16 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --legacy-peer-deps
 
+# Patch vinxi: add import condition to ./routes export (types-only in v0.5.x)
+RUN cat node_modules/vinxi/package.json | node -e "
+const j = require('fs').readFileSync('/dev/stdin','utf-8');
+const p = JSON.parse(j);
+const routes = p.exports?.['./routes'] || {};
+routes.import = './types/routes.d.ts';
+p.exports['./routes'] = routes;
+require('fs').writeFileSync('node_modules/vinxi/package.json', JSON.stringify(p, null, 2));
+"
+
 COPY . .
 RUN npm run build && npm prune --omit=dev --legacy-peer-deps
 
