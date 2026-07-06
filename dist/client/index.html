@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personale Artificiale — Il tuo dipendente virtuale AI</title>
+<meta name="description" content="Assumi un dipendente virtuale AI via WhatsApp/Telegram. Risparmia fino a ½ giornata lavorativa. Zero curva di apprendimento.">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#0a0a0f;color:#e4e4e7;line-height:1.6}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+/* Header */
+header{background:rgba(10,10,15,.8);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.05);position:fixed;width:100%;z-index:100;top:0}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.logo{font-size:1.25rem;font-weight:800;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo span{-webkit-text-fill-color:#e4e4e7;font-weight:300}
+nav a{color:#a1a1aa;text-decoration:none;margin-left:24px;font-size:.875rem;font-weight:500;transition:color .2s}
+nav a:hover{color:#e4e4e7}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 24px;border-radius:12px;font-weight:600;font-size:.875rem;text-decoration:none;transition:all .2s;cursor:pointer}
+.btn-primary{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(99,102,241,.4)}
+.btn-outline{border:1px solid rgba(255,255,255,.15);color:#e4e4e7;background:transparent}
+.btn-outline:hover{border-color:#6366f1;background:rgba(99,102,241,.1)}
+.btn-ghost{color:#a1a1aa;padding:10px 16px}
+.btn-ghost:hover{color:#e4e4e7}
+/* Hero */
+.hero{padding:160px 0 100px;text-align:center;position:relative}
+.hero::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:100%;height:100%;background:radial-gradient(ellipse at center, rgba(99,102,241,.1) 0%, transparent 70%);pointer-events:none}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border-radius:100px;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);font-size:.75rem;font-weight:600;color:#a5b4fc;margin-bottom:24px;text-transform:uppercase;letter-spacing:.5px}
+.hero h1{font-size:3.5rem;font-weight:900;line-height:1.1;margin-bottom:20px;letter-spacing:-1px}
+.hero h1 span{background:linear-gradient(135deg,#6366f1,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:1.125rem;color:#a1a1aa;max-width:600px;margin:0 auto 40px}
+.hero-cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.stats{display:flex;justify-content:center;gap:60px;margin-top:60px;padding-top:60px;border-top:1px solid rgba(255,255,255,.05)}
+.stat{text-align:center}
+.stat-num{font-size:2rem;font-weight:800;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-label{font-size:.75rem;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+/* Features */
+.features{padding:100px 0}
+.section-title{text-align:center;margin-bottom:60px}
+.section-title h2{font-size:2.5rem;font-weight:800;margin-bottom:12px;letter-spacing:-.5px}
+.section-title p{color:#a1a1aa;max-width:500px;margin:0 auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:32px;transition:all .3s}
+.card:hover{background:rgba(255,255,255,.06);border-color:rgba(99,102,241,.3);transform:translateY(-4px)}
+.card-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:16px}
+.card-icon.purple{background:rgba(99,102,241,.15)}
+.card-icon.pink{background:rgba(236,72,153,.15)}
+.card-icon.cyan{background:rgba(6,182,212,.15)}
+.card h3{font-size:1.125rem;font-weight:700;margin-bottom:8px}
+.card p{color:#a1a1aa;font-size:.875rem}
+/* Pricing */
+.pricing{padding:100px 0;background:rgba(255,255,255,.02)}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;align-items:start}
+.plan{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:40px 32px;position:relative;transition:all .3s}
+.plan:hover{transform:translateY(-4px);border-color:rgba(99,102,241,.3)}
+.plan.featured{background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(168,85,247,.05));border-color:rgba(99,102,241,.3);border:2px solid rgba(99,102,241,.4)}
+.plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:4px 16px;border-radius:100px;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.plan-badge.popular{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff}
+.plan-name{font-size:.875rem;font-weight:600;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.plan-price{font-size:3rem;font-weight:900;margin-bottom:4px}
+.plan-price span{font-size:1rem;font-weight:400;color:#71717a}
+.plan-desc{color:#a1a1aa;font-size:.875rem;margin-bottom:24px;min-height:40px}
+.plan-features{list-style:none;margin-bottom:32px}
+.plan-features li{padding:8px 0;font-size:.875rem;color:#d4d4d8;display:flex;align-items:center;gap:8px}
+.plan-features li::before{content:'✓';color:#6366f1;font-weight:700}
+.plan .btn{width:100%;justify-content:center;text-align:center}
+/* Testimonial */
+.testimonial{padding:100px 0;text-align:center}
+.testimonial blockquote{max-width:700px;margin:0 auto;font-size:1.25rem;color:#d4d4d8;font-style:italic;line-height:1.8}
+.testimonial cite{display:block;margin-top:24px;font-style:normal;font-size:.875rem;color:#a1a1aa}
+.testimonial cite strong{color:#e4e4e7}
+/* Footer */
+footer{background:rgba(255,255,255,.02);border-top:1px solid rgba(255,255,255,.05);padding:60px 0 40px}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:60px;margin-bottom:40px}
+.footer-brand .logo{margin-bottom:12px;display:block}
+.footer-brand p{color:#71717a;font-size:.875rem;max-width:300px}
+.footer-col h4{font-size:.875rem;font-weight:600;margin-bottom:16px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px}
+.footer-col a{display:block;color:#71717a;font-size:.875rem;text-decoration:none;padding:4px 0;transition:color .2s}
+.footer-col a:hover{color:#e4e4e7}
+.footer-bottom{text-align:center;padding-top:32px;border-top:1px solid rgba(255,255,255,.05);font-size:.75rem;color:#52525b}
+/* Responsive */
+@media(max-width:768px){.hero h1{font-size:2.25rem}.stats{flex-direction:column;gap:24px}.footer-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+<div class="container header-inner">
+<div class="logo">Personale<span>Artificiale</span></div>
+<nav>
+<a href="#features">Come funziona</a>
+<a href="#pricing">Piani</a>
+<a href="https://app.personaleartificiale.it" class="btn btn-ghost">Accedi</a>
+<a href="https://app.personaleartificiale.it" class="btn btn-primary">Inizia Ora</a>
+</nav>
+</div>
+</header>
+
+<section class="hero">
+<div class="container">
+<div class="badge">🚀 Forza lavoro digitale</div>
+<h1>Il tuo <span>dipendente virtuale</span><br>che vive su WhatsApp</h1>
+<p>Assumi un agente AI che lavora per te via messaggi vocali o di testo. Zero formazione, zero curva di apprendimento, risultati immediati.</p>
+<div class="hero-cta">
+<a href="https://app.personaleartificiale.it" class="btn btn-primary">🎯 Registrati Gratis</a>
+<a href="#pricing" class="btn btn-outline">Vedi i Piani</a>
+</div>
+<div class="stats">
+<div class="stat"><div class="stat-num">½</div><div class="stat-label">Giornata Risparmiata</div></div>
+<div class="stat"><div class="stat-num">€3k+</div><div class="stat-label">Risparmio/mese</div></div>
+<div class="stat"><div class="stat-num">0</div><div class="stat-label">Curva di Apprendimento</div></div>
+</div>
+</div>
+</section>
+
+<section id="features" class="features">
+<div class="container">
+<div class="section-title">
+<h2>Come funziona</h2>
+<p>Il tuo nuovo collaboratore è operativo in meno di 15 minuti</p>
+</div>
+<div class="grid">
+<div class="card">
+<div class="card-icon purple">📱</div>
+<h3>Collegalo via WhatsApp</h3>
+<p>Scansiona un QR code e inizia a parlare con il tuo assistente come faresti con un collega umano.</p>
+</div>
+<div class="card">
+<div class="card-icon pink">📧</div>
+<h3>Gestisce la tua casella</h3>
+<p>Email, calendario, Google Drive, CRM, Trello — il tuo agente si integra con tutti i tuoi strumenti.</p>
+</div>
+<div class="card">
+<div class="card-icon cyan">🧠</div>
+<h3>Impara dalla tua azienda</h3>
+<p>Carica documenti, PDF, procedure. L'agente assimila la tua knowledge base e risponde con la vostra voce.</p>
+</div>
+</div>
+</div>
+</section>
+
+<section id="pricing" class="pricing">
+<div class="container">
+<div class="section-title">
+<h2>Piani Trasparenti</h2>
+<p>Scegli il piano che fa per te. Annulla quando vuoi.</p>
+</div>
+<div class="plans">
+<div class="plan">
+<div class="plan-name">Assistente Esecutivo</div>
+<div class="plan-price">€97<span>/mese</span></div>
+<p class="plan-desc">Per freelance e artigiani che vogliono delegare le attività amministrative</p>
+<ul class="plan-features">
+<li>Agente AI dedicato su WhatsApp</li>
+<li>Gestione email e calendario</li>
+<li>Archiviazione file su Drive</li>
+<li>PDF ingestion e RAG</li>
+<li>Supporto email prioritario</li>
+</ul>
+<a href="https://app.personaleartificiale.it?plan=assistente-esecutivo" class="btn btn-outline">Seleziona Piano</a>
+</div>
+<div class="plan featured">
+<div class="plan-badge popular">🔥 Offerta Speciale - Risparmia il 40%</div>
+<div class="plan-name">L'Ufficio Digitale</div>
+<div class="plan-price">€297<span>/mese</span></div>
+<p class="plan-desc">Per PMI, agenzie e studi professionali che vogliono un team di agenti AI</p>
+<ul class="plan-features">
+<li>3 agenti AI multi-ruolo</li>
+<li>Collaborazione tra agenti</li>
+<li>CRM e lead management</li>
+<li>Social media content generation</li>
+<li>API e integrazioni personalizzate</li>
+<li>Supporto prioritario 24/7</li>
+</ul>
+<a href="https://app.personaleartificiale.it?plan=ufficio-digitale" class="btn btn-primary">Seleziona Piano</a>
+</div>
+<div class="plan">
+<div class="plan-name">Enterprise</div>
+<div class="plan-price">Custom</div>
+<p class="plan-desc">Per aziende strutturate con flussi complessi ed ERP</p>
+<ul class="plan-features">
+<li>Agenti AI illimitati</li>
+<li>Integrazione ERP personalizzata</li>
+<li>Onboarding dedicato</li>
+<li>SLA garantito 99.9%</li>
+<li>Formazione team</li>
+<li>Supporto dedicated 24/7</li>
+</ul>
+<a href="https://app.personaleartificiale.it?plan=enterprise" class="btn btn-outline">Contattaci</a>
+</div>
+</div>
+</div>
+</section>
+
+<section class="testimonial">
+<div class="container">
+<blockquote>
+"Ho recuperato 4 ore al giorno. Il mio assistente virtuale gestisce email, appuntamenti e pratiche mentre io mi concentro sul fatturato."
+<cite>— <strong>Claudio B.</strong>, Founder di Personale Artificiale</cite>
+</blockquote>
+</div>
+</section>
+
+<footer>
+<div class="container">
+<div class="footer-grid">
+<div class="footer-brand">
+<div class="logo">Personale<span>Artificiale</span></div>
+<p>Forza lavoro digitale per freelance, PMI e professionisti. Dipendenti virtuali AI che vivono su WhatsApp e Telegram.</p>
+</div>
+<div class="footer-col">
+<h4>Piani</h4>
+<a href="#pricing">Assistente Esecutivo</a>
+<a href="#pricing">L'Ufficio Digitale</a>
+<a href="#pricing">Enterprise</a>
+</div>
+<div class="footer-col">
+<h4>Risorse</h4>
+<a href="https://app.personaleartificiale.it">Dashboard</a>
+<a href="/privacy">Privacy Policy</a>
+<a href="/cookie-policy">Cookie Policy</a>
+<a href="/termini">Termini di Servizio</a>
+</div>
+</div>
+<div class="footer-bottom">
+© 2026 Personale Artificiale. Tutti i diritti riservati.
+</div>
+</div>
+</footer>
+
+</body>
+</html>
