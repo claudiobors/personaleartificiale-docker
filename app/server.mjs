@@ -1,89 +1,100 @@
 /**
  * Personale Artificiale — App Server (Dashboard SPA + API)
- * Serves:
- * 1. API routes (/api/*) with auth, rate limiting, input validation
- * 2. Dashboard SPA (index.html) for all non-API routes
+ * Portable: no team-db, no npm deps, uses JSON file storage.
+ * Serves: API routes (/api/*) and Dashboard SPA (index.html)
  */
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
 import { writeFile, unlink, mkdir, readdir } from "node:fs/promises";
+import { mkdirSync } from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = "0.0.0.0";
 const CLIENT_DIR = path.resolve(__dirname, "dist/client");
+const DATA_DIR = process.env.DATA_DIR || path.resolve(__dirname, "data");
+const UPLOADS_BASE = process.env.UPLOADS_DIR || path.join(DATA_DIR, "uploads");
 
-// ─── Allowed origins for CORS ──────────────────────────────────────────────
-const ALLOWED_ORIGINS = [
-  "https://personaleartificiale.it",
-  "https://www.personaleartificiale.it",
-  "https://app.personaleartificiale.it",
-  /^https:\/\/[a-z0-9-]+\.ctonew\.app$/,
-];
+// Ensure data directories exist
+try { mkdirSync(DATA_DIR, { recursive: true }); } catch {}
+try { mkdirSync(UPLOADS_BASE, { recursive: true }); } catch {}
 
-function isOriginAllowed(origin) {
-  if (!origin) return false;
-  for (const rule of ALLOWED_ORIGINS) {
-    if (rule instanceof RegExp && rule.test(origin)) return true;
-    if (rule === origin) return true;
-  }
-  return false;
+// ─── JSON File Database ────────────────────────────────────────────────────
+const DB_FILE = path.join(DATA_DIR, "db.json");
+const mutex = { locked: false };
+
+function dbRead() {
+  try { return JSON.parse(fs.readFileSync(DB_FILE, "utf-8")); }
+  catch { return { users: [], sessions: [], configs: [], seq: 0 }; }
 }
 
-function corsHeaders(origin) {
-  const headers = { "Content-Type": "application/json" };
-  if (origin && isOriginAllowed(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-    headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
-    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
-    headers["Access-Control-Allow-Credentials"] = "true";
-    headers["Vary"] = "Origin";
-  }
-  return headers;
+function dbWrite(data) {
+  while (mutex.locked) { /* spin */ }
+  mutex.locked = true;
+  try {
+    fs.writeFileSync(DB_FILE + ".tmp", JSON.stringify(data, null, 0));
+    fs.renameSync(DB_FILE + ".tmp", DB_FILE);
+  } finally { mutex.locked = false; }
 }
 
-// ─── Rate limiter ──────────────────────────────────────────────────────────
-const RATE_LIMIT_WINDOW = 60_000;
-const RATE_LIMIT_MAX = 20;
-const rateCounters = new Map();
-function rateLimit(ip) {
-  const now = Date.now();
-  let entry = rateCounters.get(ip);
-  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW) {
-    entry = { windowStart: now, count: 0 };
-    rateCounters.set(ip, entry);
-  }
-  entry.count++;
-  return entry.count <= RATE_LIMIT_MAX;
+function dbQuery(fn) {
+  const data = dbRead();
+  const result = fn(data);
+  dbWrite(data);
+  return result;
 }
 
-// ─── DB helpers ────────────────────────────────────────────────────────────
-function escapeSQL(value) {
-  if (value === null || value === undefined) return "NULL";
-  return `'${String(value).replace(/'/g, "''").replace(/\\/g, "\\\\")}'`;
+function dbFindOne(collection, predicate) {
+  const data = dbRead();
+  return data[collection]?.find(predicate) || null;
 }
 
-function dbQuery(sql) {
-  return JSON.parse(execSync(`team-db "${sql.replace(/"/g, '\\"')}"`, { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }));
+function dbFindAll(collection, predicate) {
+  const data = dbRead();
+  if (!predicate) return data[collection] || [];
+  return data[collection]?.filter(predicate) || [];
 }
 
-function dbExecute(sql) {
-  const raw = execSync(`team-db "${sql.replace(/"/g, '\\"')}"`, { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 });
-  try { return JSON.parse(raw); } catch { return { status: "ok" }; }
+function dbInsert(collection, doc) {
+  return dbQuery(data => {
+    if (!data[collection]) data[collection] = [];
+    data.seq = (data.seq || 0) + 1;
+    doc._id = data.seq;
+    data[collection].push(doc);
+    return doc;
+  });
 }
 
-// ─── Auth ──────────────────────────────────────────────────────────────────
+function dbUpdate(collection, predicate, update) {
+  return dbQuery(data => {
+    const items = data[collection] || [];
+    const idx = items.findIndex(predicate);
+    if (idx === -1) return null;
+    items[idx] = { ...items[idx], ...update };
+    return items[idx];
+  });
+}
+
+function dbDelete(collection, predicate) {
+  return dbQuery(data => {
+    const items = data[collection] || [];
+    const idx = items.findIndex(predicate);
+    if (idx === -1) return false;
+    items.splice(idx, 1);
+    return true;
+  });
+}
+
+// ─── Auth helpers ──────────────────────────────────────────────────────────
 function generateToken(length = 48) {
   return crypto.randomBytes(length).toString("hex").slice(0, length);
 }
-function generateUserId() {
+function generateId() {
   return crypto.randomBytes(8).toString("hex");
 }
-
 function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
 }
@@ -91,62 +102,30 @@ function validatePlanId(planId) {
   return planId === "assistente-esecutivo" || planId === "ufficio-digitale";
 }
 
-async function ensureTables() {
-  dbExecute(`CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL, name TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')), plan_id TEXT NOT NULL,
-    subscription_id TEXT, stripe_customer_id TEXT, stripe_checkout_session_id TEXT,
-    tone_of_voice TEXT DEFAULT 'Professionale, cortese e amichevole',
-    status TEXT NOT NULL DEFAULT 'pending'
-  )`);
-  dbExecute(`CREATE TABLE IF NOT EXISTS sessions (
-    token TEXT PRIMARY KEY, user_id TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')), expires_at TEXT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
-  dbExecute(`CREATE TABLE IF NOT EXISTS agent_config (
-    user_id TEXT PRIMARY KEY,
-    tone_of_voice TEXT DEFAULT 'Professionale, cortese e amichevole',
-    role_description TEXT DEFAULT 'Assistente Digitale',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )`);
-}
-
 function findOrCreateUser(email, name, planId) {
-  const existing = dbQuery(`SELECT id, email, name, created_at as createdAt,
-    plan_id as planId, subscription_id as subscriptionId,
-    stripe_customer_id as stripeCustomerId, tone_of_voice as toneOfVoice, status
-    FROM users WHERE email = ${escapeSQL(email)}`);
-  if (existing.length > 0) return existing[0];
-  const id = generateUserId();
-  dbExecute(`INSERT INTO users (id, email, name, plan_id, status)
-    VALUES (${escapeSQL(id)}, ${escapeSQL(email)}, ${escapeSQL(name)}, ${escapeSQL(planId)}, 'pending')`);
-  dbExecute(`INSERT OR IGNORE INTO agent_config (user_id) VALUES (${escapeSQL(id)})`);
-  return { id, email, name, createdAt: new Date().toISOString(), planId, subscriptionId: null, stripeCustomerId: null, toneOfVoice: null, status: "pending" };
+  const existing = dbFindOne("users", u => u.email === email);
+  if (existing) return existing;
+  const user = { id: generateId(), email, name, planId, status: "pending", createdAt: new Date().toISOString() };
+  dbInsert("users", user);
+  dbInsert("configs", { userId: user.id, toneOfVoice: "Professionale, cortese e amichevole", roleDescription: "Assistente Digitale" });
+  return user;
 }
 
 function createSession(userId) {
   const token = generateToken();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  dbExecute(`INSERT INTO sessions (token, user_id, expires_at) VALUES (${escapeSQL(token)}, ${escapeSQL(userId)}, ${escapeSQL(expiresAt)})`);
+  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  dbInsert("sessions", { token, userId, expiresAt, createdAt: new Date().toISOString() });
   return token;
 }
 
 function getUserBySession(token) {
-  const sessions = dbQuery(`SELECT user_id, expires_at FROM sessions WHERE token = ${escapeSQL(token)}`);
-  if (sessions.length === 0) return null;
-  const session = sessions[0];
-  if (new Date(session.expires_at) < new Date()) {
-    dbExecute(`DELETE FROM sessions WHERE token = ${escapeSQL(token)}`);
+  const session = dbFindOne("sessions", s => s.token === token);
+  if (!session) return null;
+  if (session.expiresAt < Date.now()) {
+    dbDelete("sessions", s => s.token === token);
     return null;
   }
-  const users = dbQuery(`SELECT id, email, name, created_at as createdAt,
-    plan_id as planId, subscription_id as subscriptionId,
-    stripe_customer_id as stripeCustomerId, tone_of_voice as toneOfVoice, status
-    FROM users WHERE id = ${escapeSQL(session.user_id)}`);
-  return users.length > 0 ? users[0] : null;
+  return dbFindOne("users", u => u.id === session.userId);
 }
 
 function getUserFromAuthHeader(req) {
@@ -157,26 +136,66 @@ function getUserFromAuthHeader(req) {
   return getUserBySession(match[1]);
 }
 
+// ─── CORS ──────────────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = [
+  "https://personaleartificiale.it",
+  "https://www.personaleartificiale.it",
+  "https://app.personaleartificiale.it",
+  /^https:\/\/[a-z0-9-]+\.ctonew\.app$/,
+];
+function isOriginAllowed(origin) {
+  if (!origin) return false;
+  for (const rule of ALLOWED_ORIGINS) {
+    if (rule instanceof RegExp && rule.test(origin)) return true;
+    if (rule === origin) return true;
+  }
+  return false;
+}
+function corsHeaders(origin) {
+  const h = { "Content-Type": "application/json" };
+  if (origin && isOriginAllowed(origin)) {
+    h["Access-Control-Allow-Origin"] = origin;
+    h["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
+    h["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
+    h["Access-Control-Allow-Credentials"] = "true";
+    h["Vary"] = "Origin";
+  }
+  return h;
+}
+
+// ─── Rate limiter ──────────────────────────────────────────────────────────
+const RATE_WINDOW = 60_000;
+const RATE_MAX = 20;
+const rateCounters = new Map();
+function rateLimit(ip) {
+  const now = Date.now();
+  let entry = rateCounters.get(ip);
+  if (!entry || now - entry.windowStart > RATE_WINDOW) {
+    entry = { windowStart: now, count: 0 };
+    rateCounters.set(ip, entry);
+  }
+  entry.count++;
+  return entry.count <= RATE_MAX;
+}
+
 // ─── Body parser ────────────────────────────────────────────────────────────
 async function readBody(req) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const chunks = [];
-    req.on("data", (c) => chunks.push(c));
+    req.on("data", c => chunks.push(c));
     req.on("end", () => resolve(Buffer.concat(chunks)));
   });
 }
 async function parseJSONBody(req) {
   try { return JSON.parse((await readBody(req)).toString("utf-8")); } catch { return null; }
 }
-
-// ─── Response helpers ──────────────────────────────────────────────────────
+function getOrigin(req) { return req.headers["origin"] || ""; }
 function jsonResponse(data, status = 200, origin = "") {
   return { status, headers: corsHeaders(origin), body: JSON.stringify(data) };
 }
 function errorResponse(msg, status = 400, origin = "") {
   return jsonResponse({ error: msg }, status, origin);
 }
-function getOrigin(req) { return req.headers["origin"] || ""; }
 
 // ─── Stripe ────────────────────────────────────────────────────────────────
 let _stripe = null;
@@ -199,7 +218,6 @@ async function handleRegister(req) {
   if (!validateEmail(body.email)) return errorResponse("Email non valida", 400, origin);
   if (!validatePlanId(body.planId)) return errorResponse("PlanId non valido", 400, origin);
   if (!body.name || body.name.length > 100) return errorResponse("Nome non valido", 400, origin);
-  await ensureTables();
   const user = findOrCreateUser(body.email, body.name, body.planId);
   const token = createSession(user.id);
   return jsonResponse({ token, user: { id: user.id, email: user.email, name: user.name, planId: user.planId } }, 200, origin);
@@ -218,7 +236,7 @@ async function handleLogout(req) {
   if (auth) {
     const match = auth.match(/^Bearer\s+(.+)$/i);
     if (match && /^[a-f0-9]{48}$/.test(match[1]))
-      dbExecute(`DELETE FROM sessions WHERE token = ${escapeSQL(match[1])}`);
+      dbDelete("sessions", s => s.token === match[1]);
   }
   return jsonResponse({ success: true }, 200, origin);
 }
@@ -265,15 +283,14 @@ async function handleWebhook(req) {
       const s = event.data.object;
       const planId = s.metadata?.plan_id;
       if (validatePlanId(planId) && s.customer_email) {
-        await ensureTables();
         const user = findOrCreateUser(s.customer_email, s.customer_email.split("@")[0] || "User", planId);
-        dbExecute(`UPDATE users SET subscription_id = ${escapeSQL(s.subscription)}, stripe_customer_id = ${escapeSQL(s.customer)}, stripe_checkout_session_id = ${escapeSQL(s.id)}, status = 'active' WHERE id = ${escapeSQL(user.id)}`);
+        dbUpdate("users", u => u.id === user.id, { subscriptionId: s.subscription, stripeCustomerId: s.customer, stripeCheckoutSessionId: s.id, status: "active" });
       }
     }
     if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
       const sub = event.data.object;
       const status = sub.status === "active" ? "active" : sub.status === "canceled" ? "cancelled" : "pending";
-      dbExecute(`UPDATE users SET status = ${escapeSQL(status)} WHERE subscription_id = ${escapeSQL(sub.id)}`);
+      dbUpdate("users", u => u.subscriptionId === sub.id, { status });
     }
     return jsonResponse({ received: true }, 200);
   } catch { return errorResponse("Webhook error", 400); }
@@ -283,9 +300,9 @@ async function handleGetAgentConfig(req) {
   const origin = getOrigin(req);
   const user = getUserFromAuthHeader(req);
   if (!user) return errorResponse("Non autorizzato", 401, origin);
-  const configs = dbQuery(`SELECT tone_of_voice, role_description FROM agent_config WHERE user_id = ${escapeSQL(user.id)}`);
-  if (configs.length === 0) return jsonResponse({ config: null }, 200, origin);
-  return jsonResponse({ config: { toneOfVoice: configs[0].tone_of_voice, roleDescription: configs[0].role_description } }, 200, origin);
+  const config = dbFindOne("configs", c => c.userId === user.id);
+  if (!config) return jsonResponse({ config: { toneOfVoice: "Professionale, cortese e amichevole", roleDescription: "Assistente Digitale" } }, 200, origin);
+  return jsonResponse({ config: { toneOfVoice: config.toneOfVoice, roleDescription: config.roleDescription } }, 200, origin);
 }
 
 async function handleUpdateAgentConfig(req) {
@@ -296,9 +313,12 @@ async function handleUpdateAgentConfig(req) {
   if (!body) return errorResponse("JSON non valido", 400, origin);
   const tone = (body.toneOfVoice || "").slice(0, 500);
   const role = (body.roleDescription || "").slice(0, 500);
-  dbExecute(`INSERT INTO agent_config (user_id, tone_of_voice, role_description, created_at, updated_at)
-    VALUES (${escapeSQL(user.id)}, ${escapeSQL(tone)}, ${escapeSQL(role)}, datetime('now'), datetime('now'))
-    ON CONFLICT(user_id) DO UPDATE SET tone_of_voice = ${escapeSQL(tone)}, role_description = ${escapeSQL(role)}, updated_at = datetime('now')`);
+  const existing = dbFindOne("configs", c => c.userId === user.id);
+  if (existing) {
+    dbUpdate("configs", c => c.userId === user.id, { toneOfVoice: tone, roleDescription: role });
+  } else {
+    dbInsert("configs", { userId: user.id, toneOfVoice: tone, roleDescription: role });
+  }
   return jsonResponse({ success: true }, 200, origin);
 }
 
@@ -381,8 +401,8 @@ async function handleGetToneOfVoice(req) {
   const origin = getOrigin(req);
   const user = getUserFromAuthHeader(req);
   if (!user) return errorResponse("Non autorizzato", 401, origin);
-  const configs = dbQuery(`SELECT tone_of_voice FROM agent_config WHERE user_id = ${escapeSQL(user.id)}`);
-  return jsonResponse({ toneOfVoice: configs.length > 0 ? configs[0].tone_of_voice : "Professionale, cortese e amichevole" }, 200, origin);
+  const config = dbFindOne("configs", c => c.userId === user.id);
+  return jsonResponse({ toneOfVoice: config?.toneOfVoice || "Professionale, cortese e amichevole" }, 200, origin);
 }
 
 async function handleUpdateToneOfVoice(req) {
@@ -391,7 +411,12 @@ async function handleUpdateToneOfVoice(req) {
   if (!user) return errorResponse("Non autorizzato", 401, origin);
   const body = await parseJSONBody(req);
   if (!body || !body.toneOfVoice) return errorResponse("Missing toneOfVoice", 400, origin);
-  dbExecute(`UPDATE agent_config SET tone_of_voice = ${escapeSQL(body.toneOfVoice.slice(0, 500))}, updated_at = datetime('now') WHERE user_id = ${escapeSQL(user.id)}`);
+  const existing = dbFindOne("configs", c => c.userId === user.id);
+  if (existing) {
+    dbUpdate("configs", c => c.userId === user.id, { toneOfVoice: body.toneOfVoice.slice(0, 500) });
+  } else {
+    dbInsert("configs", { userId: user.id, toneOfVoice: body.toneOfVoice.slice(0, 500), roleDescription: "Assistente Digitale" });
+  }
   return jsonResponse({ success: true }, 200, origin);
 }
 
@@ -431,13 +456,11 @@ const MIME_TYPES = {
   ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon",
 };
 
-const UPLOADS_BASE = process.env.UPLOADS_DIR || "/home/team/shared/uploads";
-
+// ─── HTTP Server ───────────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "OPTIONS") {
-      const headers = corsHeaders(getOrigin(req));
-      res.writeHead(204, { ...headers, "Content-Length": "0" });
+      res.writeHead(204, { ...corsHeaders(getOrigin(req)), "Content-Length": "0" });
       res.end(); return;
     }
 
@@ -445,7 +468,6 @@ const server = http.createServer(async (req, res) => {
     const pathname = url.pathname;
     const clientIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
 
-    // Rate limiting on auth endpoints
     if (pathname.startsWith("/api/auth/") && !rateLimit(clientIp)) {
       const r = jsonResponse({ error: "Troppe richieste. Riprova tra un minuto." }, 429, getOrigin(req));
       res.writeHead(r.status, r.headers); res.end(r.body); return;
@@ -460,15 +482,11 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(result.status, result.headers);
         res.end(result.body || ""); return;
       }
-      if (req.method === "DELETE" && pathname.startsWith("/api/agent/knowledge")) {
-        const result = await handleDeleteKnowledge(req);
-        res.writeHead(result.status, result.headers); res.end(result.body || ""); return;
-      }
       const r = jsonResponse({ error: "API route not found" }, 404, getOrigin(req));
       res.writeHead(r.status, r.headers); res.end(r.body); return;
     }
 
-    // ── Static files (dashboard SPA) ─────────────────────────────────────────
+    // ── Static files ─────────────────────────────────────────────────────────
     const filePath = pathname === "/" ? path.join(CLIENT_DIR, "index.html") : path.join(CLIENT_DIR, pathname);
     if (filePath.startsWith(CLIENT_DIR) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       const ext = path.extname(filePath).toLowerCase();
@@ -477,7 +495,7 @@ const server = http.createServer(async (req, res) => {
       res.end(content); return;
     }
 
-    // ── Fallback: serve dashboard SPA for all routes (SPA routing) ──────────
+    // ── Fallback: SPA routing ────────────────────────────────────────────────
     const indexPath = path.join(CLIENT_DIR, "index.html");
     if (fs.existsSync(indexPath)) {
       const content = fs.readFileSync(indexPath);
@@ -497,6 +515,6 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`Personale Artificiale App serving on http://${HOST}:${PORT}`);
+  console.log(`Personale Artificiale App on http://${HOST}:${PORT}`);
   console.log(`API routes at http://${HOST}:${PORT}/api/*`);
 });
