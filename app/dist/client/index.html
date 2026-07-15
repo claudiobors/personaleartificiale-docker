@@ -7,9 +7,8 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0f;color:#e4e4e7;min-height:100vh;display:flex;flex-direction:column}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0f;color:#e4e4e7;min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden}
 .container{max-width:900px;margin:0 auto;padding:24px;width:100%}
-/* Header */
 header{background:rgba(10,10,15,.8);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.05);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
 .logo{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .logo span{-webkit-text-fill-color:#e4e4e7;font-weight:300}
@@ -22,19 +21,16 @@ header{background:rgba(10,10,15,.8);backdrop-filter:blur(12px);border-bottom:1px
 .btn-ghost:hover{color:#e4e4e7}
 .btn-sm{padding:8px 16px;font-size:.8rem}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
-
-/* Cards */
-.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:32px;margin-bottom:24px}
+.btn-lg{padding:14px 32px;font-size:1rem;border-radius:14px}
+.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:32px;margin-bottom:24px;width:100%}
 .card-title{font-size:1.25rem;font-weight:700;margin-bottom:8px}
 .card-subtitle{color:#a1a1aa;font-size:.875rem;margin-bottom:24px}
-/* Form */
-.form-group{margin-bottom:20px}
-.form-group label{display:block;font-size:.875rem;font-weight:600;margin-bottom:6px;color:#d4d4d8}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:.8rem;font-weight:600;margin-bottom:6px;color:#d4d4d8}
 .form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#e4e4e7;font-size:.9rem;outline:none;transition:border-color .2s}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#6366f1}
 .form-group textarea{min-height:80px;resize:vertical}
-.form-error{color:#ef4444;font-size:.8rem;margin-top:4px}
-/* Plans */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .plans{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
 .plan{border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:24px;cursor:pointer;transition:all .3s;position:relative}
 .plan:hover{border-color:rgba(99,102,241,.3)}
@@ -43,18 +39,20 @@ header{background:rgba(10,10,15,.8);backdrop-filter:blur(12px);border-bottom:1px
 .plan-name{font-size:1rem;font-weight:700;margin-bottom:4px}
 .plan-price{font-size:2rem;font-weight:900;margin-bottom:4px}
 .plan-price span{font-size:.9rem;font-weight:400;color:#71717a}
-.plan-desc{color:#a1a1aa;font-size:.8rem;margin-bottom:12px;min-height:32px}
+.plan-desc{color:#a1a1aa;font-size:.8rem;margin-bottom:12px}
 .plan-features{list-style:none;font-size:.8rem;color:#d4d4d8}
 .plan-features li{padding:4px 0;display:flex;align-items:center;gap:6px}
-.plan-features li::before{content:'✓';color:#6366f1;font-weight:700}
-/* Steps */
+.plan-features li::before{content:'\2713';color:#6366f1;font-weight:700}
+.recommendation{background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:14px;padding:20px;margin-bottom:20px;text-align:center}
+.recommendation .badge{display:inline-block;padding:4px 12px;border-radius:100px;background:rgba(99,102,241,.15);color:#818cf8;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.recommendation .plan-name{font-size:1.2rem;font-weight:700;margin-bottom:4px}
+.recommendation .reason{color:#a1a1aa;font-size:.85rem}
 .steps{display:flex;gap:8px;margin-bottom:32px;justify-content:center}
 .step{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;border:2px solid rgba(255,255,255,.1);color:#71717a}
 .step.active{border-color:#6366f1;color:#6366f1;background:rgba(99,102,241,.1)}
 .step.done{background:#6366f1;color:#fff;border-color:#6366f1}
 .step-line{width:40px;height:2px;background:rgba(255,255,255,.1);align-self:center}
 .step-line.done{background:#6366f1}
-/* Upload */
 .file-list{list-style:none}
 .file-list li{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:8px;font-size:.875rem}
 .file-list li .file-name{display:flex;align-items:center;gap:8px}
@@ -63,42 +61,29 @@ header{background:rgba(10,10,15,.8);backdrop-filter:blur(12px);border-bottom:1px
 .drop-zone:hover{border-color:#6366f1;background:rgba(99,102,241,.03)}
 .drop-zone p{color:#a1a1aa;font-size:.875rem}
 .drop-zone .icon{font-size:2rem;margin-bottom:8px}
-/* QR */
 .qr-container{display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px;text-align:center}
 .qr-placeholder{width:200px;height:200px;background:rgba(255,255,255,.05);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:3rem;border:2px dashed rgba(255,255,255,.1)}
 .qr-status{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:100px;font-size:.8rem;font-weight:600}
 .qr-status.pending{background:rgba(234,179,8,.1);color:#fbbf24;border:1px solid rgba(234,179,8,.3)}
 .qr-status.connected{background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.3)}
-/* Alert */
 .alert{padding:16px;border-radius:12px;font-size:.875rem;margin-bottom:16px;display:flex;align-items:center;gap:12px}
 .alert-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#22c55e}
 .alert-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#ef4444}
 .alert-info{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:#818cf8}
-/* Loading */
-.loading{display:flex;align-items:center;justify-content:center;padding:60px;flex-direction:column;gap:12px}
-.spinner{width:32px;height:32px;border:3px solid rgba(255,255,255,.1);border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite}
+.loading{display:flex;align-items:center;justify-content:center;padding:80px;flex-direction:column;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,.1);border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-/* Hidden */
 .hidden{display:none!important}
-/* Responsive */
-@media(max-width:640px){.plans{grid-template-columns:1fr}.container{padding:16px}}
+@media(max-width:640px){.plans{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.container{padding:16px}.card{padding:20px}}
 </style>
 </head>
 <body>
-
 <header>
 <div class="logo">Personale<span>Artificiale</span></div>
-<div id="header-actions">
-  <button class="btn btn-ghost btn-sm hidden" id="btn-logout" onclick="logout()">Esci</button>
-</div>
+<div id="header-actions"><button class="btn btn-ghost btn-sm hidden" id="btn-logout" onclick="logout()">Esci</button></div>
 </header>
-
 <div class="container" id="app">
-<!-- Loading -->
-<div class="loading" id="loading-view">
-  <div class="spinner"></div>
-  <p style="color:#a1a1aa;font-size:.9rem">Caricamento...</p>
-</div>
+<div class="loading" id="loading-view"><div class="spinner"></div><p style="color:#a1a1aa;font-size:.9rem">Caricamento...</p></div>
 
 <!-- Registration -->
 <div class="card hidden" id="register-view">
@@ -108,157 +93,130 @@ header{background:rgba(10,10,15,.8);backdrop-filter:blur(12px);border-bottom:1px
     <p style="color:#a1a1aa;font-size:.875rem">Registrati gratis, nessuna carta di credito richiesta</p>
   </div>
   <div id="register-error" class="alert alert-error hidden"></div>
-  <div class="form-group">
-    <label>Nome</label>
-    <input type="text" id="reg-name" placeholder="Il tuo nome" maxlength="100" />
+  <div class="form-group"><label>Nome e Cognome</label><input type="text" id="reg-name" placeholder="Il tuo nome" maxlength="100" /></div>
+  <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="tua@email.com" /></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:1rem" onclick="register()">Registrati Gratis →</button>
+  <p style="text-align:center;color:#52525b;font-size:.75rem;margin-top:12px">Registrandoti accetti i <a href="/termini" style="color:#818cf8">Termini di Servizio</a></p>
+</div>
+
+<!-- Business Data Collections -->
+<div class="card hidden" id="business-view">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:2rem;margin-bottom:8px">💼</div>
+    <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px">Raccontaci della tua attività</h2>
+    <p style="color:#a1a1aa;font-size:.875rem">Così possiamo consigliarti la configurazione perfetta per te</p>
+  </div>
+  <div id="business-error" class="alert alert-error hidden"></div>
+  <div class="form-row">
+    <div class="form-group"><label>Nome attività / Azienda</label><input type="text" id="biz-company" placeholder="Marco Rossi Consulenze" maxlength="150" /></div>
+    <div class="form-group"><label>Il tuo ruolo</label><select id="biz-role"><option value="titolare">Titolare / Fondatore</option><option value="libero">Libero Professionista</option><option value="manager">Manager / Direttore</option><option value="dipendente">Dipendente</option><option value="altro">Altro</option></select></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Settore</label><select id="biz-sector"><option value="consulenza">Consulenza / Servizi</option><option value="commerciale">Commercio / Vendita</option><option value="artigianato">Artigianato</option><option value="studio">Studio Professionale</option><option value="agenzia">Agenzia (Marketing/Design)</option><option value="tecnologia">Tecnologia / IT</option><option value="sanita">Sanità / Benessere</option><option value="altro">Altro</option></select></div>
+    <div class="form-group"><label>Quante persone siete?</label><select id="biz-team"><option value="1">Solo io</option><option value="2-5">2-5 persone</option><option value="6-15">6-15 persone</option><option value="16-50">16-50 persone</option><option value="50+">Più di 50</option></select></div>
   </div>
   <div class="form-group">
-    <label>Email</label>
-    <input type="email" id="reg-email" placeholder="tua@email.com" />
+    <label>Quali strumenti usi ogni giorno?</label>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px">
+      <label class="tool-chip" style="cursor:pointer;padding:8px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:.8rem;transition:all .2s" data-tool="gmail" onclick="toggleTool(this)">📧 Gmail</label>
+      <label class="tool-chip" style="cursor:pointer;padding:8px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:.8rem;transition:all .2s" data-tool="calendar" onclick="toggleTool(this)">📅 Google Calendar</label>
+      <label class="tool-chip" style="cursor:pointer;padding:8px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:.8rem;transition:all .2s" data-tool="drive" onclick="toggleTool(this)">📁 Google Drive</label>
+      <label class="tool-chip" style="cursor:pointer;padding:8px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:.8rem;transition:all .2s" data-tool="trello" onclick="toggleTool(this)">📋 Trello</label>
+      <label class="tool-chip" style="cursor:pointer;padding:8px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:.8rem;transition:all .2s" data-tool="crm" onclick="toggleTool(this)">🧑‍💼 CRM</label>
+      <label class="tool-chip" style="cursor:pointer;padding:8px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.1);font-size:.8rem;transition:all .2s" data-tool="whatsapp" onclick="toggleTool(this)">💬 WhatsApp</label>
+    </div>
   </div>
-  <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="register()">
-    Registrati Gratis
-  </button>
-  <p style="text-align:center;color:#52525b;font-size:.75rem;margin-top:12px">
-    Registrandoti accetti i <a href="/termini" style="color:#818cf8">Termini di Servizio</a>
-  </p>
+  <div class="form-group"><label>Quali attività ti rubano più tempo?</label><textarea id="biz-pain" placeholder="Email, appuntamenti, fatture, risposte ai clienti..." rows="2"></textarea></div>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:1rem" onclick="saveBusiness()">✨ Scopri il sistema per te →</button>
 </div>
 
 <!-- Pricing -->
 <div class="card hidden" id="pricing-view">
   <div style="text-align:center;margin-bottom:24px">
-    <div style="font-size:2rem;margin-bottom:8px">💎</div>
-    <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px">Scegli il tuo piano</h2>
-    <p style="color:#a1a1aa;font-size:.875rem">Attiva il tuo dipendente virtuale. Disdici quando vuoi.</p>
+    <div style="font-size:2rem;margin-bottom:8px">🎯</div>
+    <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:4px">Il piano perfetto per <span id="rec-name" style="background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent">te</span></h2>
+    <p style="color:#a1a1aa;font-size:.875rem">Basato sulle tue esigenze. Attiva il tuo dipendente virtuale in 15 minuti.</p>
+  </div>
+  <div class="recommendation" id="plan-recommendation">
+    <div class="badge">✨ Consigliato per te</div>
+    <div class="plan-name" id="rec-plan-name">L'Ufficio Digitale</div>
+    <div class="reason" id="rec-plan-reason">Perfetto per team che gestiscono clienti, email e calendario ogni giorno</div>
   </div>
   <div class="plans">
     <div class="plan" id="plan-assistente" onclick="selectPlan('assistente-esecutivo')">
       <div class="plan-name">Assistente Esecutivo</div>
       <div class="plan-price">€97<span>/mese</span></div>
-      <p class="plan-desc">Per freelance e artigiani</p>
-      <ul class="plan-features">
-        <li>1 agente AI dedicato</li>
-        <li>Email + Calendar + Drive</li>
-        <li>WhatsApp / Telegram</li>
-        <li>Knowledge Base RAG</li>
-      </ul>
+      <p class="plan-desc">Per freelance e professionisti</p>
+      <ul class="plan-features"><li>1 agente AI dedicato</li><li>Email + Calendar + Drive</li><li>WhatsApp / Telegram</li><li>Knowledge Base RAG</li></ul>
     </div>
     <div class="plan" id="plan-ufficio" onclick="selectPlan('ufficio-digitale')" style="border-color:rgba(99,102,241,.3)">
       <div class="plan-badge">🔥 Più Popolare</div>
       <div class="plan-name">L'Ufficio Digitale</div>
       <div class="plan-price">€297<span>/mese</span></div>
       <p class="plan-desc">Per PMI, agenzie e studi</p>
-      <ul class="plan-features">
-        <li>Fino a 3 agenti cooperanti</li>
-        <li>Google Workspace completo</li>
-        <li>Trello, Asana & CRM</li>
-        <li>Memoria RAG + PDF</li>
-        <li>Supporto prioritario</li>
-      </ul>
+      <ul class="plan-features"><li>Fino a 3 agenti cooperanti</li><li>Google Workspace completo</li><li>Trello, Asana & CRM</li><li>Memoria RAG + PDF</li><li>Supporto prioritario</li></ul>
     </div>
   </div>
   <div id="checkout-error" class="alert alert-error hidden"></div>
-  <button class="btn btn-primary" style="width:100%;justify-content:center" id="btn-checkout" onclick="goToCheckout()">
-    Continua con Stripe →
-  </button>
-  <p style="text-align:center;color:#52525b;font-size:.75rem;margin-top:8px">
-    Pagamento sicuro gestito da Stripe • Disdici in qualsiasi momento
-  </p>
+  <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:1rem" id="btn-checkout" onclick="goToCheckout()">Attiva il tuo Agente — Vai al Pagamento →</button>
+  <p style="text-align:center;color:#52525b;font-size:.75rem;margin-top:8px">✅ Pagamento sicuro gestito da Stripe • Disdici in qualsiasi momento</p>
 </div>
 
 <!-- Wizard -->
 <div class="hidden" id="wizard-view">
   <div class="steps" id="wizard-steps">
-    <div class="step active" id="ws-1">1</div>
-    <div class="step-line" id="wl-1"></div>
-    <div class="step" id="ws-2">2</div>
-    <div class="step-line" id="wl-2"></div>
+    <div class="step active" id="ws-1">1</div><div class="step-line" id="wl-1"></div>
+    <div class="step" id="ws-2">2</div><div class="step-line" id="wl-2"></div>
     <div class="step" id="ws-3">3</div>
   </div>
-
-  <!-- Step 1: Config -->
   <div class="card" id="wizard-step-1">
     <div class="card-title">Configura il tuo agente</div>
     <div class="card-subtitle">Personalizza il tono di voce e il ruolo del tuo dipendente virtuale</div>
-    <div class="form-group">
-      <label>Tono di voce</label>
-      <textarea id="wiz-tone" placeholder="Es: Professionale, cortese e amichevole. Risponde sempre in italiano.">Professionale, cortese e amichevole</textarea>
-    </div>
-    <div class="form-group">
-      <label>Ruolo / Descrizione</label>
-      <textarea id="wiz-role" placeholder="Es: Assistente Esecutivo specializzato nella gestione di email e appuntamenti">Assistente Digitale</textarea>
-    </div>
+    <div class="form-group"><label>Tono di voce</label><textarea id="wiz-tone" placeholder="Professionale, cortese e amichevole">Professionale, cortese e amichevole</textarea></div>
+    <div class="form-group"><label>Ruolo</label><textarea id="wiz-role" placeholder="Assistente Digitale">Assistente Digitale</textarea></div>
     <div id="config-error" class="alert alert-error hidden"></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveConfig()">
-      Salva e Continua →
-    </button>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveConfig()">Salva e Continua →</button>
   </div>
-
-  <!-- Step 2: Documents -->
   <div class="card hidden" id="wizard-step-2">
     <div class="card-title">Carica i tuoi documenti</div>
-    <div class="card-subtitle">PDF, documenti, procedure — l'agente li assimilerà nella sua knowledge base</div>
-    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <div class="icon">📄</div>
-      <p>Clicca per caricare PDF, DOC, DOCX, TXT o MD</p>
-      <p style="font-size:.75rem;color:#52525b;margin-top:4px">Max 20MB per file</p>
+    <div class="card-subtitle">PDF, listini, procedure — l'agente li assimilerà nella sua knowledge base</div>
+    <div class="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">📄</div><p>Clicca per caricare PDF, DOC, DOCX, TXT o MD</p><p style="font-size:.75rem;color:#52525b;margin-top:4px">Max 20MB per file</p>
     </div>
     <input type="file" id="file-input" accept=".pdf,.doc,.docx,.txt,.md" multiple style="display:none" onchange="uploadFiles(this.files)" />
     <ul class="file-list" id="file-list"></ul>
     <div id="upload-error" class="alert alert-error hidden"></div>
     <div style="display:flex;gap:12px;margin-top:8px">
       <button class="btn btn-outline" style="flex:1;justify-content:center" onclick="prevStep()">← Indietro</button>
-      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="nextStep()">
-        Salta / Continua →
-      </button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="nextStep()">Salta / Continua →</button>
     </div>
   </div>
-
-  <!-- Step 3: WhatsApp -->
   <div class="card hidden" id="wizard-step-3">
     <div class="card-title">Collega WhatsApp</div>
     <div class="card-subtitle">Scansiona il QR code con WhatsApp per attivare il tuo agente</div>
     <div class="qr-container">
       <div class="qr-placeholder" id="qr-placeholder">📱</div>
       <div class="qr-status pending" id="qr-status">⏳ In attesa della scansione...</div>
-      <p style="color:#a1a1aa;font-size:.8rem;max-width:300px">
-        Apri WhatsApp sul tuo telefono, vai su Impostazioni → Dispositivi collegati → Scansiona codice
-      </p>
+      <p style="color:#a1a1aa;font-size:.8rem;max-width:300px">Apri WhatsApp → Impostazioni → Dispositivi collegati → Scansiona codice</p>
     </div>
     <div style="display:flex;gap:12px;margin-top:8px">
       <button class="btn btn-outline" style="flex:1;justify-content:center" onclick="prevStep()">← Indietro</button>
-      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="finishSetup()">
-        ✅ Completa Setup
-      </button>
+      <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="finishSetup()">✅ Completa Setup</button>
     </div>
   </div>
 </div>
 
-<!-- Dashboard (active subscription) -->
+<!-- Dashboard -->
 <div class="card hidden" id="dashboard-view">
   <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
     <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;font-size:1.5rem">🤖</div>
-    <div>
-      <h2 style="font-size:1.25rem;font-weight:700" id="dash-name">Il tuo agente</h2>
-      <p style="color:#a1a1aa;font-size:.8rem" id="dash-plan">Piano: Assistente Esecutivo</p>
-    </div>
-    <div style="margin-left:auto">
-      <span style="padding:4px 12px;border-radius:100px;background:rgba(34,197,94,.1);color:#22c55e;font-size:.75rem;font-weight:600" id="dash-status">● Attivo</span>
-    </div>
+    <div><h2 style="font-size:1.25rem;font-weight:700" id="dash-name">Il tuo agente</h2><p style="color:#a1a1aa;font-size:.8rem" id="dash-plan">Piano: Assistente Esecutivo</p></div>
+    <div style="margin-left:auto"><span style="padding:4px 12px;border-radius:100px;background:rgba(34,197,94,.1);color:#22c55e;font-size:.75rem;font-weight:600" id="dash-status">● Attivo</span></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px">
-    <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:16px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:800;color:#6366f1" id="dash-msgs">0</div>
-      <div style="color:#71717a;font-size:.75rem">Messaggi</div>
-    </div>
-    <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:16px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:800;color:#6366f1" id="dash-files">0</div>
-      <div style="color:#71717a;font-size:.75rem">Documenti</div>
-    </div>
-    <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:16px;text-align:center">
-      <div style="font-size:1.5rem;font-weight:800;color:#6366f1" id="dash-tasks">0</div>
-      <div style="color:#71717a;font-size:.75rem">Task Completati</div>
-    </div>
+    <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:16px;text-align:center"><div style="font-size:1.5rem;font-weight:800;color:#6366f1" id="dash-msgs">0</div><div style="color:#71717a;font-size:.75rem">Messaggi</div></div>
+    <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:16px;text-align:center"><div style="font-size:1.5rem;font-weight:800;color:#6366f1" id="dash-files">0</div><div style="color:#71717a;font-size:.75rem">Documenti</div></div>
+    <div style="background:rgba(255,255,255,.03);border-radius:12px;padding:16px;text-align:center"><div style="font-size:1.5rem;font-weight:800;color:#6366f1" id="dash-tasks">0</div><div style="color:#71717a;font-size:.75rem">Task Completati</div></div>
   </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap">
     <button class="btn btn-outline btn-sm" onclick="showWizard()">⚙️ Configura</button>
@@ -272,143 +230,127 @@ header{background:rgba(10,10,15,.8);backdrop-filter:blur(12px);border-bottom:1px
 const API_BASE = '';
 let TOKEN = localStorage.getItem('pa_token');
 let USER = null;
+let SELECTED_TOOLS = [];
 
-// ─── Init ──────────────────────────────────────────────────────────────────
 async function init() {
   const params = new URLSearchParams(window.location.search);
   const queryToken = params.get('token');
   if (queryToken) {
-    TOKEN = queryToken;
-    localStorage.setItem('pa_token', queryToken);
+    TOKEN = queryToken; localStorage.setItem('pa_token', queryToken);
     const url = new URL(window.location.href);
-    url.searchParams.delete('token');
-    url.searchParams.delete('session_id');
+    url.searchParams.delete('token'); url.searchParams.delete('session_id');
     window.history.replaceState({}, document.title, url.pathname + url.search);
   }
   if (TOKEN) {
     const user = await fetchMe();
     if (user) {
       USER = user;
-      if (user.status === 'active') {
-        showDashboard();
-      } else {
-        showPricing();
-      }
+      if (user.status === 'active') showDashboard();
+      else if (localStorage.getItem('pa_business')) showPricing();
+      else showBusiness();
       return;
     }
   }
   showRegister();
 }
 
-// ─── API calls ─────────────────────────────────────────────────────────────
 async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`;
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+  const res = await fetch(API_BASE + path, { ...options, headers });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Errore di rete');
   return data;
 }
 
 async function fetchMe() {
-  try {
-    const data = await api('/api/auth/me');
-    return data.user;
-  } catch { return null; }
+  try { const d = await api('/api/auth/me'); return d.user; }
+  catch { return null; }
 }
-
-async function fetchPlans() {
-  const data = await api('/api/plans');
-  return data.plans;
-}
-
 async function fetchStats() {
-  try {
-    const data = await api('/api/agent/stats');
-    return data.stats;
-  } catch { return { totalMessages: 0, totalTasksCompleted: 0, filesInKnowledgeBase: 0 }; }
+  try { const d = await api('/api/agent/stats'); return d.stats; }
+  catch { return { totalMessages: 0, totalTasksCompleted: 0, filesInKnowledgeBase: 0 }; }
 }
-
 async function fetchFiles() {
-  try {
-    const data = await api('/api/agent/knowledge');
-    return data.files || [];
-  } catch { return []; }
+  try { const d = await api('/api/agent/knowledge'); return d.files || []; }
+  catch { return []; }
 }
 
-// ─── Views ─────────────────────────────────────────────────────────────────
 function showView(id) {
   document.querySelectorAll('#app > .card, #app > div').forEach(el => el.classList.add('hidden'));
   document.getElementById(id)?.classList.remove('hidden');
   document.getElementById('loading-view')?.classList.add('hidden');
 }
-
-function showRegister() {
-  showView('register-view');
-  document.getElementById('btn-logout')?.classList.add('hidden');
-}
-
+function showRegister() { showView('register-view'); document.getElementById('btn-logout')?.classList.add('hidden'); }
+function showBusiness() { showView('business-view'); document.getElementById('btn-logout')?.classList.remove('hidden'); }
 function showPricing() {
   showView('pricing-view');
   document.getElementById('btn-logout')?.classList.remove('hidden');
-  document.getElementById('btn-checkout').textContent = 'Continua con Stripe →';
+  const biz = JSON.parse(localStorage.getItem('pa_business') || '{}');
+  const team = biz.team || '1';
+  const sector = biz.sector || 'consulenza';
+  let recommended = 'assistente-esecutivo', recName = 'Assistente Esecutivo', recReason = 'Perfetto per professionisti che lavorano in autonomia';
+  if (['2-5','6-15','16-50'].includes(team) || ['agenzia','commerciale'].includes(sector)) {
+    recommended = 'ufficio-digitale'; recName = "L'Ufficio Digitale"; recReason = 'Ideale per team che gestiscono clienti, email e calendario ogni giorno';
+  }
+  document.getElementById('rec-plan-name').textContent = recName;
+  document.getElementById('rec-plan-reason').textContent = recReason;
+  selectPlan(recommended);
   document.getElementById('btn-checkout').disabled = false;
+  document.getElementById('btn-checkout').textContent = 'Attiva il tuo Agente \u2014 Vai al Pagamento \u2192';
 }
-
 function showDashboard() {
   showView('dashboard-view');
   document.getElementById('btn-logout')?.classList.remove('hidden');
   document.getElementById('dash-name').textContent = USER?.name || 'Il tuo agente';
-  document.getElementById('dash-plan').textContent = `Piano: ${USER?.planName || USER?.planId || 'Assistente Esecutivo'}`;
+  document.getElementById('dash-plan').textContent = 'Piano: ' + (USER?.planName || USER?.planId || 'Assistente Esecutivo');
   fetchStats().then(s => {
     document.getElementById('dash-msgs').textContent = s.totalMessages || 0;
     document.getElementById('dash-files').textContent = s.filesInKnowledgeBase || 0;
     document.getElementById('dash-tasks').textContent = s.totalTasksCompleted || 0;
   });
 }
-
 function showWizard() {
   showView('wizard-view');
   document.getElementById('btn-logout')?.classList.remove('hidden');
-  setStep(1);
-  loadConfig();
-  loadFiles();
+  setStep(1); loadConfig(); loadFiles();
 }
 
-// ─── Registration ──────────────────────────────────────────────────────────
+function toggleTool(el) {
+  const tool = el.dataset.tool;
+  const idx = SELECTED_TOOLS.indexOf(tool);
+  if (idx > -1) { SELECTED_TOOLS.splice(idx, 1); el.style.borderColor = 'rgba(255,255,255,.1)'; el.style.background = 'transparent'; }
+  else { SELECTED_TOOLS.push(tool); el.style.borderColor = '#6366f1'; el.style.background = 'rgba(99,102,241,.1)'; }
+}
+
 async function register() {
   const name = document.getElementById('reg-name').value.trim();
   const email = document.getElementById('reg-email').value.trim();
   const errEl = document.getElementById('register-error');
   errEl.classList.add('hidden');
-  if (!name || !email) {
-    errEl.textContent = 'Compila tutti i campi';
-    errEl.classList.remove('hidden');
-    return;
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errEl.textContent = 'Inserisci un\'email valida';
-    errEl.classList.remove('hidden');
-    return;
-  }
+  if (!name || !email) { errEl.textContent = 'Compila tutti i campi'; errEl.classList.remove('hidden'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { errEl.textContent = 'Email non valida'; errEl.classList.remove('hidden'); return; }
   try {
-    const data = await api('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, planId: 'assistente-esecutivo' }),
-    });
-    TOKEN = data.token;
-    localStorage.setItem('pa_token', TOKEN);
-    USER = data.user;
-    showPricing();
-  } catch (e) {
-    errEl.textContent = e.message;
-    errEl.classList.remove('hidden');
-  }
+    const data = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, email, planId: 'assistente-esecutivo' }) });
+    TOKEN = data.token; localStorage.setItem('pa_token', TOKEN); USER = data.user;
+    showBusiness();
+  } catch (e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
 }
 
-// ─── Pricing & Checkout ────────────────────────────────────────────────────
-let selectedPlan = 'ufficio-digitale';
+async function saveBusiness() {
+  const company = document.getElementById('biz-company').value.trim();
+  const role = document.getElementById('biz-role').value;
+  const sector = document.getElementById('biz-sector').value;
+  const team = document.getElementById('biz-team').value;
+  const pain = document.getElementById('biz-pain').value.trim();
+  const errEl = document.getElementById('business-error');
+  errEl.classList.add('hidden');
+  if (!company) { errEl.textContent = 'Inserisci il nome della tua attivit\u00e0'; errEl.classList.remove('hidden'); return; }
+  localStorage.setItem('pa_business', JSON.stringify({ company, role, sector, team, tools: SELECTED_TOOLS, pain, name: USER?.name, email: USER?.email }));
+  showPricing();
+}
 
+let selectedPlan = 'ufficio-digitale';
 function selectPlan(planId) {
   selectedPlan = planId;
   document.querySelectorAll('.plan').forEach(p => p.classList.remove('selected'));
@@ -419,156 +361,61 @@ function selectPlan(planId) {
 async function goToCheckout() {
   const btn = document.getElementById('btn-checkout');
   const errEl = document.getElementById('checkout-error');
-  btn.disabled = true;
-  btn.textContent = 'Reindirizzamento in corso...';
+  btn.disabled = true; btn.textContent = 'Reindirizzamento...';
   errEl.classList.add('hidden');
   try {
-    const data = await api('/api/stripe/checkout', {
-      method: 'POST',
-      body: JSON.stringify({ planId: selectedPlan, email: USER?.email || '' }),
-    });
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      throw new Error('URL di pagamento non disponibile');
-    }
-  } catch (e) {
-    errEl.textContent = e.message;
-    errEl.classList.remove('hidden');
-    btn.disabled = false;
-    btn.textContent = 'Continua con Stripe →';
-  }
+    const data = await api('/api/stripe/checkout', { method: 'POST', body: JSON.stringify({ planId: selectedPlan, email: USER?.email || '' }) });
+    if (data.url) window.location.href = data.url;
+    else throw new Error('URL non disponibile');
+  } catch (e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); btn.disabled = false; btn.textContent = 'Attiva il tuo Agente \u2014 Vai al Pagamento \u2192'; }
 }
 
-// ─── Wizard Steps ──────────────────────────────────────────────────────────
 let currentStep = 1;
 function setStep(n) {
   currentStep = n;
   for (let i = 1; i <= 3; i++) {
-    const s = document.getElementById(`ws-${i}`);
-    const l = document.getElementById(`wl-${i}`);
-    s.classList.remove('active', 'done');
-    if (l) l.classList.remove('done');
-    if (i < n) { s.classList.add('done'); if (l) l.classList.add('done'); }
-    else if (i === n) s.classList.add('active');
+    const s = document.getElementById('ws-'+i), l = document.getElementById('wl-'+i);
+    s?.classList.remove('active','done'); l?.classList.remove('done');
+    if (i < n) { s?.classList.add('done'); l?.classList.add('done'); }
+    else if (i === n) s?.classList.add('active');
   }
-  for (let i = 1; i <= 3; i++) {
-    document.getElementById(`wizard-step-${i}`).classList.toggle('hidden', i !== n);
-  }
+  for (let i = 1; i <= 3; i++) document.getElementById('wizard-step-'+i)?.classList.toggle('hidden', i !== n);
 }
-
 function nextStep() { if (currentStep < 3) setStep(currentStep + 1); }
 function prevStep() { if (currentStep > 1) setStep(currentStep - 1); }
 
-// ─── Config ────────────────────────────────────────────────────────────────
 async function loadConfig() {
-  try {
-    const data = await api('/api/agent/config');
-    if (data.config) {
-      document.getElementById('wiz-tone').value = data.config.toneOfVoice || 'Professionale, cortese e amichevole';
-      document.getElementById('wiz-role').value = data.config.roleDescription || 'Assistente Digitale';
-    }
-  } catch {}
+  try { const d = await api('/api/agent/config'); if (d.config) { document.getElementById('wiz-tone').value = d.config.toneOfVoice || 'Professionale...'; document.getElementById('wiz-role').value = d.config.roleDescription || 'Assistente Digitale'; } } catch {}
 }
-
 async function saveConfig() {
   const tone = document.getElementById('wiz-tone').value.trim();
   const role = document.getElementById('wiz-role').value.trim();
-  const errEl = document.getElementById('config-error');
-  errEl.classList.add('hidden');
-  try {
-    await api('/api/agent/config', {
-      method: 'PUT',
-      body: JSON.stringify({ toneOfVoice: tone, roleDescription: role }),
-    });
-    nextStep();
-  } catch (e) {
-    errEl.textContent = e.message;
-    errEl.classList.remove('hidden');
-  }
+  const errEl = document.getElementById('config-error'); errEl.classList.add('hidden');
+  try { await api('/api/agent/config', { method: 'PUT', body: JSON.stringify({ toneOfVoice: tone, roleDescription: role }) }); nextStep(); }
+  catch (e) { errEl.textContent = e.message; errEl.classList.remove('hidden'); }
 }
-
-// ─── File Upload ───────────────────────────────────────────────────────────
 async function loadFiles() {
-  try {
-    const files = await fetchFiles();
-    const list = document.getElementById('file-list');
-    list.innerHTML = '';
-    files.forEach(f => {
-      const li = document.createElement('li');
-      li.innerHTML = `<span class="file-name">📄 ${f.originalName || f.fileName}</span>
-        <button class="file-delete" onclick="deleteFile('${f.id}')">✕</button>`;
-      list.appendChild(li);
-    });
-  } catch {}
+  try { const files = await fetchFiles(); const list = document.getElementById('file-list'); list.innerHTML = ''; files.forEach(f => { const li = document.createElement('li'); li.innerHTML = '<span class="file-name">\uD83D\uDCC4 ' + (f.originalName || f.fileName) + '</span><button class="file-delete" onclick="deleteFile(\''+f.id+'\')">\u2715</button>'; list.appendChild(li); }); } catch {}
 }
-
 async function uploadFiles(files) {
-  const errEl = document.getElementById('upload-error');
-  errEl.classList.add('hidden');
+  const errEl = document.getElementById('upload-error'); errEl.classList.add('hidden');
   for (const file of files) {
-    if (file.size > 20 * 1024 * 1024) {
-      errEl.textContent = `File troppo grande: ${file.name} (max 20MB)`;
-      errEl.classList.remove('hidden');
-      continue;
-    }
-    const ext = '.' + file.name.split('.').pop().toLowerCase();
-    if (!['.pdf', '.doc', '.docx', '.txt', '.md'].includes(ext)) {
-      errEl.textContent = `Formato non supportato: ${file.name}`;
-      errEl.classList.remove('hidden');
-      continue;
-    }
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/agent/knowledge', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${TOKEN}` },
-        body: formData,
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        throw new Error(d.error || 'Upload fallito');
-      }
-    } catch (e) {
-      errEl.textContent = `Errore: ${file.name} - ${e.message}`;
-      errEl.classList.remove('hidden');
-    }
+    if (file.size > 20*1024*1024) { errEl.textContent = 'File troppo grande: '+file.name; errEl.classList.remove('hidden'); continue; }
+    const ext = '.'+file.name.split('.').pop().toLowerCase();
+    if (!['.pdf','.doc','.docx','.txt','.md'].includes(ext)) { errEl.textContent = 'Formato non supportato: '+file.name; errEl.classList.remove('hidden'); continue; }
+    try { const fd = new FormData(); fd.append('file', file); const r = await fetch('/api/agent/knowledge', { method: 'POST', headers: { Authorization: 'Bearer '+TOKEN }, body: fd }); if (!r.ok) { const d = await r.json(); throw new Error(d.error||'Upload fallito'); } } catch (e) { errEl.textContent = 'Errore: '+e.message; errEl.classList.remove('hidden'); }
   }
   loadFiles();
 }
-
 async function deleteFile(fileId) {
-  try {
-    await fetch(`/api/agent/knowledge?id=${fileId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${TOKEN}` },
-    });
-    loadFiles();
-  } catch {}
+  try { await fetch('/api/agent/knowledge?id='+fileId, { method: 'DELETE', headers: { Authorization: 'Bearer '+TOKEN } }); loadFiles(); } catch {}
 }
-
-// ─── WhatsApp ──────────────────────────────────────────────────────────────
-let qrCheckInterval = null;
-
-// ─── Finish ────────────────────────────────────────────────────────────────
-async function finishSetup() {
-  if (qrCheckInterval) clearInterval(qrCheckInterval);
-  showDashboard();
-}
-
-// ─── Logout ────────────────────────────────────────────────────────────────
+async function finishSetup() { showDashboard(); }
 async function logout() {
-  try {
-    await api('/api/auth/logout', { method: 'POST' });
-  } catch {}
-  TOKEN = null;
-  USER = null;
-  localStorage.removeItem('pa_token');
+  try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
+  TOKEN = null; USER = null; localStorage.removeItem('pa_token'); localStorage.removeItem('pa_business');
   showRegister();
 }
-
-// ─── Start ─────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
