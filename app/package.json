@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "start": "node server.mjs"
+    "typecheck": "tsc --noEmit --pretty false",
+    "verify": "npm run typecheck && npm run build",
+    "start": "node server-v2.mjs"
   },
   "dependencies": {
     "@langchain/core": "^1.2.1",
@@ -19,7 +21,9 @@
     "@tanstack/start": "^1.120.20",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.23.0",
+    "mammoth": "^1.9.1",
     "openai": "^4.86.0",
+    "pdf-parse": "^1.1.1",
     "pg": "^8.13.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

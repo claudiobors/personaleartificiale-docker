@@ -1,48 +1,53 @@
 # Personale Artificiale — Docker Stack
-# Deploy: docker compose up -d
+# Deploy: cp .env.example .env && docker compose up -d --build
 
 services:
-
-  # ─── Reverse Proxy ───────────────────────────────
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
-      - "443:443"
+      # Espone Personale Artificiale solo in loopback per convivere sulla stessa VM
+      # con altri siti/container. Il reverse proxy host pubblico deve inoltrare:
+      # - personaleartificiale.it / www.personaleartificiale.it -> 127.0.0.1:${PA_HTTP_PORT:-8081}
+      # - app.personaleartificiale.it -> 127.0.0.1:${PA_HTTP_PORT:-8081}
+      - "127.0.0.1:${PA_HTTP_PORT:-8081}:80"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
-      - app
-      - www
+      app:
+        condition: service_healthy
+      www:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - pa-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
-  # ─── App (Dashboard + API + Agenti) ─────────────
   app:
     build:
       context: ./app
       dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=postgresql://pa:${POSTGRES_PASSWORD}@postgres:5432/personale_artificiale
-      - REDIS_URL=redis://redis:6379
-      - QDRANT_URL=http://qdrant:6333
-      - EVOLUTION_API_URL=http://evolution:8080
-      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - JWT_SECRET=${JWT_SECRET}
-      - APP_URL=https://app.personaleartificiale.it
-      - WWW_URL=https://www.personaleartificiale.it
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://pa:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/personale_artificiale
+      REDIS_URL: redis://redis:6379
+      QDRANT_URL: http://qdrant:6333
+      EVOLUTION_API_URL: http://evolution:8080
+      APP_URL: ${APP_URL:-https://app.personaleartificiale.it}
+      WWW_URL: ${WWW_URL:-https://www.personaleartificiale.it}
+      UPLOADS_DIR: /app/uploads
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       qdrant:
         condition: service_started
     restart: unless-stopped
@@ -51,48 +56,62 @@ services:
     volumes:
       - app-uploads:/app/uploads
       - app-logs:/app/.run
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
-  # ─── www (sito vetrina - SSR) ───────────────────
   www:
     build:
       context: ./www
       dockerfile: Dockerfile
     environment:
-      - NODE_ENV=production
-      - PORT=3000
+      NODE_ENV: production
+      PORT: 3000
     restart: unless-stopped
     networks:
       - pa-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
 
-  # ─── PostgreSQL ─────────────────────────────────
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: personale_artificiale
       POSTGRES_USER: pa
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pa -d personale_artificiale"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     restart: unless-stopped
     networks:
       - pa-net
 
-  # ─── Redis (coda messaggi) ──────────────────────
   redis:
     image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
     networks:
       - pa-net
 
-  # ─── Qdrant (Vector DB per RAG) ────────────────
   qdrant:
     image: qdrant/qdrant:latest
     volumes:
@@ -101,29 +120,31 @@ services:
     networks:
       - pa-net
 
-  # ─── Evolution API (WhatsApp bridge) ────────────
   evolution:
     build:
       context: https://github.com/EvolutionAPI/evolution-api.git
       dockerfile: Dockerfile
       args:
-        - SERVER_URL=http://evolution:8080
-        - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
+        SERVER_URL: http://evolution:8080
+        AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?set EVOLUTION_API_KEY in .env}
+    env_file:
+      - path: .env
+        required: false
     environment:
-      - SERVER_URL=http://evolution:8080
-      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
-      - DATABASE_ENABLED=true
-      - DATABASE_PROVIDE=postgresql
-      - DATABASE_URL=postgresql://pa:${POSTGRES_PASSWORD}@postgres:5432/evolution
-      - REDIS_ENABLED=true
-      - REDIS_URI=redis://redis:6379
+      SERVER_URL: http://evolution:8080
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?set EVOLUTION_API_KEY in .env}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDE: postgresql
+      DATABASE_URL: postgresql://pa:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/evolution
+      REDIS_ENABLED: "true"
+      REDIS_URI: redis://redis:6379
     volumes:
-      - ./evolution/config.json:/evolution/config.json
+      - ./evolution/config.json:/evolution/config.json:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - pa-net

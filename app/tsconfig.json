@@ -1,5 +1,14 @@
 {
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [
+    "src/app/**/*.ts",
+    "src/app/**/*.tsx",
+    "src/routes/__root.tsx",
+    "src/routes/index.tsx",
+    "src/routes/dashboard.tsx",
+    "src/router.tsx",
+    "src/routeTree.gen.ts"
+  ],
+  "exclude": ["src/routes/api/**", "src/lib/**", "dist", "node_modules"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
