@@ -195,7 +195,7 @@ export async function dispatchApi(request, url) {
     const method = request.method || "GET";
     const path = url.pathname;
 
-    if (method === "GET" && path === "/api/health") {
+    if (["GET", "HEAD"].includes(method) && path === "/api/health") {
       await query("SELECT 1");
       return response({
         status: "ok",
