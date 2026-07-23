@@ -87,6 +87,14 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname !== "/" && serveStatic(req, res, url.pathname)) return;
 
+    if (req.method === "HEAD") {
+      write(res, 200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache",
+      }, "", req.method);
+      return;
+    }
+
     if (!ssrHandler) {
       write(res, 503, { "Content-Type": "text/plain; charset=utf-8" }, "Sito temporaneamente non disponibile.", req.method);
       return;

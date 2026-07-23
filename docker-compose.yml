@@ -21,7 +21,7 @@ services:
     networks:
       - pa-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- --header='Host: www.personaleartificiale.it' http://127.0.0.1/healthz >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
