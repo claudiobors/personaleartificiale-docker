@@ -48,6 +48,46 @@ function writeResult(res, result) {
   res.end(result.body ?? "");
 }
 
+function findClientAsset(prefix, suffix) {
+  const assetsDir = path.join(CLIENT_DIR, "assets");
+  try {
+    return fs.readdirSync(assetsDir).find((name) => name.startsWith(prefix) && name.endsWith(suffix));
+  } catch {
+    return null;
+  }
+}
+
+function dashboardShellHtml() {
+  const css = findClientAsset("app-", ".css");
+  const indexJs = findClientAsset("index-", ".js");
+  const dashboardJs = findClientAsset("dashboard-", ".js");
+  const cssTag = css ? `<link rel="stylesheet" href="/assets/${css}">` : "";
+  const scripts = [indexJs, dashboardJs]
+    .filter(Boolean)
+    .map((name) => `<script type="module" src="/assets/${name}"></script>`)
+    .join("");
+
+  return `<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard | Personale Artificiale</title>
+    <meta name="robots" content="noindex" />
+    ${cssTag}
+    <style>
+      body { margin: 0; background: #05070b; color: white; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      #root:empty { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+      #root:empty::before { content: "Personale Artificiale — caricamento dashboard…"; color: #cbd5e1; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    ${scripts}
+  </body>
+</html>`;
+}
+
 function clientIp(req) {
   return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
 }
@@ -130,6 +170,12 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", "http://" + (req.headers.host || "localhost"));
     const pathname = url.pathname;
 
+    if (pathname === "/") {
+      res.writeHead(307, { ...securityHeaders(), Location: "/dashboard" });
+      res.end();
+      return;
+    }
+
     if (pathname.startsWith("/api/")) {
       if (!originAllowed(req)) {
         writeResult(res, {
@@ -175,6 +221,12 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (req.method === "HEAD" && pathname === "/dashboard") {
+      res.writeHead(200, { ...securityHeaders(), "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
+      res.end();
+      return;
+    }
+
     if (!ssrHandler) {
       res.writeHead(503, { ...securityHeaders(), "Content-Type": "text/plain; charset=utf-8" });
       res.end("Applicazione temporaneamente non disponibile.");
@@ -198,8 +250,19 @@ const server = http.createServer(async (req, res) => {
     });
     const response = await ssrHandler(request);
     const responseHeaders = Object.fromEntries(response.headers.entries());
+    const responseBody = Buffer.from(await response.arrayBuffer());
+    if (pathname === "/dashboard" && response.status >= 500 && /application\/json/i.test(responseHeaders["content-type"] || "") && responseBody.includes("HTTPError")) {
+      res.writeHead(200, {
+        ...securityHeaders(),
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "X-SSR-Fallback": "app-http-error",
+      });
+      res.end(dashboardShellHtml());
+      return;
+    }
     res.writeHead(response.status, { ...securityHeaders(), ...responseHeaders });
-    res.end(Buffer.from(await response.arrayBuffer()));
+    res.end(responseBody);
   } catch (error) {
     console.error("[request]", error);
     if (!res.headersSent) {
