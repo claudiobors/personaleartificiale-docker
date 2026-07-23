@@ -1,4 +1,3 @@
-# Evolution API config
 {
   "server": {
     "port": 8080,
@@ -10,13 +9,12 @@
     "credentials": true
   },
   "auth": {
-    "apiKey": "${EVOLUTION_API_KEY}",
     "type": "apikey"
   },
   "whatsapp": {
     "webhook": {
       "enabled": true,
-      "url": "https://app.personaleartificiale.it/api/whatsapp/webhook"
+      "url": "https://app.personaleartificiale.it/api/evolution/webhook"
     }
   },
   "websocket": {
