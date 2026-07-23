@@ -27,6 +27,16 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
+
+    if (url.pathname === "/healthz") {
+      res.writeHead(200, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      });
+      res.end(JSON.stringify({ status: "ok", service: "www" }));
+      return;
+    }
+
     let filePath = path.join(CLIENT_DIR, url.pathname === "/" ? "index.html" : url.pathname);
 
     // Security: prevent directory traversal

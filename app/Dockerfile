@@ -30,7 +30,7 @@ COPY --from=builder --chown=app:app /app/runtime ./runtime
 USER app
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
-  CMD wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=10 \
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "server-v2.mjs"]
