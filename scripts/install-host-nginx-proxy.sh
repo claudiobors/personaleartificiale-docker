@@ -14,9 +14,21 @@ if ! command -v nginx >/dev/null 2>&1; then
   apt-get install -y nginx
 fi
 
-if [[ "${SKIP_CERTBOT:-false}" != "true" ]] && ! command -v certbot >/dev/null 2>&1; then
-  apt-get update
-  apt-get install -y certbot python3-certbot-nginx
+if [[ "${SKIP_CERTBOT:-false}" != "true" ]]; then
+  if ! command -v certbot >/dev/null 2>&1 || ! certbot plugins 2>/dev/null | grep -q 'nginx'; then
+    apt-get update
+    apt-get install -y certbot python3-certbot-nginx
+  fi
+
+  if ! certbot plugins 2>/dev/null | grep -q 'nginx'; then
+    echo "ERRORE: Certbot è installato ma il plugin nginx non è disponibile." >&2
+    echo "Su Ubuntu/Debian prova manualmente:" >&2
+    echo "  sudo apt-get update && sudo apt-get install -y python3-certbot-nginx" >&2
+    echo "Se certbot arriva da snap, prova:" >&2
+    echo "  sudo snap install --classic certbot" >&2
+    echo "  sudo ln -sf /snap/bin/certbot /usr/bin/certbot" >&2
+    exit 1
+  fi
 fi
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/deploy/nginx/multi-site.conf"
