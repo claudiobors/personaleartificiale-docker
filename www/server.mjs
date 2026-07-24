@@ -74,26 +74,61 @@ function fallbackHtml() {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Personale Artificiale</title>
-    <meta name="description" content="Assistenti AI configurati per aziende, studi e professionisti." />
+    <title>Personale Artificiale | Bot AI per vendere e rispondere ai clienti</title>
+    <meta name="description" content="Configuriamo bot AI e assistenti WhatsApp su misura per aziende, studi e professionisti." />
     <style>
       :root { color-scheme: dark; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at 20% 10%, #1d4ed8 0, transparent 30%), #05070b; color: white; }
-      main { width: min(920px, calc(100% - 40px)); padding: 56px 0; }
-      .card { border: 1px solid rgba(255,255,255,.14); border-radius: 28px; background: rgba(15,23,42,.72); padding: clamp(28px, 6vw, 64px); box-shadow: 0 30px 80px rgba(0,0,0,.35); }
-      .kicker { color: #93c5fd; font-weight: 800; text-transform: uppercase; letter-spacing: .14em; font-size: 12px; }
-      h1 { font-size: clamp(38px, 7vw, 72px); line-height: .95; margin: 18px 0; letter-spacing: -.05em; }
-      p { max-width: 680px; color: #cbd5e1; font-size: 18px; line-height: 1.7; }
-      a { display: inline-flex; margin-top: 24px; min-height: 48px; align-items: center; border-radius: 999px; background: #2563eb; color: white; padding: 0 22px; font-weight: 800; text-decoration: none; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: radial-gradient(circle at 15% 0%, rgba(37,99,235,.45), transparent 30%), radial-gradient(circle at 85% 20%, rgba(16,185,129,.18), transparent 28%), #05070b; color: white; }
+      a { color: inherit; }
+      .wrap { width: min(1120px, calc(100% - 36px)); margin: 0 auto; }
+      header { padding: 22px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+      nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+      .brand { display: flex; align-items: center; gap: 10px; font-weight: 950; letter-spacing: -.02em; }
+      .logo { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 14px; background: white; color: #0f172a; font-weight: 950; }
+      .hero { padding: clamp(56px, 8vw, 110px) 0 42px; display: grid; gap: 32px; grid-template-columns: minmax(0, 1.08fr) minmax(280px, .92fr); align-items: center; }
+      .kicker { color: #93c5fd; font-weight: 900; text-transform: uppercase; letter-spacing: .16em; font-size: 12px; }
+      h1 { font-size: clamp(42px, 7vw, 76px); line-height: .94; margin: 18px 0; letter-spacing: -.06em; max-width: 820px; }
+      .lead { max-width: 700px; color: #cbd5e1; font-size: clamp(18px, 2vw, 21px); line-height: 1.7; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+      .btn { display: inline-flex; min-height: 52px; align-items: center; justify-content: center; border-radius: 999px; padding: 0 22px; font-weight: 900; text-decoration: none; }
+      .btn.primary { background: #2563eb; box-shadow: 0 18px 44px rgba(37,99,235,.28); }
+      .btn.secondary { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #dbeafe; }
+      .panel, .card { border: 1px solid rgba(255,255,255,.13); background: rgba(15,23,42,.68); box-shadow: 0 30px 80px rgba(0,0,0,.32); backdrop-filter: blur(14px); }
+      .panel { border-radius: 32px; padding: 22px; }
+      .chat { min-height: 360px; border-radius: 24px; background: #e9f0ea; color: #111827; overflow: hidden; }
+      .chat-head { background: #0b1713; color: white; padding: 18px; font-weight: 900; }
+      .bubble { margin: 16px; padding: 13px 15px; border-radius: 18px; line-height: 1.45; font-size: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+      .bubble.me { margin-left: 62px; background: #d7ffc9; border-top-right-radius: 4px; }
+      .bubble.bot { margin-right: 42px; background: white; border-top-left-radius: 4px; }
+      .grid { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); padding: 28px 0 70px; }
+      .card { border-radius: 24px; padding: 24px; }
+      .card h2 { margin: 0 0 10px; font-size: 19px; }
+      .card p { margin: 0; color: #94a3b8; line-height: 1.6; }
+      .price { font-size: 34px; font-weight: 950; margin-top: 14px; }
+      footer { border-top: 1px solid rgba(255,255,255,.1); color: #64748b; padding: 24px 0 36px; font-size: 13px; }
+      @media (max-width: 820px) { .hero, .grid { grid-template-columns: 1fr; } h1 { font-size: 44px; } }
     </style>
   </head>
   <body>
-    <main><section class="card">
-      <div class="kicker">Personale Artificiale</div>
-      <h1>Assistenti AI pronti per lavorare con i tuoi clienti.</h1>
-      <p>Configuriamo bot AI, knowledge base e automazioni WhatsApp per rispondere meglio, vendere di più e liberare tempo operativo.</p>
-      <a href="https://app.personaleartificiale.it/dashboard">Accedi alla dashboard</a>
-    </section></main>
+    <header><nav class="wrap"><div class="brand"><span class="logo">PA</span> Personale Artificiale</div><a class="btn secondary" href="//app.personaleartificiale.it/dashboard">Area clienti</a></nav></header>
+    <main class="wrap">
+      <section class="hero">
+        <div>
+          <div class="kicker">Bot AI configurati sui tuoi dati</div>
+          <h1>Un assistente AI che risponde, vende e libera tempo operativo.</h1>
+          <p class="lead">Configuriamo per te un bot aziendale collegabile a WhatsApp, knowledge base e processi interni. Tu scegli piano e dati: il sistema prepara dashboard, profilo AI e QR di collegamento.</p>
+          <div class="actions"><a class="btn primary" href="//app.personaleartificiale.it/dashboard">Crea il tuo bot AI</a><a class="btn secondary" href="#piani">Vedi i piani</a></div>
+        </div>
+        <aside class="panel"><div class="chat"><div class="chat-head">Personale Artificiale · WhatsApp</div><div class="bubble me">Un cliente chiede prezzi e disponibilità.</div><div class="bubble bot">Rispondo con i dati approvati, propongo il piano corretto e salvo la conversazione.</div><div class="bubble me">E se serve una persona?</div><div class="bubble bot">Applico le regole di escalation e passo il contatto al referente.</div></div></aside>
+      </section>
+      <section class="grid" id="piani">
+        <article class="card"><h2>Assistente Esecutivo</h2><p>Per professionisti e piccole attività: WhatsApp, documenti, FAQ e automazioni essenziali.</p><div class="price">97 €/mese</div></article>
+        <article class="card"><h2>Ufficio Digitale</h2><p>Per PMI e studi: più knowledge base, processi più strutturati e supporto prioritario.</p><div class="price">297 €/mese</div></article>
+        <article class="card"><h2>Flusso completo</h2><p>Registrazione, pagamento, onboarding aziendale, upload documenti e QR WhatsApp in dashboard.</p><div class="price">Pronto</div></article>
+      </section>
+    </main>
+    <footer><div class="wrap">© 2026 Personale Artificiale · Servizio configurato su dati, regole e conferme del cliente.</div></footer>
   </body>
 </html>`;
 }

@@ -62,11 +62,34 @@ async function ensureCustomer(user) {
   return customer.id;
 }
 
+function localBillingBypassAllowed(origin) {
+  if (process.env.DEV_BYPASS_BILLING !== "true") return false;
+  try {
+    const host = new URL(origin).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost");
+  } catch {
+    return false;
+  }
+}
+
 export async function createCheckout({ user, planId, origin }) {
   const plan = getPlan(planId);
   if (!plan) throw apiError(400, "Piano non valido.");
   if (user.status === "active") {
     throw apiError(409, "Hai già un abbonamento attivo. Gestiscilo dalla sezione Fatturazione.");
+  }
+
+  if (localBillingBypassAllowed(origin)) {
+    await query(
+      `UPDATE users
+       SET plan_id = $1, status = 'active', subscription_id = COALESCE(subscription_id, 'dev_bypass'),
+           stripe_checkout_session_id = 'dev_bypass',
+           subscription_current_period_end = NOW() + INTERVAL '30 days',
+           last_payment_error = NULL, updated_at = NOW()
+       WHERE id = $2`,
+      [plan.id, user.id],
+    );
+    return { url: origin.replace(/\/+$/, "") + "/dashboard?checkout=dev-bypass" };
   }
 
   const customer = await ensureCustomer(user);

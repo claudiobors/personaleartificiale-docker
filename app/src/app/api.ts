@@ -3,13 +3,15 @@ import type { KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppSession 
 const TOKEN_KEY = "pa_session";
 
 export function getToken() {
-  return typeof window === "undefined" ? null : localStorage.getItem(TOKEN_KEY);
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
 }
 
 export function setToken(token: string | null) {
   if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
-  if (!token) sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
 }
 
 export async function api<T>(
