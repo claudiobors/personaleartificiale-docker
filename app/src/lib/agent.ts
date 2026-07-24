@@ -1,5 +1,5 @@
 /**
- * Virtual Employee AI Brain (LangChain + OpenAI GPT-4o).
+ * Virtual Employee AI Brain (LangChain + OpenRouter-compatible chat models).
  * 
  * Implements agent reasoning, tool calling, memory retrieval,
  * and multi-agent cooperation structures.
@@ -128,7 +128,7 @@ const projectManagementTool = tool(
   }
 );
 
-// Tool: Social Media Content Generation (DALL-E 3 / GPT-4o)
+// Tool: Social Media Content Generation
 const socialMediaTool = tool(
   async ({ platform, topic, generateImage }) => {
     console.log(`[AgentTool] Generating social post for ${platform} about "${topic}"`);
@@ -136,16 +136,16 @@ const socialMediaTool = tool(
       status: "success",
       postText: `🚀 Annuncio importante per ${platform}!\n\nParliamo di: ${topic}.\n\n#AI #PersonaleArtificiale #DigitalEmployee`,
       imageUrl: generateImage ? "https://api.enginelabs.ai/mock-dalle3-image.png" : undefined,
-      note: "Post social generato con successo. L'immagine è stata elaborata tramite DALL-E 3 API."
+      note: "Post social generato con successo. L'immagine è un placeholder: collega qui il provider media scelto."
     });
   },
   {
     name: "social_media_generator",
-    description: "Genera post pubblicitari, testi e immagini (DALL-E 3) per i social media aziendali.",
+    description: "Genera post pubblicitari, testi e placeholder immagine per i social media aziendali.",
     schema: z.object({
       platform: z.enum(["LinkedIn", "Facebook", "Instagram", "Twitter"]).describe("Piattaforma social di destinazione"),
       topic: z.string().describe("Argomento o focus principale del post"),
-      generateImage: z.boolean().optional().default(false).describe("Indica se generare anche una grafica illustrativa con DALL-E 3"),
+      generateImage: z.boolean().optional().default(false).describe("Indica se generare anche una grafica illustrativa placeholder"),
     }),
   }
 );
@@ -246,8 +246,8 @@ export class LongTermMemory {
   async retrieveContext(query: string, tenantId: string): Promise<string> {
     console.log(`[Memory] Querying vector DB for tenant "${tenantId}" with query: "${query}"`);
     
-    // In production, instantiate OpenAIEmbeddings and PineconeStore to perform similarity search:
-    // const embeddings = new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY });
+    // In production, instantiate the configured OpenRouter-compatible embeddings client and vector store:
+    // const embeddings = new EmbeddingsClient({ apiKey: process.env.OPENROUTER_API_KEY });
     // const results = await vectorStore.similaritySearch(query, 3, { tenantId });
     
     // Fallback/Mock Context representing general corporate guidelines
@@ -284,9 +284,16 @@ export class VirtualEmployeeAgent {
     const def = AGENT_DEFINITIONS[agentType] || AGENT_DEFINITIONS.executive_assistant;
 
     this.model = new ChatOpenAI({
-      modelName: "gpt-4o",
+      modelName: process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
       temperature: 0.3, // Accurate execution and structured tool calling
-      openAIApiKey: process.env.OPENAI_API_KEY || "default_openai_key",
+      openAIApiKey: process.env.OPENROUTER_API_KEY || "missing_openrouter_key",
+      configuration: {
+        baseURL: process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1",
+        defaultHeaders: {
+          "HTTP-Referer": process.env.OPENROUTER_SITE_URL || process.env.APP_URL || "https://app.personaleartificiale.it",
+          "X-Title": process.env.OPENROUTER_APP_NAME || "Personale Artificiale",
+        },
+      },
     }).bindTools(def.tools);
 
     this.memory = new LongTermMemory();

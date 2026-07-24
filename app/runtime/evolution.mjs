@@ -24,11 +24,21 @@ function cleanNumber(value) {
 }
 
 async function evolutionFetch(pathname, options = {}) {
-  const res = await fetch(EVOLUTION_URL + pathname, {
-    ...options,
-    headers: { ...headers(), ...(options.headers || {}) },
-    signal: AbortSignal.timeout(Number(process.env.EVOLUTION_TIMEOUT_MS || 10000)),
-  });
+  let res;
+  try {
+    res = await fetch(EVOLUTION_URL + pathname, {
+      ...options,
+      headers: { ...headers(), ...(options.headers || {}) },
+      signal: AbortSignal.timeout(Number(process.env.EVOLUTION_TIMEOUT_MS || 10000)),
+    });
+  } catch (error) {
+    const message = error?.name === "TimeoutError"
+      ? "Timeout collegando Evolution API."
+      : "Evolution API non raggiungibile dal container app.";
+    const wrapped = apiError(503, `${message} Verifica che il container evolution sia attivo e raggiungibile su ${EVOLUTION_URL}.`, "evolution_unreachable");
+    wrapped.detail = { url: EVOLUTION_URL + pathname, cause: error?.message || String(error) };
+    throw wrapped;
+  }
   const text = await res.text();
   let payload = null;
   try { payload = text ? JSON.parse(text) : null; } catch { payload = { raw: text }; }

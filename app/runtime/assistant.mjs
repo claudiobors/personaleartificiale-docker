@@ -4,11 +4,29 @@ import { searchKnowledge } from "./rag.mjs";
 
 let client;
 
-function openAI() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw apiError(503, "OPENAI_API_KEY non configurata: uso la risposta locale basata sulla knowledge base.");
+function openRouterConfig() {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw apiError(503, "OPENROUTER_API_KEY non configurata: uso la risposta locale basata sulla knowledge base.");
   }
-  client ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return {
+    apiKey,
+    baseURL: (process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/+$/, ""),
+    siteUrl: process.env.OPENROUTER_SITE_URL || process.env.APP_URL || "https://app.personaleartificiale.it",
+    appName: process.env.OPENROUTER_APP_NAME || "Personale Artificiale",
+  };
+}
+
+function openRouter() {
+  const config = openRouterConfig();
+  client ??= new OpenAI({
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+    defaultHeaders: {
+      "HTTP-Referer": config.siteUrl,
+      "X-Title": config.appName,
+    },
+  });
   return client;
 }
 
@@ -54,7 +72,7 @@ export async function answerWithKnowledge(userId, question, onboarding = {}) {
     .map((item, index) => `[Fonte ${index + 1}: ${item.source || "Profilo aziendale"}]\n${item.text}`)
     .join("\n\n");
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.OPENROUTER_API_KEY) {
     return buildLocalAnswer(cleanQuestion, sources, onboarding);
   }
 
@@ -71,24 +89,27 @@ Quando necessario applica questa escalation: ${onboarding.escalationRules || "co
 CONTESTO AZIENDALE:
 ${context || "Nessuna fonte pertinente disponibile."}`;
 
-  const model = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
+  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
 
   try {
-    const completion = await openAI().responses.create({
+    const completion = await openRouter().chat.completions.create({
       model,
-      instructions,
-      input: cleanQuestion,
-      max_output_tokens: 700,
+      messages: [
+        { role: "system", content: instructions },
+        { role: "user", content: cleanQuestion },
+      ],
+      max_tokens: 700,
     });
+    const answer = completion.choices?.[0]?.message?.content;
 
     return {
-      answer: completion.output_text?.trim() || "Non sono riuscito a generare una risposta.",
+      answer: String(answer || "").trim() || "Non sono riuscito a generare una risposta.",
       sources: sources.map(({ source, score }) => ({ source, score })),
       model,
       fallback: false,
     };
   } catch (error) {
-    console.warn("[assistant] OpenAI unavailable, using local fallback", error?.message || error);
+    console.warn("[assistant] OpenRouter unavailable, using local fallback", error?.message || error);
     return buildLocalAnswer(cleanQuestion, sources, onboarding);
   }
 }

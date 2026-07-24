@@ -10,8 +10,8 @@ import { apiError } from "./auth.mjs";
 const UPLOADS_BASE = process.env.UPLOADS_DIR || "/app/uploads";
 const QDRANT_URL = (process.env.QDRANT_URL || "http://qdrant:6333").replace(/\/+$/, "");
 const COLLECTION = process.env.QDRANT_COLLECTION || "pa_knowledge";
-const EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
-const VECTOR_SIZE = Number(process.env.OPENAI_EMBEDDING_DIMENSIONS || 1536);
+const EMBEDDING_MODEL = process.env.OPENROUTER_EMBEDDING_MODEL || "openai/text-embedding-3-small";
+const VECTOR_SIZE = Number(process.env.OPENROUTER_EMBEDDING_DIMENSIONS || 1536);
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
 const TYPES = {
@@ -56,11 +56,29 @@ function assertFileSignature(extension, buffer) {
 
 let openai;
 
-function openAI() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw apiError(503, "OPENAI_API_KEY non configurata: il documento è salvato ma non può essere indicizzato.");
+function embeddingConfig() {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw apiError(503, "OPENROUTER_API_KEY non configurata: il documento è salvato ma non può essere indicizzato.");
   }
-  openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return {
+    apiKey,
+    baseURL: (process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1").replace(/\/+$/, ""),
+    siteUrl: process.env.OPENROUTER_SITE_URL || process.env.APP_URL || "https://app.personaleartificiale.it",
+    appName: process.env.OPENROUTER_APP_NAME || "Personale Artificiale",
+  };
+}
+
+function embeddingClient() {
+  const config = embeddingConfig();
+  openai ??= new OpenAI({
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+    defaultHeaders: {
+      "HTTP-Referer": config.siteUrl,
+      "X-Title": config.appName,
+    },
+  });
   return openai;
 }
 
@@ -139,10 +157,10 @@ async function extractText(filePath, extension) {
 }
 
 async function embedTexts(texts) {
-  const response = await openAI().embeddings.create({
+  const response = await embeddingClient().embeddings.create({
     model: EMBEDDING_MODEL,
     input: texts,
-    ...(EMBEDDING_MODEL === "text-embedding-3-small" ? { dimensions: VECTOR_SIZE } : {}),
+    ...(EMBEDDING_MODEL.endsWith("text-embedding-3-small") ? { dimensions: VECTOR_SIZE } : {}),
   });
   return response.data.map((item) => item.embedding);
 }

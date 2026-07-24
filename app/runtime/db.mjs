@@ -155,6 +155,11 @@ export async function migrate() {
   `);
   await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS qr_code TEXT");
   await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS last_error TEXT");
+  await query("ALTER TABLE whatsapp_sessions DROP CONSTRAINT IF EXISTS whatsapp_sessions_status_check");
+  await query(`
+    ALTER TABLE whatsapp_sessions ADD CONSTRAINT whatsapp_sessions_status_check
+    CHECK (status IN ('not_configured', 'provisioning', 'provisioned', 'qr_ready', 'connecting', 'connected', 'disconnected', 'error'))
+  `);
 
   await query(`
     CREATE TABLE IF NOT EXISTS stripe_webhook_events (

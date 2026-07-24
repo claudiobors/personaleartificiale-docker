@@ -56,7 +56,7 @@ server {
 
 - `POSTGRES_PASSWORD`, `JWT_SECRET`: valori casuali lunghi.
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`: checkout e abbonamenti.
-- `OPENAI_API_KEY`: embeddings + risposte AI. Se manca, il chatbot non va in crash: risponde con fallback locale sulle fonti disponibili.
+- `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`: risposte AI via OpenRouter. `OPENROUTER_EMBEDDING_MODEL` gestisce gli embeddings RAG se supportato dal provider/modello scelto. Se manca la chiave, il chatbot non va in crash: risponde con fallback locale sulle fonti disponibili.
 - `EVOLUTION_API_KEY`: bridge WhatsApp.
 - `PA_HTTP_PORT`: porta locale loopback per Personale Artificiale, default `8081`; non usare `3000` se `occhioesperto.it` la usa già.
 

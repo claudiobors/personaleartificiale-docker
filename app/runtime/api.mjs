@@ -202,7 +202,7 @@ export async function dispatchApi(request, url) {
         services: {
           database: "connected",
           stripe: Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET),
-          rag: Boolean(process.env.OPENAI_API_KEY && process.env.QDRANT_URL),
+          rag: Boolean(process.env.OPENROUTER_API_KEY && process.env.QDRANT_URL),
         },
         timestamp: new Date().toISOString(),
       });
