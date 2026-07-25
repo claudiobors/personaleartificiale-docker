@@ -116,15 +116,29 @@ export async function ensureWhatsAppSession(user, origin) {
     await evolutionFetch("/webhook/set/" + encodeURIComponent(instanceName), {
       method: "POST",
       body: JSON.stringify({
-        enabled: true,
-        url: webhookUrl,
-        webhookByEvents: false,
-        events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
+        webhook: {
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
+        },
       }),
     }).catch((error) => {
       webhookError = "Registrazione webhook non riuscita: " + (error.message || "errore sconosciuto");
       console.error("[evolution] webhook/set failed", instanceName, error?.detail || error);
     });
+
+    if (!webhookError) {
+      const saved = await evolutionFetch("/webhook/find/" + encodeURIComponent(instanceName)).catch((error) => {
+        console.error("[evolution] webhook/find failed", instanceName, error?.detail || error);
+        return null;
+      });
+      const savedWebhook = saved?.webhook || saved;
+      if (!savedWebhook?.enabled || !String(savedWebhook?.url || "").includes("/api/evolution/webhook")) {
+        webhookError = "Il webhook risulta non attivo o con URL diverso su Evolution dopo la registrazione. Verifica la versione dell'API.";
+        console.error("[evolution] webhook/find mismatch", instanceName, saved);
+      }
+    }
 
     const qr = await fetchQr(instanceName).catch(() => null);
     await query(
