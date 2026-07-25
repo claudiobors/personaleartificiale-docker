@@ -39,7 +39,7 @@ function securityHeaders() {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
-    "Content-Security-Policy": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com",
+    "Content-Security-Policy": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://checkout.stripe.com",
   };
 }
 
@@ -286,6 +286,11 @@ const server = http.createServer(async (req, res) => {
         fs.createReadStream(filePath).pipe(res);
         return;
       }
+      if (pathname.startsWith("/assets/")) {
+        res.writeHead(404, { ...securityHeaders(), "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+        res.end("Asset non trovato.");
+        return;
+      }
     }
 
     if (req.method === "HEAD" && pathname === "/dashboard") {
@@ -329,7 +334,8 @@ const server = http.createServer(async (req, res) => {
       res.end(dashboardShellHtml());
       return;
     }
-    res.writeHead(response.status, { ...securityHeaders(), ...responseHeaders });
+    const cacheOverride = pathname === "/dashboard" ? { "Cache-Control": "no-cache" } : {};
+    res.writeHead(response.status, { ...securityHeaders(), ...responseHeaders, ...cacheOverride });
     res.end(responseBody);
   } catch (error) {
     console.error("[request]", error);
