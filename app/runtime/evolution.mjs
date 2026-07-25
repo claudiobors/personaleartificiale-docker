@@ -286,6 +286,22 @@ export async function processEvolutionWebhook(payload) {
   const { instanceName, remoteJid, fromMe, text } = extractWebhookMessage(payload);
   console.info("[evolution] webhook ricevuto", { event, instanceName, remoteJid, fromMe, textLength: text.length });
 
+  try {
+    return await handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, text, payload });
+  } catch (error) {
+    console.error("[evolution] ERRORE non gestito nel webhook", {
+      instanceName,
+      remoteJid,
+      message: error?.message,
+      status: error?.status,
+      code: error?.code,
+      stack: error?.stack,
+    });
+    throw error;
+  }
+}
+
+async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, text, payload }) {
   if (!instanceName) {
     console.warn("[evolution] webhook ignorato: instance mancante nel payload", { event, keys: Object.keys(payload || {}) });
     return { ignored: true, reason: "missing_instance" };
@@ -314,9 +330,17 @@ export async function processEvolutionWebhook(payload) {
     console.info("[evolution] webhook ignorato: non è un messaggio testuale in ingresso valido", { event, fromMe, hasRemoteJid: Boolean(remoteJid), textLength: text.length });
     return { ignored: true };
   }
-  await assertWhatsAppRateLimit(remoteJid);
 
+  try {
+    await assertWhatsAppRateLimit(remoteJid);
+  } catch (error) {
+    console.warn("[evolution] webhook ignorato: rate limit superato per questo numero", { remoteJid: cleanNumber(remoteJid), message: error?.message });
+    throw error;
+  }
+
+  console.info("[evolution] cerco utente registrato per numero", { remoteJid: cleanNumber(remoteJid) });
   const user = await getUserByWhatsAppPhone(remoteJid);
+  console.info("[evolution] esito ricerca utente", { found: Boolean(user), userId: user?.id, status: user?.status });
   if (!user) {
     console.warn("[evolution] mittente non riconosciuto: nessun utente con questo numero registrato", { remoteJid: cleanNumber(remoteJid) });
     if (autoReplyAllowed(remoteJid)) {
