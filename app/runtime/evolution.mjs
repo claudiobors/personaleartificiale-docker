@@ -295,6 +295,7 @@ export async function processEvolutionWebhook(payload) {
       message: error?.message,
       status: error?.status,
       code: error?.code,
+      detail: error?.detail,
       stack: error?.stack,
     });
     throw error;
@@ -429,8 +430,8 @@ export async function sendWhatsAppText(instanceName, to, text) {
     method: "POST",
     body: JSON.stringify({
       number,
-      options: { delay: 900, presence: "composing" },
-      textMessage: { text: String(text).slice(0, 3500) },
+      text: String(text).slice(0, 3500),
+      delay: 900,
     }),
   });
 }
