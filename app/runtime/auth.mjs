@@ -17,6 +17,7 @@ function hashOtp(code) {
 }
 
 function otpRequiredFor(row) {
+  if (process.env.OTP_LOGIN_REQUIRED === "false") return Boolean(row?.otp_enabled);
   return process.env.OTP_LOGIN_REQUIRED === "true" || Boolean(row?.otp_enabled) || isAdminEmail(row?.email);
 }
 

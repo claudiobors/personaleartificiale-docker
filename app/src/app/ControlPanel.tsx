@@ -21,12 +21,14 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  Users,
 } from "lucide-react";
 import { backend } from "./api";
+import { AdminPanel } from "./AdminPanel";
 import { AppHeader } from "./PlansView";
 import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
 
-type Tab = "overview" | "knowledge" | "whatsapp" | "profile" | "billing" | "credits";
+type Tab = "overview" | "knowledge" | "whatsapp" | "profile" | "billing" | "credits" | "admin";
 
 interface Props {
   user: UserProfile;
@@ -77,6 +79,7 @@ export function ControlPanel({
     ["billing", "Fatturazione", CreditCard],
   ];
   if (user.isAdmin) tabs.splice(2, 0, ["whatsapp", "Admin WhatsApp", MessageCircle]);
+  if (user.isAdmin) tabs.unshift(["admin", "Amministrazione", Users]);
 
   const upload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files || []);
@@ -345,6 +348,8 @@ export function ControlPanel({
             {error}
           </div>
         )}
+
+        {tab === "admin" && <AdminPanel />}
 
         {tab === "overview" && (
           <div className="space-y-6">

@@ -22,7 +22,7 @@ import {
   createPortal,
   processWebhook,
 } from "./stripe.mjs";
-import { consumeTokens, creditSummary, estimateTokens } from "./credits.mjs";
+import { addCredits, consumeTokens, creditSummary, estimateTokens, grantPlanAllowance } from "./credits.mjs";
 import {
   deleteKnowledge,
   indexOnboarding,
@@ -245,6 +245,113 @@ async function dashboardStats(userId) {
     [userId],
   );
   return result.rows[0] || { files: 0, ready_files: 0, messages: 0 };
+}
+
+function mapAdminUser(row) {
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    planId: row.plan_id,
+    status: row.status,
+    accountType: row.account_type,
+    whatsappPhone: row.whatsapp_phone,
+    tokenBalance: row.token_balance ?? 0,
+    monthlyTokenAllowance: row.monthly_token_allowance ?? 0,
+    monthlyTokensUsed: row.monthly_tokens_used ?? 0,
+    onboardingComplete: Boolean(row.onboarding_completed_at || row.onboarding_completed),
+    files: row.files ?? 0,
+    readyFiles: row.ready_files ?? 0,
+    messages: row.messages ?? 0,
+    whatsappStatus: row.whatsapp_status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+async function adminListUsers() {
+  const result = await query(
+    `SELECT users.id, users.email, users.name, users.plan_id, users.status,
+            users.account_type, users.whatsapp_phone, users.token_balance,
+            users.monthly_token_allowance, users.monthly_tokens_used,
+            users.onboarding_completed_at, users.created_at, users.updated_at,
+            COALESCE(files.count, 0)::int AS files,
+            COALESCE(ready.count, 0)::int AS ready_files,
+            COALESCE(messages.count, 0)::int AS messages,
+            sessions.status AS whatsapp_status
+     FROM users
+     LEFT JOIN LATERAL (SELECT COUNT(*) FROM knowledge_files WHERE user_id = users.id) files ON true
+     LEFT JOIN LATERAL (SELECT COUNT(*) FROM knowledge_files WHERE user_id = users.id AND status = 'ready') ready ON true
+     LEFT JOIN LATERAL (SELECT COUNT(*) FROM agent_messages WHERE user_id = users.id) messages ON true
+     LEFT JOIN whatsapp_sessions sessions ON sessions.user_id = users.id
+     ORDER BY users.created_at DESC
+     LIMIT 250`,
+  );
+  return result.rows.map(mapAdminUser);
+}
+
+async function adminUpdateUser(input, admin) {
+  const userId = String(input?.userId || "");
+  if (!userId) throw apiError(400, "Utente mancante.");
+  const planId = input?.planId === "none" ? "none" : (getPlan(input?.planId) ? input.planId : "none");
+  const status = ["pending", "active", "past_due", "cancelled"].includes(input?.status) ? input.status : "pending";
+  const accountType = cleanAccountType(input?.accountType);
+  const whatsappPhone = normalizePhone(input?.whatsappPhone);
+  const name = String(input?.name || "").trim().slice(0, 160) || "Utente";
+  await query(
+    `UPDATE users
+     SET name = $1, plan_id = $2, status = $3, account_type = $4,
+         whatsapp_phone = NULLIF($5, ''), updated_at = NOW()
+     WHERE id = $6`,
+    [name, planId, status, accountType, whatsappPhone, userId],
+  );
+  if (status === "active" && planId !== "none") await grantPlanAllowance(userId, planId);
+  await query(
+    `INSERT INTO token_ledger (user_id, delta, balance_after, reason, metadata)
+     SELECT id, 0, token_balance, 'admin_account_update', $1::jsonb FROM users WHERE id = $2`,
+    [JSON.stringify({ adminId: admin.id, planId, status, accountType }), userId],
+  );
+  return getUserById(userId);
+}
+
+async function adminGrantTokens(input, admin) {
+  const userId = String(input?.userId || "");
+  const tokens = Math.round(Number(input?.tokens || 0));
+  const note = String(input?.note || "Accredito manuale admin").slice(0, 300);
+  if (!userId) throw apiError(400, "Utente mancante.");
+  if (!Number.isFinite(tokens) || tokens <= 0 || tokens > 50_000_000) throw apiError(400, "Numero token non valido.");
+  const balance = await addCredits(userId, tokens, "admin_credit_grant", { note, adminId: admin.id });
+  return { balance };
+}
+
+async function adminLogs() {
+  const messages = await query(
+    `SELECT agent_messages.id, agent_messages.user_id, users.email, agent_messages.direction,
+            agent_messages.channel, agent_messages.content, agent_messages.metadata,
+            agent_messages.created_at
+     FROM agent_messages
+     LEFT JOIN users ON users.id = agent_messages.user_id
+     ORDER BY agent_messages.created_at DESC
+     LIMIT 120`,
+  );
+  const sessions = await query(
+    `SELECT whatsapp_sessions.user_id, users.email, whatsapp_sessions.instance_name,
+            whatsapp_sessions.status, whatsapp_sessions.last_error, whatsapp_sessions.updated_at
+     FROM whatsapp_sessions
+     LEFT JOIN users ON users.id = whatsapp_sessions.user_id
+     ORDER BY whatsapp_sessions.updated_at DESC
+     LIMIT 50`,
+  );
+  const ledger = await query(
+    `SELECT token_ledger.user_id, users.email, token_ledger.delta,
+            token_ledger.balance_after, token_ledger.reason, token_ledger.metadata,
+            token_ledger.created_at
+     FROM token_ledger
+     LEFT JOIN users ON users.id = token_ledger.user_id
+     ORDER BY token_ledger.created_at DESC
+     LIMIT 80`,
+  );
+  return { messages: messages.rows, sessions: sessions.rows, ledger: ledger.rows };
 }
 
 export async function dispatchApi(request, url) {
@@ -478,6 +585,28 @@ export async function dispatchApi(request, url) {
     if (method === "GET" && path === "/api/dashboard/stats") {
       const { user } = await requireActiveUser(request);
       return response({ stats: await dashboardStats(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/admin/users") {
+      await requireAdminUser(request);
+      return response({ users: await adminListUsers() });
+    }
+
+    if (method === "PUT" && path === "/api/admin/users") {
+      const { user: admin } = await requireAdminUser(request);
+      const user = await adminUpdateUser(await jsonBody(request), admin);
+      return response({ user, users: await adminListUsers() });
+    }
+
+    if (method === "POST" && path === "/api/admin/tokens") {
+      const { user: admin } = await requireAdminUser(request);
+      const result = await adminGrantTokens(await jsonBody(request), admin);
+      return response(result);
+    }
+
+    if (method === "GET" && path === "/api/admin/logs") {
+      await requireAdminUser(request);
+      return response({ logs: await adminLogs() });
     }
 
     return response({ error: "Endpoint non trovato." }, 404);

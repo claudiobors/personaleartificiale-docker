@@ -81,6 +81,44 @@ export interface WhatsAppContact {
   url: string;
 }
 
+export interface AdminUserProfile extends UserProfile {
+  files: number;
+  readyFiles: number;
+  messages: number;
+  whatsappStatus?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface AdminLogs {
+  messages: Array<{
+    id: string;
+    user_id: string;
+    email?: string | null;
+    direction: "incoming" | "outgoing";
+    channel: string;
+    content: string;
+    metadata?: Record<string, unknown> | null;
+    created_at: string;
+  }>;
+  sessions: Array<{
+    user_id: string;
+    email?: string | null;
+    instance_name: string;
+    status: string;
+    last_error?: string | null;
+    updated_at: string;
+  }>;
+  ledger: Array<{
+    user_id: string;
+    email?: string | null;
+    delta: number;
+    balance_after: number;
+    reason: string;
+    metadata?: Record<string, unknown> | null;
+    created_at: string;
+  }>;
+}
+
 export interface OnboardingData {
   accountType: "private" | "business" | "professional";
   personalGoal: string;

@@ -1,4 +1,4 @@
-import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
+import type { AdminLogs, AdminUserProfile, CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -110,5 +110,17 @@ export const backend = {
     method: "DELETE",
     body: JSON.stringify({ confirmation }),
   }),
+  adminUsers: () => api<{ users: AdminUserProfile[] }>("/api/admin/users"),
+  adminUpdateUser: (data: { userId: string; name: string; planId: string; status: string; accountType: string; whatsappPhone: string }) =>
+    api<{ user: AdminUserProfile; users: AdminUserProfile[] }>("/api/admin/users", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+  adminGrantTokens: (data: { userId: string; tokens: number; note?: string }) =>
+    api<{ balance: number }>("/api/admin/tokens", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  adminLogs: () => api<{ logs: AdminLogs }>("/api/admin/logs"),
 };
 

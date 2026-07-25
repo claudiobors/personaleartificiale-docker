@@ -43,6 +43,24 @@ async function assertWhatsAppRateLimit(remoteJid) {
   }
 }
 
+// Messaggi da numeri non riconosciuti, account inattivi o onboarding incompleto non finiscono mai in
+// agent_messages, quindi il rate limit sopra (basato su DB) non li vede: senza questo contatore in
+// memoria un numero che scrive ripetutamente riceverebbe una risposta automatica ogni volta.
+const AUTO_REPLY_LIMIT = Number(process.env.WHATSAPP_AUTO_REPLY_LIMIT || 3);
+const AUTO_REPLY_WINDOW_MS = Number(process.env.WHATSAPP_AUTO_REPLY_WINDOW_MS || 10 * 60_000);
+const autoReplyCounters = new Map();
+
+function autoReplyAllowed(remoteJid) {
+  const now = Date.now();
+  const entry = autoReplyCounters.get(remoteJid);
+  if (!entry || now > entry.resetAt) {
+    autoReplyCounters.set(remoteJid, { count: 1, resetAt: now + AUTO_REPLY_WINDOW_MS });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= AUTO_REPLY_LIMIT;
+}
+
 async function evolutionFetch(pathname, options = {}) {
   let res;
   try {
@@ -93,23 +111,27 @@ export async function ensureWhatsAppSession(user, origin) {
       if (![400, 409, 403].includes(Number(error.status))) throw error;
     });
 
-    const webhookUrl = origin.replace(/\/+$/, "") + "/api/evolution/webhook";
+    const webhookUrl = origin.replace(/\/+$/, "") + "/api/evolution/webhook?apikey=" + encodeURIComponent(evolutionKey());
+    let webhookError = null;
     await evolutionFetch("/webhook/set/" + encodeURIComponent(instanceName), {
       method: "POST",
       body: JSON.stringify({
         enabled: true,
         url: webhookUrl,
-        byEvents: false,
+        webhookByEvents: false,
         events: ["MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"],
       }),
-    }).catch(() => {});
+    }).catch((error) => {
+      webhookError = "Registrazione webhook non riuscita: " + (error.message || "errore sconosciuto");
+      console.error("[evolution] webhook/set failed", instanceName, error?.detail || error);
+    });
 
     const qr = await fetchQr(instanceName).catch(() => null);
     await query(
       `UPDATE whatsapp_sessions
-       SET status = $1, qr_code = $2, last_error = NULL, updated_at = NOW()
-       WHERE user_id = $3`,
-      [qr?.base64 ? "qr_ready" : "provisioned", qr?.base64 || qr?.code || null, user.id],
+       SET status = $1, qr_code = $2, last_error = $3, updated_at = NOW()
+       WHERE user_id = $4`,
+      [qr?.base64 ? "qr_ready" : "provisioned", qr?.base64 || qr?.code || null, webhookError, user.id],
     );
     return await getWhatsAppStatus(user.id);
   } catch (error) {
@@ -255,19 +277,25 @@ export async function processEvolutionWebhook(payload) {
 
   const user = await getUserByWhatsAppPhone(remoteJid);
   if (!user) {
-    await sendWhatsAppText(
-      instanceName,
-      remoteJid,
-      "Ciao! Questo numero è riservato agli utenti registrati di Personale Artificiale. Accedi alla piattaforma e inserisci questo numero WhatsApp nel tuo profilo per parlare con il tuo bot.",
-    );
+    if (autoReplyAllowed(remoteJid)) {
+      await sendWhatsAppText(
+        instanceName,
+        remoteJid,
+        "Ciao! Questo numero è riservato agli utenti registrati di Personale Artificiale. Accedi alla piattaforma e inserisci questo numero WhatsApp nel tuo profilo per parlare con il tuo bot.",
+      );
+    }
     return { ignored: true, reason: "unknown_sender" };
   }
   if (user.status !== "active") {
-    await sendWhatsAppText(instanceName, remoteJid, "Il tuo account non è attivo. Accedi alla piattaforma per completare piano e pagamento.");
+    if (autoReplyAllowed(remoteJid)) {
+      await sendWhatsAppText(instanceName, remoteJid, "Il tuo account non è attivo. Accedi alla piattaforma per completare piano e pagamento.");
+    }
     return { ignored: true, reason: "inactive_user" };
   }
   if (!user.onboarding_completed_at) {
-    await sendWhatsAppText(instanceName, remoteJid, "Il tuo bot non è ancora pronto. Completa profilo e knowledge base nella dashboard.");
+    if (autoReplyAllowed(remoteJid)) {
+      await sendWhatsAppText(instanceName, remoteJid, "Il tuo bot non è ancora pronto. Completa profilo e knowledge base nella dashboard.");
+    }
     return { ignored: true, reason: "onboarding_incomplete" };
   }
 
