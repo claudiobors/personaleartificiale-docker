@@ -170,7 +170,7 @@ export function Onboarding({ user, initial, initialFiles, editing = false, onDon
           </div>
         )}
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 sm:p-8">
+        <section className="pa-panel p-5 sm:p-8">
           {step === 0 && (
             <div>
               <SectionTitle title="Raccontaci chi sei" description="Questi dati identificano l'azienda e aiutano l?assistente a contestualizzare ogni conversazione." />
@@ -254,7 +254,7 @@ export function Onboarding({ user, initial, initialFiles, editing = false, onDon
                     Nessun documento caricato. Puoi completare il profilo e aggiungerli in seguito.
                   </p>
                 ) : files.map((file) => (
-                  <div key={file.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div key={file.id} className="pa-panel-tight flex items-center gap-3 p-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 text-blue-300">
                       <FileText className="h-5 w-5" />
                     </span>

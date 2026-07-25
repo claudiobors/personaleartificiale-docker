@@ -188,6 +188,7 @@ export function AppExperience() {
         }));
       }}
       onEditProfile={() => setEditingProfile(true)}
+      onUserChange={setUser}
       onPortal={openPortal}
       onLogout={logout}
     />

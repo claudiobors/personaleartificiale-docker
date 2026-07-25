@@ -34,6 +34,7 @@ export async function api<T>(
 }
 
 export const backend = {
+  health: () => api<{ status: string; services: Record<string, boolean | string> }>("/api/health", {}, false),
   plans: () => api<{ plans: Plan[]; creditPacks: CreditPack[] }>("/api/plans", {}, false),
   register: (data: { name: string; email: string; password: string; termsAccepted: boolean }) =>
     api<{ token: string; user: UserProfile }>("/api/auth/register", {

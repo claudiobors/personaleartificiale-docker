@@ -107,7 +107,7 @@ export function AuthView({ onAuthenticated }: Props) {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-white/10 bg-white/[0.045] p-5 shadow-2xl shadow-black/40 sm:p-8">
+        <section className="pa-panel p-5 shadow-2xl shadow-black/40 sm:p-8">
           <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/30 p-1">
             <button
               type="button"

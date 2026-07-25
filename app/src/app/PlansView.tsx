@@ -65,7 +65,7 @@ export function PlansView({ user, plans, busyPlan, error, onCheckout, onPortal, 
                   <h2 className="mt-2 text-2xl font-black">{plan.name}</h2>
                   <p className="mt-3 min-h-12 text-sm leading-6 text-zinc-400">{plan.description}</p>
 
-                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/25 p-5">
+                  <div className="pa-panel-tight mt-6 p-5">
                     <div className="flex items-end gap-2">
                       <span className="text-4xl font-black">{plan.monthlyPriceFormatted}</span>
                       <span className="pb-1 text-sm text-zinc-500">/mese</span>
