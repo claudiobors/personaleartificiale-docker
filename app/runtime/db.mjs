@@ -83,6 +83,8 @@ export async function migrate() {
     "ADD COLUMN IF NOT EXISTS otp_secret_hash TEXT",
     "ADD COLUMN IF NOT EXISTS otp_enabled BOOLEAN NOT NULL DEFAULT FALSE",
     "ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ",
+    "ADD COLUMN IF NOT EXISTS extra_integration_slots INTEGER NOT NULL DEFAULT 0",
+    "ADD COLUMN IF NOT EXISTS extra_whatsapp_slots INTEGER NOT NULL DEFAULT 0",
   ];
   for (const definition of userColumns) {
     await query(`ALTER TABLE users ${definition}`);
@@ -264,6 +266,43 @@ export async function migrate() {
       sent_at TIMESTAMPTZ
     )
   `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS whatsapp_numbers (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      phone TEXT NOT NULL,
+      label TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_whatsapp_numbers_phone ON whatsapp_numbers(regexp_replace(phone, '\\D', '', 'g'))",
+  );
+  await query("CREATE INDEX IF NOT EXISTS idx_whatsapp_numbers_user ON whatsapp_numbers(user_id)");
+
+  // Ripopola whatsapp_numbers dal vecchio campo singolo users.whatsapp_phone, una tantum
+  // (idempotente: non tocca chi ha già righe in whatsapp_numbers).
+  await query(`
+    INSERT INTO whatsapp_numbers (user_id, phone, created_at)
+    SELECT id, whatsapp_phone, COALESCE(updated_at, NOW())
+    FROM users
+    WHERE whatsapp_phone IS NOT NULL AND whatsapp_phone <> ''
+      AND NOT EXISTS (SELECT 1 FROM whatsapp_numbers WHERE whatsapp_numbers.user_id = users.id)
+    ON CONFLICT DO NOTHING
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS addon_subscriptions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      addon_type TEXT NOT NULL CHECK (addon_type IN ('extra_integration', 'extra_whatsapp_number')),
+      stripe_subscription_id TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cancelled')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_addon_subscriptions_user ON addon_subscriptions(user_id)");
 
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)");
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)");

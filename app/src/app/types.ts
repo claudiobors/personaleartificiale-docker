@@ -31,6 +31,8 @@ export interface Plan {
   monthlyPrice: number;
   includedTokens?: number;
   maxDocuments?: number;
+  includedIntegrations?: number;
+  includedWhatsappNumbers?: number;
   setupFeeFormatted: string;
   monthlyPriceFormatted: string;
   features: string[];
@@ -44,6 +46,28 @@ export interface CreditPack {
   tokens: number;
   price: number;
   priceFormatted: string;
+}
+
+export interface Addon {
+  type: "extra_integration" | "extra_whatsapp_number";
+  name: string;
+  description: string;
+  price: number;
+  priceFormatted: string;
+}
+
+export interface Quota {
+  included: number;
+  extra: number;
+  total: number;
+  used: number;
+}
+
+export interface WhatsappNumber {
+  id: string;
+  phone: string;
+  label?: string | null;
+  createdAt: string;
 }
 
 export interface CreditSummary {

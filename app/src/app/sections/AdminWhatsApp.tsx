@@ -62,7 +62,7 @@ export function AdminWhatsApp() {
   };
 
   const disconnect = async () => {
-    if (!window.confirm("Disconnettere WhatsApp Web? Il bot smetterà di rispondere a tutti i clienti finché non ricolleghi un nuovo QR.")) return;
+    if (!window.confirm("Disconnettere WhatsApp Web? Nessun account riceverà risposte dal proprio assistente finché non ricolleghi un nuovo QR.")) return;
     setDisconnecting(true);
     setError("");
     try {
@@ -82,8 +82,8 @@ export function AdminWhatsApp() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Canale operativo · Amministrazione"
-        title="Bot WhatsApp per i clienti"
-        description="Genera l'istanza Evolution, collega il numero con QR code e ricevi messaggi reali: il bot risponde usando profilo aziendale e knowledge base."
+        title="Bot WhatsApp della piattaforma"
+        description="Genera l'istanza Evolution e collega il numero condiviso con QR code: da qui passano i messaggi di tutti gli assistenti personali degli account, ognuno riservato al proprio titolare e ai numeri che ha autorizzato."
         action={
           <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold hover:bg-white/10 disabled:opacity-60">
             <RefreshCw className={`mr-2 inline h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Aggiorna
@@ -94,7 +94,7 @@ export function AdminWhatsApp() {
       {!isConnected && (
         <div role="alert" className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Finché lo stato non è <strong>Connesso</strong>, il bot non riceve né invia messaggi WhatsApp: nessun cliente riceverà risposta, anche se scrive da un numero abilitato.</p>
+          <p>Finché lo stato non è <strong>Connesso</strong>, il bot non riceve né invia messaggi WhatsApp: nessun titolare riceverà risposta dal proprio assistente, anche scrivendo da un numero autorizzato.</p>
         </div>
       )}
 
@@ -147,7 +147,7 @@ export function AdminWhatsApp() {
         <aside className="pa-panel p-6">
           <h3 className="font-extrabold">Cosa succede dopo</h3>
           <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-400">
-            <li>• Ogni cliente ha una sessione WhatsApp isolata.</li>
+            <li>• Ogni account risponde solo ai numeri WhatsApp che ha autorizzato: non è un canale di assistenza clienti.</li>
             <li>• I messaggi in ingresso vengono salvati e deduplicati.</li>
             <li>• Le risposte usano RAG, onboarding e fallback sicuro.</li>
             <li>• Il webhook rifiuta chiamate senza API key Evolution.</li>

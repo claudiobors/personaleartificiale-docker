@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, Download, Phone, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Download, MessageCircle, Trash2 } from "lucide-react";
 import { backend } from "../api";
 import { PageHeader } from "../Shell";
 import type { UserProfile } from "../types";
@@ -7,12 +7,12 @@ import type { UserProfile } from "../types";
 interface Props {
   user: UserProfile;
   onProfileSaved: (user: UserProfile) => void;
+  onNavigateToNumbers: () => void;
   onLogout: () => void;
 }
 
-export function AccountSettings({ user, onProfileSaved, onLogout }: Props) {
+export function AccountSettings({ user, onProfileSaved, onNavigateToNumbers, onLogout }: Props) {
   const [accountType, setAccountType] = useState(user.accountType || "business");
-  const [whatsappPhone, setWhatsappPhone] = useState(user.whatsappPhone || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -25,9 +25,8 @@ export function AccountSettings({ user, onProfileSaved, onLogout }: Props) {
     setError("");
     setSaved(false);
     try {
-      const result = await backend.updateProfile({ accountType, whatsappPhone });
+      const result = await backend.updateProfile({ accountType });
       setAccountType(result.user.accountType || accountType);
-      setWhatsappPhone(result.user.whatsappPhone || "");
       onProfileSaved(result.user);
       setSaved(true);
     } catch (cause) {
@@ -72,14 +71,12 @@ export function AccountSettings({ user, onProfileSaved, onLogout }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Account" title="Impostazioni" description="Tipo di profilo, numero WhatsApp personale e gestione dei tuoi dati." />
+      <PageHeader eyebrow="Account" title="Impostazioni" description="Tipo di profilo e gestione dei tuoi dati." />
 
       <section className="pa-panel p-6 sm:p-8">
-        <h3 className="flex items-center gap-2 font-extrabold"><Phone className="h-4 w-4 text-blue-300" /> Accesso WhatsApp personale</h3>
-        <p className="mt-2 text-sm leading-6 text-zinc-400">
-          Questo è il numero da cui parlerai al bot principale della piattaforma. Il bot risponde solo ai numeri registrati e associati a un account attivo.
-        </p>
-        <div className="mt-5 grid gap-4 md:grid-cols-[.8fr_1fr_auto] md:items-end">
+        <h3 className="font-extrabold">Tipo di profilo</h3>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">Usato per adattare l'onboarding e i suggerimenti dell'assistente.</p>
+        <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
           <label className="block">
             <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Tipo profilo</span>
             <select value={accountType} onChange={(event) => setAccountType(event.target.value as "private" | "business" | "professional")} className="pa-input">
@@ -88,17 +85,22 @@ export function AccountSettings({ user, onProfileSaved, onLogout }: Props) {
               <option value="private">Privato</option>
             </select>
           </label>
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Numero WhatsApp personale</span>
-            <input value={whatsappPhone} onChange={(event) => setWhatsappPhone(event.target.value)} className="pa-input" placeholder="+393331234567" />
-          </label>
           <button onClick={() => void save()} disabled={saving} className="pa-button px-5 py-3">
             {saving ? "Salvo…" : "Salva"}
           </button>
         </div>
         {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
         {saved && <p className="mt-3 text-sm text-emerald-300">Profilo aggiornato.</p>}
-        <p className="mt-3 flex items-center gap-2 text-xs text-emerald-300"><ShieldCheck className="h-3.5 w-3.5" /> Il bot risponde solo ai numeri registrati e associati a un account attivo.</p>
+      </section>
+
+      <section className="pa-panel p-6 sm:p-8">
+        <h3 className="flex items-center gap-2 font-extrabold"><MessageCircle className="h-4 w-4 text-blue-300" /> Numeri WhatsApp autorizzati</h3>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">
+          Il tuo assistente risponde solo ai numeri che aggiungi tu: sono numeri personali, non un canale di assistenza per i tuoi clienti.
+        </p>
+        <button onClick={onNavigateToNumbers} className="mt-5 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-extrabold hover:bg-white/10">
+          Gestisci numeri WhatsApp <ArrowRight className="h-4 w-4" />
+        </button>
       </section>
 
       <section className="pa-panel p-6 sm:p-8">

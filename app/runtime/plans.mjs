@@ -8,15 +8,17 @@ export const PLANS = {
     monthlyPrice: 9700,
     includedTokens: 250000,
     maxDocuments: 50,
+    includedIntegrations: 2,
+    includedWhatsappNumbers: 1,
     stripeMonthlyPriceEnv: "STRIPE_PRICE_EXECUTIVE_MONTHLY",
     stripeSetupPriceEnv: "STRIPE_PRICE_EXECUTIVE_SETUP",
     features: [
-      "1 assistente AI personalizzato",
+      "1 assistente AI personale",
       "Knowledge base RAG aziendale",
       "Fino a 50 documenti",
       "Configurazione tono, regole e obiettivi",
-      "Canale WhatsApp",
-      "Report attività e assistenza email",
+      "1 numero WhatsApp personale",
+      "Fino a 2 integrazioni incluse",
     ],
   },
   "ufficio-digitale": {
@@ -28,19 +30,42 @@ export const PLANS = {
     monthlyPrice: 29700,
     includedTokens: 1000000,
     maxDocuments: 250,
+    includedIntegrations: 6,
+    includedWhatsappNumbers: 2,
     stripeMonthlyPriceEnv: "STRIPE_PRICE_OFFICE_MONTHLY",
     stripeSetupPriceEnv: "STRIPE_PRICE_OFFICE_SETUP",
     features: [
       "Fino a 3 ruoli AI coordinati",
       "Knowledge base RAG avanzata",
       "Fino a 250 documenti",
-      "WhatsApp e flussi multicanale",
       "Configurazione processi e priorità",
-      "Report avanzati e supporto prioritario",
+      "2 numeri WhatsApp personali",
+      "Fino a 6 integrazioni incluse",
     ],
     highlighted: true,
   },
 };
+
+export const ADDONS = {
+  extra_integration: {
+    type: "extra_integration",
+    name: "Integrazione extra",
+    description: "Uno slot in più per collegare un'integrazione oltre quelle incluse nel piano.",
+    price: 900,
+    priceEnv: "STRIPE_PRICE_EXTRA_INTEGRATION_MONTHLY",
+  },
+  extra_whatsapp_number: {
+    type: "extra_whatsapp_number",
+    name: "Numero WhatsApp extra",
+    description: "Un numero personale in più a cui il tuo assistente risponde.",
+    price: 500,
+    priceEnv: "STRIPE_PRICE_EXTRA_WHATSAPP_NUMBER_MONTHLY",
+  },
+};
+
+export function getAddon(addonType) {
+  return ADDONS[addonType] ?? null;
+}
 
 export const CREDIT_PACKS = {
   "crediti-100k": {
@@ -82,6 +107,13 @@ export function publicCreditPacks() {
 
 export function getCreditPack(packId) {
   return CREDIT_PACKS[packId] ?? null;
+}
+
+export function publicAddons() {
+  return Object.values(ADDONS).map(({ priceEnv, ...addon }) => ({
+    ...addon,
+    priceFormatted: euro(addon.price) + " / mese",
+  }));
 }
 
 export function euro(cents) {

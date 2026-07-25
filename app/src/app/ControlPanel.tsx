@@ -83,9 +83,13 @@ export function ControlPanel({
   onPortal,
   onLogout,
 }: Props) {
-  const [active, setActive] = useState<SectionKey>(() =>
-    new URLSearchParams(window.location.search).get("integration") === "google" ? "integrations" : "overview",
-  );
+  const [active, setActive] = useState<SectionKey>(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("integration") === "google") return "integrations";
+    if (params.get("addon") === "extra_integration") return "integrations";
+    if (params.get("addon") === "extra_whatsapp_number") return "whatsapp-client";
+    return "overview";
+  });
   const [whatsAppContact, setWhatsAppContact] = useState<WhatsAppContact | null>(null);
 
   useEffect(() => {
@@ -167,7 +171,14 @@ export function ControlPanel({
       {active === "email-drafts" && <EmailDrafts />}
       {active === "credits" && <Credits user={user} plan={plan} />}
       {active === "billing" && <Billing user={user} plan={plan} onPortal={onPortal} />}
-      {active === "settings" && <AccountSettings user={user} onProfileSaved={onUserChange} onLogout={onLogout} />}
+      {active === "settings" && (
+        <AccountSettings
+          user={user}
+          onProfileSaved={onUserChange}
+          onNavigateToNumbers={() => setActive("whatsapp-client")}
+          onLogout={onLogout}
+        />
+      )}
       {active === "admin-users" && user.isAdmin && <AdminUsers />}
       {active === "admin-logs" && user.isAdmin && <AdminLogs />}
       {active === "admin-whatsapp" && user.isAdmin && <AdminWhatsApp />}

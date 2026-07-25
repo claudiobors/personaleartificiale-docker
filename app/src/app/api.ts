@@ -1,4 +1,4 @@
-import type { AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, EmailDraft, EmailStatus, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
+import type { Addon, AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, EmailDraft, EmailStatus, KnowledgeFile, OnboardingData, Plan, Quota, UserProfile, WhatsAppContact, WhatsAppSession, WhatsappNumber } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -35,7 +35,7 @@ export async function api<T>(
 
 export const backend = {
   health: () => api<{ status: string; services: Record<string, boolean | string> }>("/api/health", {}, false),
-  plans: () => api<{ plans: Plan[]; creditPacks: CreditPack[] }>("/api/plans", {}, false),
+  plans: () => api<{ plans: Plan[]; creditPacks: CreditPack[]; addons: Addon[] }>("/api/plans", {}, false),
   register: (data: { name: string; email: string; password: string; termsAccepted: boolean }) =>
     api<{ token: string; user: UserProfile }>("/api/auth/register", {
       method: "POST",
@@ -53,7 +53,7 @@ export const backend = {
     }, false),
   logout: () => api<{ success: boolean }>("/api/auth/logout", { method: "POST" }),
   me: () => api<{ user: UserProfile }>("/api/auth/me"),
-  updateProfile: (data: { accountType: string; whatsappPhone: string }) => api<{ user: UserProfile }>("/api/profile", {
+  updateProfile: (data: { accountType: string }) => api<{ user: UserProfile }>("/api/profile", {
     method: "PUT",
     body: JSON.stringify(data),
   }),
@@ -141,5 +141,13 @@ export const backend = {
     }),
   discardEmailDraft: (id: string) =>
     api<{ discarded: boolean; drafts: EmailDraft[] }>(`/api/email/drafts/discard?id=${encodeURIComponent(id)}`, { method: "POST" }),
+  whatsappNumbers: () => api<{ numbers: WhatsappNumber[]; quota: Quota }>("/api/whatsapp/numbers"),
+  addWhatsappNumber: (data: { phone: string; label?: string }) =>
+    api<{ numbers: WhatsappNumber[]; quota: Quota }>("/api/whatsapp/numbers", { method: "POST", body: JSON.stringify(data) }),
+  removeWhatsappNumber: (id: string) =>
+    api<{ numbers: WhatsappNumber[]; quota: Quota }>(`/api/whatsapp/numbers?id=${encodeURIComponent(id)}`, { method: "DELETE" }),
+  integrationQuota: () => api<{ quota: Quota }>("/api/integrations/quota"),
+  addonCheckout: (addonType: Addon["type"]) =>
+    api<{ url: string }>("/api/billing/addon-checkout", { method: "POST", body: JSON.stringify({ addonType }) }),
 };
 

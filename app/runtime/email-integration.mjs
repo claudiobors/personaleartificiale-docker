@@ -3,6 +3,7 @@ import { simpleParser } from "mailparser";
 import nodemailer from "nodemailer";
 import { apiError } from "./auth.mjs";
 import { query } from "./db.mjs";
+import { assertIntegrationSlot } from "./integration-quota.mjs";
 import { encryptSecret, decryptSecret } from "./secrets.mjs";
 import { answerWithKnowledge } from "./assistant.mjs";
 import { consumeTokens, estimateTokens } from "./credits.mjs";
@@ -64,6 +65,7 @@ function cleanSettings(input) {
 }
 
 export async function connectEmailAccount(userId, input) {
+  await assertIntegrationSlot(userId, "email_imap");
   const settings = cleanSettings(input);
   const password = String(input?.password || "");
   if (!password) throw apiError(400, "Password (o app-password) mancante.");

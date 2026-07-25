@@ -61,8 +61,11 @@ server {
 - `PA_HTTP_PORT`: porta locale loopback per Personale Artificiale, default `8081`; non usare `3000` se `occhioesperto.it` la usa già.
 - `INTEGRATIONS_ENCRYPTION_KEY`: obbligatoria per usare le integrazioni Google Calendar/email (cifra le credenziali salvate per cliente).
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: opzionali, richieste solo per abilitare il collegamento a Google Calendar (vedi `.env.example` per come crearle).
+- Portale clienti Stripe: se vuoi che i cambi di piano dal portale (upgrade/downgrade base↔pro) aggiornino le quote integrazioni/numeri, la configurazione del portale in Stripe Dashboard deve includere entrambi i Price mensili come piani tra cui il cliente può passare ("Update subscription").
 
 ## Flusso business coperto
+
+Il bot è un **dipendente artificiale personale**: risponde solo al titolare dell'account e ai numeri WhatsApp che lui stesso autorizza. Non è un canale di assistenza per i clienti esterni dell'azienda.
 
 1. Registrazione utente con password sicura e accettazione termini.
 2. Scelta piano e checkout Stripe.
@@ -70,11 +73,12 @@ server {
 4. Onboarding aziendale con bozza salvabile e completamento validato.
 5. Upload documenti PDF/DOCX/TXT/MD/immagini con validazione dimensione, estensione, MIME e firma file; le immagini vengono lette con un modello vision e poi eliminate (non restano mai salvate).
 6. Indicizzazione Qdrant per tenant/utente.
-7. Test assistente dalla dashboard con salvataggio messaggi in `agent_messages`; l'assistente conosce anche token residui, piano e stato abbonamento del cliente.
-8. Provisioning WhatsApp Evolution, QR, webhook autenticato e risposta automatica usando profilo + knowledge base.
+7. Test assistente dalla dashboard con salvataggio messaggi in `agent_messages`; l'assistente conosce anche token residui, piano e stato abbonamento dell'account.
+8. Provisioning WhatsApp Evolution (istanza condivisa di piattaforma), QR, webhook autenticato e risposta automatica usando profilo + knowledge base — instradata in base ai **numeri WhatsApp personali** che ogni account registra (piano base: 1 incluso; piano pro: 2 inclusi; extra a 5€/mese ciascuno).
 9. Portale Stripe per gestione fatturazione.
-10. Google Calendar collegabile per cliente (OAuth): il bot propone orari liberi via WhatsApp e crea l'evento solo dopo conferma esplicita del cliente.
-11. Casella email IMAP/SMTP collegabile per cliente: il bot legge le email in arrivo e prepara bozze di risposta che il titolare rivede e invia dalla dashboard, non le invia mai in autonomia.
+10. Google Calendar collegabile per account (OAuth): il bot propone orari liberi via WhatsApp e crea l'evento solo dopo conferma esplicita — mai una prenotazione autonoma.
+11. Casella email IMAP/SMTP collegabile per account: il bot legge le email in arrivo e prepara bozze di risposta che il titolare rivede e invia dalla dashboard, non le invia mai in autonomia.
+12. **Quote integrazioni**: piano base 2 integrazioni incluse (Google Calendar + Email contano entrambe), piano pro 6 incluse; extra a 9€/mese ciascuna. Se un account passa a un piano con quote più basse mentre ha più risorse attive di quante ne includa il nuovo piano, l'eccedenza viene fatturata automaticamente come extra dal webhook Stripe.
 
 ## Comandi operativi
 

@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { query } from "./db.mjs";
 import { apiError } from "./auth.mjs";
-import { getPlan, getCreditPack } from "./plans.mjs";
+import { PLANS, getAddon, getPlan, getCreditPack } from "./plans.mjs";
 import { addCredits, grantPlanAllowance } from "./credits.mjs";
 
 let stripeClient;
@@ -50,6 +50,38 @@ function creditItemFor(pack) {
     },
     quantity: 1,
   };
+}
+
+function addonItemFor(addon) {
+  const configuredPrice = process.env[addon.priceEnv];
+  if (configuredPrice) return { price: configuredPrice, quantity: 1 };
+  return {
+    price_data: {
+      currency: "eur",
+      unit_amount: addon.price,
+      recurring: { interval: "month" },
+      product_data: {
+        name: addon.name,
+        description: addon.description,
+        metadata: { addon_type: addon.type, charge_type: "addon" },
+      },
+    },
+    quantity: 1,
+  };
+}
+
+function planIdFromSubscription(subscription) {
+  const items = subscription?.items?.data || [];
+  for (const item of items) {
+    const priceId = item.price?.id;
+    if (!priceId) continue;
+    const match = Object.values(PLANS).find((plan) => process.env[plan.stripeMonthlyPriceEnv] === priceId);
+    if (match) return match.id;
+  }
+  if (subscription?.metadata?.plan_id && getPlan(subscription.metadata.plan_id)) {
+    return subscription.metadata.plan_id;
+  }
+  return null;
 }
 
 function statusFromStripe(status) {
@@ -155,6 +187,25 @@ export async function createCreditCheckout({ user, packId, origin }) {
   return { url: session.url, sessionId: session.id };
 }
 
+export async function createAddonCheckout({ user, addonType, origin }) {
+  const addon = getAddon(addonType);
+  if (!addon) throw apiError(400, "Componente aggiuntivo non valido.");
+  if (user.status !== "active") throw apiError(402, "Serve un account attivo per attivare un componente aggiuntivo.");
+  const customer = await ensureCustomer(user);
+  const session = await stripe().checkout.sessions.create({
+    mode: "subscription",
+    customer,
+    line_items: [addonItemFor(addon)],
+    success_url: origin + `/dashboard?addon=${addonType}&status=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: origin + `/dashboard?addon=${addonType}&status=cancelled`,
+    locale: "it",
+    allow_promotion_codes: true,
+    metadata: { user_id: user.id, addon_type: addonType, checkout_type: "addon" },
+    subscription_data: { metadata: { user_id: user.id, addon_type: addonType, checkout_type: "addon" } },
+  });
+  return { url: session.url, sessionId: session.id };
+}
+
 async function activateFromSession(session) {
   const userId = session.metadata?.user_id;
   const planId = session.metadata?.plan_id;
@@ -197,6 +248,89 @@ async function activateCreditsFromSession(session) {
   await addCredits(userId, pack.tokens, "credit_purchase", { packId, stripeSessionId: session.id });
 }
 
+async function grantAddonSlot(userId, addonType, subscriptionId) {
+  const inserted = await query(
+    `INSERT INTO addon_subscriptions (user_id, addon_type, stripe_subscription_id, status)
+     VALUES ($1, $2, $3, 'active')
+     ON CONFLICT (stripe_subscription_id) DO NOTHING
+     RETURNING id`,
+    [userId, addonType, subscriptionId],
+  );
+  if (!inserted.rowCount) return;
+  const column = addonType === "extra_integration" ? "extra_integration_slots" : "extra_whatsapp_slots";
+  await query(`UPDATE users SET ${column} = ${column} + 1, updated_at = NOW() WHERE id = $1`, [userId]);
+}
+
+async function revokeAddonSlot(userId, addonType, subscriptionId) {
+  const updated = await query(
+    `UPDATE addon_subscriptions SET status = 'cancelled' WHERE stripe_subscription_id = $1 AND status = 'active' RETURNING id`,
+    [subscriptionId],
+  );
+  if (!updated.rowCount) return;
+  const column = addonType === "extra_integration" ? "extra_integration_slots" : "extra_whatsapp_slots";
+  await query(`UPDATE users SET ${column} = GREATEST(0, ${column} - 1), updated_at = NOW() WHERE id = $1`, [userId]);
+}
+
+async function activateAddonFromSession(session) {
+  const userId = session.metadata?.user_id;
+  const addonType = session.metadata?.addon_type;
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+  if (!userId || !addonType || !subscriptionId) return;
+  await grantAddonSlot(userId, addonType, subscriptionId);
+}
+
+/**
+ * Se un cliente passa a un piano con quote più basse e in quel momento ha più
+ * integrazioni/numeri attivi di quanti ne includa il nuovo piano, l'eccedenza
+ * viene addebitata automaticamente come componente extra (per policy: chi supera
+ * la quota dopo un downgrade paga da subito, non perde l'accesso).
+ */
+async function reconcilePlanDowngrade(userId, customerId, newPlanId) {
+  if (!customerId) return;
+  const plan = getPlan(newPlanId);
+  if (!plan) return;
+
+  const [userRow, integrationsCount, numbersCount] = await Promise.all([
+    query(`SELECT extra_integration_slots, extra_whatsapp_slots FROM users WHERE id = $1`, [userId]),
+    query(`SELECT COUNT(*)::int AS count FROM integrations WHERE user_id = $1 AND status = 'connected'`, [userId]),
+    query(`SELECT COUNT(*)::int AS count FROM whatsapp_numbers WHERE user_id = $1`, [userId]),
+  ]);
+  const row = userRow.rows[0];
+  if (!row) return;
+
+  const overIntegrations = Math.max(
+    0,
+    integrationsCount.rows[0].count - (plan.includedIntegrations || 0) - (row.extra_integration_slots || 0),
+  );
+  const overNumbers = Math.max(
+    0,
+    numbersCount.rows[0].count - (plan.includedWhatsappNumbers || 0) - (row.extra_whatsapp_slots || 0),
+  );
+
+  for (let i = 0; i < overIntegrations; i += 1) {
+    await autoChargeAddon(userId, customerId, "extra_integration");
+  }
+  for (let i = 0; i < overNumbers; i += 1) {
+    await autoChargeAddon(userId, customerId, "extra_whatsapp_number");
+  }
+}
+
+async function autoChargeAddon(userId, customerId, addonType) {
+  const addon = getAddon(addonType);
+  if (!addon) return;
+  try {
+    const subscription = await stripe().subscriptions.create({
+      customer: customerId,
+      items: [addonItemFor(addon)],
+      metadata: { user_id: userId, addon_type: addonType, checkout_type: "addon" },
+      description: `${addon.name} — attivato automaticamente dopo cambio piano`,
+    });
+    await grantAddonSlot(userId, addonType, subscription.id);
+  } catch (error) {
+    console.error("[stripe] addebito automatico componente extra non riuscito", userId, addonType, error?.message || error);
+  }
+}
+
 export async function confirmCheckout({ sessionId, userId }) {
   if (!sessionId) throw apiError(400, "Sessione Stripe mancante.");
   const session = await stripe().checkout.sessions.retrieve(sessionId, {
@@ -219,18 +353,49 @@ export async function createPortal({ user, origin }) {
   return { url: session.url };
 }
 
+async function updateAddonSubscription(subscription) {
+  const userId = subscription.metadata?.user_id;
+  const addonType = subscription.metadata?.addon_type;
+  if (!userId || !addonType) return;
+  const active = statusFromStripe(subscription.status) === "active";
+  if (!active) {
+    await revokeAddonSlot(userId, addonType, subscription.id);
+  }
+}
+
 async function updateSubscription(subscription) {
+  if (subscription.metadata?.checkout_type === "addon") {
+    await updateAddonSubscription(subscription);
+    return;
+  }
+
   const customerId = typeof subscription.customer === "string"
     ? subscription.customer
     : subscription.customer?.id;
   if (!customerId) return;
+
+  const existing = await query(`SELECT id, plan_id FROM users WHERE stripe_customer_id = $1`, [customerId]);
+  const userRow = existing.rows[0];
+  const newPlanId = planIdFromSubscription(subscription);
+
   await query(
     `UPDATE users
      SET subscription_id = $1, status = $2,
-         subscription_current_period_end = $3, updated_at = NOW()
+         subscription_current_period_end = $3,
+         plan_id = COALESCE($5, plan_id),
+         updated_at = NOW()
      WHERE stripe_customer_id = $4`,
-    [subscription.id, statusFromStripe(subscription.status), periodEnd(subscription), customerId],
+    [subscription.id, statusFromStripe(subscription.status), periodEnd(subscription), customerId, newPlanId],
   );
+
+  if (userRow && newPlanId && newPlanId !== userRow.plan_id) {
+    await grantPlanAllowance(userRow.id, newPlanId).catch((error) =>
+      console.error("[stripe] aggiornamento monte token dopo cambio piano fallito", userRow.id, error?.message || error),
+    );
+    await reconcilePlanDowngrade(userRow.id, customerId, newPlanId).catch((error) =>
+      console.error("[stripe] riconciliazione downgrade fallita", userRow.id, error?.message || error),
+    );
+  }
 }
 
 export function constructWebhook(rawBody, signature) {
@@ -245,13 +410,17 @@ export async function processWebhook(event) {
   if (exists.rowCount) return { duplicate: true };
 
   switch (event.type) {
-    case "checkout.session.completed":
-      if (event.data.object?.metadata?.checkout_type === "credits") {
+    case "checkout.session.completed": {
+      const checkoutType = event.data.object?.metadata?.checkout_type;
+      if (checkoutType === "credits") {
         await activateCreditsFromSession(event.data.object);
+      } else if (checkoutType === "addon") {
+        await activateAddonFromSession(event.data.object);
       } else {
         await activateFromSession(event.data.object);
       }
       break;
+    }
     case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted":

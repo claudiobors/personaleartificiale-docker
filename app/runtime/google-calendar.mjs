@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { apiError } from "./auth.mjs";
 import { query } from "./db.mjs";
+import { assertIntegrationSlot } from "./integration-quota.mjs";
 import { encryptSecret, decryptSecret } from "./secrets.mjs";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
@@ -91,6 +92,7 @@ async function storeTokens(userId, { accessToken, refreshToken, expiresIn }) {
 
 export async function handleGoogleCallback(code, state) {
   const userId = verifyState(state);
+  await assertIntegrationSlot(userId, "google_calendar");
   const { clientId, clientSecret, redirectUri } = googleConfig();
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",

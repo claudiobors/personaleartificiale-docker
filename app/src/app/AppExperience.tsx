@@ -60,6 +60,10 @@ export function AppExperience() {
             setError("Pagamento annullato: non è stato effettuato alcun addebito.");
             window.history.replaceState({}, document.title, "/dashboard");
           }
+          if (params.get("addon") && params.get("status") === "cancelled") {
+            setError("Attivazione annullata: non è stato effettuato alcun addebito.");
+            window.history.replaceState({}, document.title, "/dashboard");
+          }
         }
 
         if (!cancelled) {

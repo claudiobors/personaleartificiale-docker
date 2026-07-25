@@ -5,6 +5,7 @@ import { answerWithKnowledge } from "./assistant.mjs";
 import { handleBookingMessage } from "./booking.mjs";
 import { consumeTokens, estimateTokens } from "./credits.mjs";
 import { createCreditCheckout } from "./stripe.mjs";
+import { getUserByWhatsAppNumber } from "./whatsapp-numbers.mjs";
 
 const EVOLUTION_URL = (process.env.EVOLUTION_API_URL || "http://evolution:8080").replace(/\/+$/, "");
 
@@ -219,20 +220,6 @@ async function getSessionByInstance(instanceName) {
   return row ? mapSession(row) : null;
 }
 
-async function getUserByWhatsAppPhone(remoteJid) {
-  const digits = cleanNumber(remoteJid);
-  if (!digits) return null;
-  const result = await query(
-    `SELECT id, email, name, plan_id, status, stripe_customer_id, subscription_id,
-            subscription_current_period_end, token_balance, onboarding_completed_at
-     FROM users
-     WHERE regexp_replace(COALESCE(whatsapp_phone, ''), '\\D', '', 'g') = $1
-     LIMIT 1`,
-    [digits],
-  );
-  return result.rows[0] || null;
-}
-
 function mapSession(row) {
   return {
     userId: row.user_id,
@@ -341,7 +328,7 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
   }
 
   console.info("[evolution] cerco utente registrato per numero", { remoteJid: cleanNumber(remoteJid) });
-  const user = await getUserByWhatsAppPhone(remoteJid);
+  const user = await getUserByWhatsAppNumber(remoteJid);
   console.info("[evolution] esito ricerca utente", { found: Boolean(user), userId: user?.id, status: user?.status });
   if (!user) {
     console.warn("[evolution] mittente non riconosciuto: nessun utente con questo numero registrato", { remoteJid: cleanNumber(remoteJid) });
@@ -349,7 +336,7 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
       await sendWhatsAppText(
         instanceName,
         remoteJid,
-        "Ciao! Questo numero è riservato agli utenti registrati di Personale Artificiale. Accedi alla piattaforma e inserisci questo numero WhatsApp nel tuo profilo per parlare con il tuo bot.",
+        "Ciao! Questo è il numero del tuo assistente artificiale personale, riservato a chi lo ha attivato e ai numeri autorizzati sul suo account. Se sei tu il titolare, accedi alla piattaforma e aggiungi questo numero tra i tuoi \"Numeri WhatsApp\".",
       );
     }
     return { ignored: true, reason: "unknown_sender" };

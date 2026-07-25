@@ -13,10 +13,11 @@ import {
   sessionCookie,
   verifyLoginOtp,
 } from "./auth.mjs";
-import { publicPlans, publicCreditPacks, getPlan } from "./plans.mjs";
+import { publicPlans, publicCreditPacks, publicAddons, getPlan } from "./plans.mjs";
 import {
   confirmCheckout,
   constructWebhook,
+  createAddonCheckout,
   createCreditCheckout,
   createCheckout,
   createPortal,
@@ -54,6 +55,12 @@ import {
   listEmailDrafts,
   sendEmailDraft,
 } from "./email-integration.mjs";
+import {
+  addWhatsappNumber,
+  listWhatsappNumbers,
+  removeWhatsappNumber,
+} from "./whatsapp-numbers.mjs";
+import { assertIntegrationSlot, integrationQuota } from "./integration-quota.mjs";
 
 const MAX_JSON = 1024 * 1024;
 const MAX_UPLOAD = 15 * 1024 * 1024;
@@ -185,16 +192,9 @@ function whatsappContactFor(user) {
 
 async function updateUserProfile(userId, input) {
   const accountType = cleanAccountType(input?.accountType);
-  const whatsappPhone = normalizePhone(input?.whatsappPhone);
   const result = await query(
-    `UPDATE users
-     SET account_type = $1,
-         whatsapp_phone = NULLIF($2, ''),
-         whatsapp_phone_verified_at = CASE WHEN NULLIF($2, '') IS DISTINCT FROM whatsapp_phone THEN NULL ELSE whatsapp_phone_verified_at END,
-         updated_at = NOW()
-     WHERE id = $3
-     RETURNING id`,
-    [accountType, whatsappPhone, userId],
+    `UPDATE users SET account_type = $1, updated_at = NOW() WHERE id = $2 RETURNING id`,
+    [accountType, userId],
   );
   if (!result.rowCount) throw apiError(404, "Utente non trovato.");
   return getUserById(userId);
@@ -318,12 +318,12 @@ async function adminUpdateUser(input, admin) {
   const whatsappPhone = normalizePhone(input?.whatsappPhone);
   const name = String(input?.name || "").trim().slice(0, 160) || "Utente";
   await query(
-    `UPDATE users
-     SET name = $1, plan_id = $2, status = $3, account_type = $4,
-         whatsapp_phone = NULLIF($5, ''), updated_at = NOW()
-     WHERE id = $6`,
-    [name, planId, status, accountType, whatsappPhone, userId],
+    `UPDATE users SET name = $1, plan_id = $2, status = $3, account_type = $4, updated_at = NOW() WHERE id = $5`,
+    [name, planId, status, accountType, userId],
   );
+  if (whatsappPhone) {
+    await addWhatsappNumber(userId, { phone: whatsappPhone }, { bypassQuota: true });
+  }
   if (status === "active" && planId !== "none") await grantPlanAllowance(userId, planId);
   await query(
     `INSERT INTO token_ledger (user_id, delta, balance_after, reason, metadata)
@@ -392,7 +392,7 @@ export async function dispatchApi(request, url) {
     }
 
     if (method === "GET" && path === "/api/plans") {
-      return response({ plans: publicPlans(), creditPacks: publicCreditPacks() });
+      return response({ plans: publicPlans(), creditPacks: publicCreditPacks(), addons: publicAddons() });
     }
 
     if (method === "POST" && path === "/api/auth/register") {
@@ -521,6 +521,7 @@ export async function dispatchApi(request, url) {
 
     if (method === "GET" && path === "/api/integrations/google/connect") {
       const { user } = await requireActiveUser(request);
+      await assertIntegrationSlot(user.id, "google_calendar");
       return response({ url: googleAuthUrl(user.id) });
     }
 
@@ -578,6 +579,37 @@ export async function dispatchApi(request, url) {
       if (!draftId) throw apiError(400, "ID bozza mancante.");
       const result = await discardEmailDraft(user.id, draftId);
       return response({ ...result, drafts: await listEmailDrafts(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/whatsapp/numbers") {
+      const { user } = await requireActiveUser(request);
+      return response(await listWhatsappNumbers(user.id));
+    }
+
+    if (method === "POST" && path === "/api/whatsapp/numbers") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      const result = await addWhatsappNumber(user.id, { phone: body.phone, label: body.label });
+      return response(result);
+    }
+
+    if (method === "DELETE" && path === "/api/whatsapp/numbers") {
+      const { user } = await requireActiveUser(request);
+      const numberId = url.searchParams.get("id");
+      if (!numberId) throw apiError(400, "ID numero mancante.");
+      const result = await removeWhatsappNumber(user.id, numberId);
+      return response(result);
+    }
+
+    if (method === "GET" && path === "/api/integrations/quota") {
+      const { user } = await requireActiveUser(request);
+      return response({ quota: await integrationQuota(user.id) });
+    }
+
+    if (method === "POST" && path === "/api/billing/addon-checkout") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      return response(await createAddonCheckout({ user, addonType: body.addonType, origin: originFor(request) }));
     }
 
     if (method === "GET" && path === "/api/onboarding") {
