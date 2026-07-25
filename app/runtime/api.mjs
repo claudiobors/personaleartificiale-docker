@@ -33,6 +33,7 @@ import {
 import { answerWithKnowledge } from "./assistant.mjs";
 import {
   assertEvolutionWebhook,
+  disconnectWhatsAppSession,
   ensureWhatsAppSession,
   getWhatsAppStatus,
   processEvolutionWebhook,
@@ -477,6 +478,11 @@ export async function dispatchApi(request, url) {
     if (method === "POST" && path === "/api/whatsapp/provision") {
       const { user } = await requireAdminUser(request);
       return response({ session: await ensureWhatsAppSession(user, originFor(request)) });
+    }
+
+    if (method === "POST" && path === "/api/whatsapp/disconnect") {
+      const { user } = await requireAdminUser(request);
+      return response({ session: await disconnectWhatsAppSession(user.id) });
     }
 
     if (method === "GET" && path === "/api/whatsapp/contact") {

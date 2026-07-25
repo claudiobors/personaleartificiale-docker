@@ -157,6 +157,19 @@ export async function ensureWhatsAppSession(user, origin) {
   }
 }
 
+export async function disconnectWhatsAppSession(userId) {
+  const session = await getSessionByUser(userId);
+  if (!session?.instanceName) throw apiError(404, "Nessuna sessione WhatsApp da disconnettere.");
+  await evolutionFetch("/instance/logout/" + encodeURIComponent(session.instanceName), { method: "DELETE" }).catch((error) => {
+    if (![400, 404].includes(Number(error.status))) throw error;
+  });
+  await query(
+    `UPDATE whatsapp_sessions SET status = 'disconnected', qr_code = NULL, last_error = NULL, updated_at = NOW() WHERE user_id = $1`,
+    [userId],
+  );
+  return getWhatsAppStatus(userId);
+}
+
 async function fetchQr(instanceName) {
   const data = await evolutionFetch("/instance/connect/" + encodeURIComponent(instanceName), { method: "GET" });
   return {
@@ -245,7 +258,10 @@ export function assertEvolutionWebhook(request, url) {
   const configured = process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY;
   if (!configured) throw apiError(503, "Webhook Evolution non configurato.");
   const provided = request.headers.apikey || request.headers["x-api-key"] || url.searchParams.get("apikey");
-  if (provided !== configured) throw apiError(401, "Webhook Evolution non autorizzato.");
+  if (provided !== configured) {
+    console.warn("[evolution] webhook rifiutato: apikey mancante o errata", { hasHeader: Boolean(request.headers.apikey || request.headers["x-api-key"]), hasQuery: url.searchParams.has("apikey") });
+    throw apiError(401, "Webhook Evolution non autorizzato.");
+  }
 }
 
 function extractWebhookMessage(payload) {
@@ -268,10 +284,18 @@ function extractWebhookMessage(payload) {
 export async function processEvolutionWebhook(payload) {
   const event = String(payload?.event || payload?.type || "").toUpperCase();
   const { instanceName, remoteJid, fromMe, text } = extractWebhookMessage(payload);
-  if (!instanceName) return { ignored: true, reason: "missing_instance" };
+  console.info("[evolution] webhook ricevuto", { event, instanceName, remoteJid, fromMe, textLength: text.length });
+
+  if (!instanceName) {
+    console.warn("[evolution] webhook ignorato: instance mancante nel payload", { event, keys: Object.keys(payload || {}) });
+    return { ignored: true, reason: "missing_instance" };
+  }
 
   const session = await getSessionByInstance(instanceName);
-  if (!session) return { ignored: true, reason: "unknown_instance" };
+  if (!session) {
+    console.warn("[evolution] webhook ignorato: nessuna sessione per questa instance", { instanceName });
+    return { ignored: true, reason: "unknown_instance" };
+  }
 
   if (event.includes("CONNECTION")) {
     const state = payload?.data?.state || payload?.state;
@@ -286,11 +310,15 @@ export async function processEvolutionWebhook(payload) {
     return { updated: true, status: "qr_ready" };
   }
 
-  if (fromMe || !remoteJid || text.length < 2) return { ignored: true };
+  if (fromMe || !remoteJid || text.length < 2) {
+    console.info("[evolution] webhook ignorato: non è un messaggio testuale in ingresso valido", { event, fromMe, hasRemoteJid: Boolean(remoteJid), textLength: text.length });
+    return { ignored: true };
+  }
   await assertWhatsAppRateLimit(remoteJid);
 
   const user = await getUserByWhatsAppPhone(remoteJid);
   if (!user) {
+    console.warn("[evolution] mittente non riconosciuto: nessun utente con questo numero registrato", { remoteJid: cleanNumber(remoteJid) });
     if (autoReplyAllowed(remoteJid)) {
       await sendWhatsAppText(
         instanceName,
@@ -301,12 +329,14 @@ export async function processEvolutionWebhook(payload) {
     return { ignored: true, reason: "unknown_sender" };
   }
   if (user.status !== "active") {
+    console.warn("[evolution] mittente riconosciuto ma account non attivo", { userId: user.id, status: user.status });
     if (autoReplyAllowed(remoteJid)) {
       await sendWhatsAppText(instanceName, remoteJid, "Il tuo account non è attivo. Accedi alla piattaforma per completare piano e pagamento.");
     }
     return { ignored: true, reason: "inactive_user" };
   }
   if (!user.onboarding_completed_at) {
+    console.warn("[evolution] mittente riconosciuto ma onboarding incompleto", { userId: user.id });
     if (autoReplyAllowed(remoteJid)) {
       await sendWhatsAppText(instanceName, remoteJid, "Il tuo bot non è ancora pronto. Completa profilo e knowledge base nella dashboard.");
     }
@@ -320,7 +350,10 @@ export async function processEvolutionWebhook(payload) {
      LIMIT 1`,
     [user.id, remoteJid, text],
   );
-  if (recent.rowCount) return { duplicate: true };
+  if (recent.rowCount) {
+    console.info("[evolution] webhook ignorato: messaggio duplicato ricevuto due volte da Evolution", { userId: user.id });
+    return { duplicate: true };
+  }
 
   const profile = await query("SELECT onboarding_data FROM agent_config WHERE user_id = $1", [user.id]);
   await query(
@@ -358,6 +391,7 @@ export async function processEvolutionWebhook(payload) {
      VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
     [user.id, answer.answer, JSON.stringify({ remoteJid, instanceName, model: answer.model, fallback: answer.fallback })],
   );
+  console.info("[evolution] risposta inviata con successo", { userId: user.id, model: answer.model, fallback: answer.fallback });
   return { replied: true };
 }
 
