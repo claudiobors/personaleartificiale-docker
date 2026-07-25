@@ -22,6 +22,7 @@ function otpRequiredFor(row) {
 
 async function deliverOtp({ email, name, code }) {
   if (process.env.RESEND_API_KEY) {
+    const from = process.env.OTP_EMAIL_FROM || "Personale Artificiale <onboarding@resend.dev>";
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -29,14 +30,26 @@ async function deliverOtp({ email, name, code }) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.OTP_EMAIL_FROM || "Personale Artificiale <noreply@personaleartificiale.it>",
+        from,
         to: [email],
         subject: "Codice di accesso Personale Artificiale",
         text: `Ciao ${name || ""},\n\nIl tuo codice OTP è: ${code}\n\nScade tra ${OTP_TTL_MINUTES} minuti. Se non hai richiesto tu l'accesso, ignora questa email.`,
       }),
       signal: AbortSignal.timeout(Number(process.env.OTP_EMAIL_TIMEOUT_MS || 8000)),
     });
-    if (!response.ok) throw apiError(503, "Invio OTP non riuscito. Riprova tra poco.", "otp_delivery_failed");
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.error("[otp] Resend delivery failed", {
+        status: response.status,
+        from,
+        to: email,
+        detail: detail.slice(0, 1000),
+      });
+      const message = response.status === 403 || response.status === 422
+        ? "Invio OTP non riuscito: verifica RESEND_API_KEY e il dominio/mittente OTP_EMAIL_FROM su Resend."
+        : "Invio OTP non riuscito. Riprova tra poco.";
+      throw apiError(503, message, "otp_delivery_failed");
+    }
     return;
   }
   if (process.env.NODE_ENV !== "production") {

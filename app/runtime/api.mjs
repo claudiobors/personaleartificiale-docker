@@ -151,6 +151,19 @@ function cleanAccountType(value) {
   return ["private", "business", "professional"].includes(value) ? value : "business";
 }
 
+function whatsappContactFor(user) {
+  const rawNumber = process.env.WHATSAPP_BOT_NUMBER || process.env.WHATSAPP_PUBLIC_NUMBER || "";
+  const digits = rawNumber.replace(/\D/g, "");
+  const displayNumber = rawNumber.trim() || (digits ? "+" + digits : "");
+  const message = (process.env.WHATSAPP_PREFILLED_MESSAGE || `Ciao, sono ${user.name}. Voglio aprire la chat con il mio assistente Personale Artificiale.`).slice(0, 500);
+  return {
+    configured: Boolean(digits),
+    number: displayNumber,
+    message,
+    url: digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : "",
+  };
+}
+
 async function updateUserProfile(userId, input) {
   const accountType = cleanAccountType(input?.accountType);
   const whatsappPhone = normalizePhone(input?.whatsappPhone);
@@ -357,6 +370,11 @@ export async function dispatchApi(request, url) {
     if (method === "POST" && path === "/api/whatsapp/provision") {
       const { user } = await requireAdminUser(request);
       return response({ session: await ensureWhatsAppSession(user, originFor(request)) });
+    }
+
+    if (method === "GET" && path === "/api/whatsapp/contact") {
+      const { user } = await requireActiveUser(request);
+      return response({ contact: whatsappContactFor(user) });
     }
 
     if (method === "POST" && path === "/api/evolution/webhook") {

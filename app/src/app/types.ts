@@ -74,6 +74,13 @@ export interface WhatsAppSession {
   updatedAt?: string | null;
 }
 
+export interface WhatsAppContact {
+  configured: boolean;
+  number: string;
+  message: string;
+  url: string;
+}
+
 export interface OnboardingData {
   accountType: "private" | "business" | "professional";
   personalGoal: string;

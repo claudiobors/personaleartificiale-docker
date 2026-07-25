@@ -1,4 +1,4 @@
-import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppSession } from "./types";
+import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -104,6 +104,7 @@ export const backend = {
     api<{ stats: { files: number; ready_files: number; messages: number; whatsapp_status?: string | null } }>("/api/dashboard/stats"),
   whatsappStatus: () => api<{ session: WhatsAppSession }>("/api/whatsapp/status"),
   provisionWhatsApp: () => api<{ session: WhatsAppSession }>("/api/whatsapp/provision", { method: "POST" }),
+  whatsappContact: () => api<{ contact: WhatsAppContact }>("/api/whatsapp/contact"),
   exportPrivacy: () => api<{ data: unknown }>("/api/privacy/export"),
   deleteAccount: (confirmation: string) => api<{ deleted: boolean; deletedAt: string }>("/api/privacy/account", {
     method: "DELETE",

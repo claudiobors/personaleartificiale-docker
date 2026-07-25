@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import {
+  ArrowRight,
   Bot,
   Building2,
   CheckCircle2,
+  Copy,
   CreditCard,
   Database,
+  ExternalLink,
   FileText,
   Gauge,
   Loader2,
@@ -15,12 +18,13 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
 import { backend } from "./api";
 import { AppHeader } from "./PlansView";
-import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppSession } from "./types";
+import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
 
 type Tab = "overview" | "knowledge" | "whatsapp" | "profile" | "billing" | "credits";
 
@@ -54,6 +58,7 @@ export function ControlPanel({
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState<Array<{ score: number; source: string }>>([]);
   const [whatsApp, setWhatsApp] = useState<WhatsAppSession | null>(null);
+  const [whatsAppContact, setWhatsAppContact] = useState<WhatsAppContact | null>(null);
   const [whatsAppLoading, setWhatsAppLoading] = useState(false);
   const [accountType, setAccountType] = useState(user.accountType || "business");
   const [whatsappPhone, setWhatsappPhone] = useState(user.whatsappPhone || "");
@@ -67,7 +72,7 @@ export function ControlPanel({
   const tabs: Array<[Tab, string, typeof Gauge]> = [
     ["overview", "Panoramica", Gauge],
     ["knowledge", "Documenti", Database],
-    ["profile", "Profilo", Bot],
+    ["profile", "Configurazione", Bot],
     ["credits", "Crediti", CreditCard],
     ["billing", "Fatturazione", CreditCard],
   ];
@@ -134,6 +139,15 @@ export function ControlPanel({
     }
   };
 
+  const loadWhatsAppContact = async () => {
+    try {
+      const result = await backend.whatsappContact();
+      setWhatsAppContact(result.contact);
+    } catch {
+      setWhatsAppContact(null);
+    }
+  };
+
   const provisionWhatsApp = async () => {
     setWhatsAppLoading(true);
     setError("");
@@ -192,6 +206,10 @@ export function ControlPanel({
   }, [tab, whatsApp]);
 
   useEffect(() => {
+    if (!whatsAppContact) void loadWhatsAppContact();
+  }, [whatsAppContact]);
+
+  useEffect(() => {
     if (tab === "credits" && !credits) void loadCredits();
   }, [tab, credits]);
 
@@ -233,26 +251,79 @@ export function ControlPanel({
     ? new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" }).format(new Date(user.subscriptionCurrentPeriodEnd))
     : "Gestito da Stripe";
 
+  const botReady = user.onboardingComplete && stats.ready_files > 0 && Boolean(whatsappPhone);
+  const creditBalance = credits?.balance ?? user.tokenBalance ?? 0;
+  const whatsappQrUrl = whatsAppContact?.url
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(whatsAppContact.url)}`
+    : "";
+  const setupSteps = [
+    {
+      title: "Configura profilo",
+      detail: user.onboardingComplete ? "Profilo completato" : "Completa tono, obiettivi, regole e contatti",
+      done: user.onboardingComplete,
+      action: "Apri configurazione",
+      onClick: onEditProfile,
+    },
+    {
+      title: "Carica documenti",
+      detail: stats.ready_files > 0 ? `${stats.ready_files} documenti indicizzati` : "Aggiungi FAQ, listini, procedure o cataloghi",
+      done: stats.ready_files > 0,
+      action: "Vai ai documenti",
+      onClick: () => setTab("knowledge"),
+    },
+    {
+      title: "Collega il tuo numero",
+      detail: whatsappPhone ? whatsappPhone : "Inserisci il numero da cui scriverai al bot",
+      done: Boolean(whatsappPhone),
+      action: "Configura WhatsApp",
+      onClick: () => setTab("profile"),
+    },
+    {
+      title: "Testa la chat",
+      detail: botReady ? "Apri WhatsApp con messaggio preimpostato" : "Disponibile dopo configurazione, documenti e numero",
+      done: botReady,
+      action: "Apri chat",
+      onClick: () => whatsAppContact?.url && window.open(whatsAppContact.url, "_blank", "noopener,noreferrer"),
+    },
+  ];
+
+  const copyWhatsAppMessage = async () => {
+    if (!whatsAppContact?.message) return;
+    await navigator.clipboard?.writeText(whatsAppContact.message).catch(() => undefined);
+  };
+
   return (
     <main className="min-h-screen bg-[#05070b] text-white">
       <AppHeader user={user} onLogout={onLogout} />
       <div className="mx-auto max-w-6xl px-5 py-8">
-        <section className="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-400">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
-              Account operativo
+        <section className="mb-7 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,.28),transparent_34%),linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025))] p-6 shadow-2xl shadow-black/30 sm:p-8">
+          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+            <div className="max-w-3xl">
+              <div className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
+                {botReady ? "Assistente pronto" : "Completa la configurazione"}
+              </div>
+              <h1 className="text-3xl font-black leading-tight sm:text-5xl">
+                Ciao {user.name.split(" ")[0]}, porta il tuo bot su WhatsApp in pochi passaggi.
+              </h1>
+              <p className="mt-3 text-sm leading-7 text-zinc-300 sm:text-base">
+                Configura profilo, documenti e numero personale. Il QR tecnico del numero piattaforma è visibile solo all'amministratore.
+              </p>
             </div>
-            <h1 className="text-3xl font-black sm:text-4xl">
-              Ciao {user.name.split(" ")[0]}, il tuo assistente è pronto.
-            </h1>
-            <p className="mt-2 text-sm text-zinc-400">
-              {onboarding.companyName || "La tua azienda"} · {plan?.name || user.planId}
-            </p>
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+              <button onClick={onEditProfile} className="pa-button flex items-center justify-center gap-2 px-5 py-3">
+                <Settings className="h-4 w-4" /> Configura ora
+              </button>
+              <button onClick={() => setTab("knowledge")} className="rounded-xl border border-white/10 bg-white/10 px-5 py-3 text-sm font-extrabold hover:bg-white/15">
+                Carica documenti
+              </button>
+              {whatsAppContact?.url && (
+                <a href={whatsAppContact.url} target="_blank" rel="noreferrer" className="rounded-xl border border-emerald-400/25 bg-emerald-500/15 px-5 py-3 text-center text-sm font-extrabold text-emerald-100 hover:bg-emerald-500/25">
+                  Apri WhatsApp
+                </a>
+              )}
+            </div>
           </div>
-          <button onClick={onEditProfile} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold hover:bg-white/10">
-            <Settings className="h-4 w-4" /> Modifica configurazione
-          </button>
         </section>
 
         <nav className="mb-7 flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.025] p-1">
@@ -279,9 +350,46 @@ export function ControlPanel({
           <div className="space-y-6">
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Metric icon={Database} label="Documenti" value={String(files.length)} detail={stats.ready_files + " indicizzati"} />
-              <Metric icon={Bot} label="Profilo AI" value="Completo" detail={onboarding.toneOfVoice || "Configurato"} />
-              <Metric icon={CreditCard} label="Crediti token" value={formatNumber(user.tokenBalance || credits?.balance || 0)} detail={`${formatNumber(user.monthlyTokensUsed || credits?.monthlyUsed || 0)} token usati`} />
-              <Metric icon={Phone} label="Numero personale" value={whatsappPhone || "Da inserire"} detail="Da qui parlerai col bot" />
+              <Metric icon={Bot} label="Profilo AI" value={user.onboardingComplete ? "Completo" : "Da completare"} detail={onboarding.toneOfVoice || "Configura tono"} />
+              <Metric icon={CreditCard} label="Crediti token" value={formatNumber(creditBalance)} detail={`${formatNumber(user.monthlyTokensUsed || credits?.monthlyUsed || 0)} token usati`} />
+              <Metric icon={Phone} label="WhatsApp" value={whatsAppContact?.number || "Da configurare"} detail={whatsappPhone ? `Scrivi da ${whatsappPhone}` : "Inserisci il tuo numero"} />
+            </section>
+
+            <section className="grid gap-5 lg:grid-cols-[1fr_.9fr]">
+              <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 sm:p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-blue-300">Percorso guidato</p>
+                    <h2 className="mt-2 text-2xl font-black">Configura il bot senza perderti.</h2>
+                    <p className="mt-2 text-sm leading-6 text-zinc-400">I pulsanti sotto portano esattamente alla sezione giusta.</p>
+                  </div>
+                  <Sparkles className="h-6 w-6 text-blue-300" />
+                </div>
+                <div className="mt-6 grid gap-3">
+                  {setupSteps.map((step, index) => (
+                    <button key={step.title} onClick={step.onClick} disabled={step.action === "Apri chat" && !whatsAppContact?.url} className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-left transition hover:border-blue-400/35 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60">
+                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-black ${step.done ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-zinc-400"}`}>
+                        {step.done ? <CheckCircle2 className="h-5 w-5" /> : index + 1}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-extrabold text-white">{step.title}</span>
+                        <span className="mt-1 block text-xs leading-5 text-zinc-500">{step.detail}</span>
+                      </span>
+                      <span className="hidden items-center gap-1 text-xs font-black text-blue-300 sm:flex">
+                        {step.action} <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <WhatsAppClientCard
+                contact={whatsAppContact}
+                qrUrl={whatsappQrUrl}
+                whatsappPhone={whatsappPhone}
+                onConfigure={() => setTab("profile")}
+                onCopyMessage={copyWhatsAppMessage}
+              />
             </section>
 
             <section className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
@@ -291,15 +399,15 @@ export function ControlPanel({
                     <Search className="h-5 w-5" />
                   </span>
                   <div>
-                    <h2 className="font-extrabold">Verifica il RAG</h2>
-                    <p className="text-xs text-zinc-500">Fai una domanda e controlla quali informazioni recupera.</p>
+                    <h2 className="font-extrabold">Test rapido del bot</h2>
+                    <p className="text-xs text-zinc-500">Fai una domanda e verifica come risponde prima di usare WhatsApp.</p>
                   </div>
                 </div>
                 <form onSubmit={search} className="mt-5 flex flex-col gap-2 sm:flex-row">
                   <input value={query} onChange={(event) => setQuery(event.target.value)} className="pa-input flex-1" placeholder="Es. Qual è la nostra politica sui resi?" />
                   <button disabled={searching} className="pa-button flex items-center justify-center gap-2 px-5">
                     {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    Cerca
+                    Testa
                   </button>
                 </form>
                 {answer && (
@@ -323,13 +431,9 @@ export function ControlPanel({
                 <p className="text-xs font-black uppercase tracking-widest text-blue-300">Piano attivo</p>
                 <h2 className="mt-2 text-2xl font-black">{plan?.name}</h2>
                 <p className="mt-2 text-sm leading-6 text-zinc-400">{plan?.description}</p>
-                <ul className="mt-5 space-y-2">
-                  {plan?.features.slice(0, 4).map((feature) => (
-                    <li key={feature} className="flex items-center gap-2 text-xs text-zinc-300">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" /> {feature}
-                    </li>
-                  ))}
-                </ul>
+                <button onClick={() => setTab("credits")} className="mt-5 rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-extrabold hover:bg-white/15">
+                  Gestisci crediti
+                </button>
               </div>
             </section>
           </div>
@@ -471,6 +575,15 @@ export function ControlPanel({
               </div>
               <p className="mt-3 flex items-center gap-2 text-xs text-emerald-300"><ShieldCheck className="h-3.5 w-3.5" /> Il bot risponde solo ai numeri registrati e associati a un account attivo.</p>
             </div>
+            <div className="mt-5">
+              <WhatsAppClientCard
+                contact={whatsAppContact}
+                qrUrl={whatsappQrUrl}
+                whatsappPhone={whatsappPhone}
+                onConfigure={() => setTab("profile")}
+                onCopyMessage={copyWhatsAppMessage}
+              />
+            </div>
           </section>
         )}
 
@@ -548,6 +661,72 @@ export function ControlPanel({
         )}
       </div>
     </main>
+  );
+}
+
+function WhatsAppClientCard({
+  contact,
+  qrUrl,
+  whatsappPhone,
+  onConfigure,
+  onCopyMessage,
+}: {
+  contact: WhatsAppContact | null;
+  qrUrl: string;
+  whatsappPhone: string;
+  onConfigure: () => void;
+  onCopyMessage: () => void;
+}) {
+  return (
+    <aside className="rounded-3xl border border-emerald-400/20 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,.16),transparent_36%),rgba(255,255,255,.035)] p-6 sm:p-7">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-emerald-300">Chat WhatsApp</p>
+          <h2 className="mt-2 text-2xl font-black">Scrivi al tuo bot</h2>
+          <p className="mt-2 text-sm leading-6 text-zinc-400">
+            Usa il numero ufficiale della piattaforma. Il messaggio è già preimpostato e il sistema riconosce il tuo account dal numero personale salvato.
+          </p>
+        </div>
+        <MessageCircle className="h-7 w-7 shrink-0 text-emerald-300" />
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
+        <p className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Numero da contattare</p>
+        <p className="mt-1 text-xl font-black">{contact?.number || "Numero bot non configurato"}</p>
+        {!contact?.configured && (
+          <p className="mt-2 text-xs leading-5 text-amber-300">
+            Chiedi all'amministratore di impostare `WHATSAPP_BOT_NUMBER` nel `.env` e riavviare l'app.
+          </p>
+        )}
+      </div>
+
+      {contact?.configured && (
+        <div className="mt-5 grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
+          <div className="inline-flex rounded-2xl bg-white p-3">
+            <img src={qrUrl} alt="QR per aprire la chat WhatsApp" className="h-36 w-36 rounded-lg object-contain" />
+          </div>
+          <div className="space-y-3">
+            <a href={contact.url} target="_blank" rel="noreferrer" className="pa-button flex w-full items-center justify-center gap-2 px-5 py-3">
+              Apri chat WhatsApp <ExternalLink className="h-4 w-4" />
+            </a>
+            <button onClick={onCopyMessage} className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-extrabold hover:bg-white/10">
+              <Copy className="h-4 w-4" /> Copia messaggio
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Messaggio preimpostato</p>
+        <p className="mt-2 text-sm leading-6 text-zinc-300">{contact?.message || "Ciao, voglio aprire la chat con il mio assistente Personale Artificiale."}</p>
+      </div>
+
+      {!whatsappPhone && (
+        <button onClick={onConfigure} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-400/25 bg-blue-500/10 px-4 py-3 text-sm font-extrabold text-blue-100 hover:bg-blue-500/20">
+          <Phone className="h-4 w-4" /> Inserisci il tuo numero personale
+        </button>
+      )}
+    </aside>
   );
 }
 
