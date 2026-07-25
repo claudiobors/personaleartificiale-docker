@@ -40,6 +40,20 @@ import {
   refreshWhatsAppStatus,
 } from "./evolution.mjs";
 import { deleteUserData, exportUserData } from "./privacy.mjs";
+import {
+  disconnectGoogleCalendar,
+  getCalendarStatus,
+  googleAuthUrl,
+  handleGoogleCallback,
+} from "./google-calendar.mjs";
+import {
+  connectEmailAccount,
+  discardEmailDraft,
+  disconnectEmailAccount,
+  getEmailStatus,
+  listEmailDrafts,
+  sendEmailDraft,
+} from "./email-integration.mjs";
 
 const MAX_JSON = 1024 * 1024;
 const MAX_UPLOAD = 15 * 1024 * 1024;
@@ -54,6 +68,10 @@ function response(data, status = 200, headers = {}) {
     },
     body: JSON.stringify(data),
   };
+}
+
+function redirect(location) {
+  return { status: 302, headers: { Location: location, "Cache-Control": "no-store" }, body: "" };
 }
 
 function authResponse(result, status = 200) {
@@ -494,6 +512,72 @@ export async function dispatchApi(request, url) {
       assertEvolutionWebhook(request, url);
       const result = await processEvolutionWebhook(await jsonBody(request));
       return response({ received: true, ...result });
+    }
+
+    if (method === "GET" && path === "/api/integrations/google/status") {
+      const { user } = await requireActiveUser(request);
+      return response({ status: await getCalendarStatus(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/google/connect") {
+      const { user } = await requireActiveUser(request);
+      return response({ url: googleAuthUrl(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/google/callback") {
+      const dashboardUrl = originFor(request) + "/dashboard";
+      try {
+        await handleGoogleCallback(url.searchParams.get("code"), url.searchParams.get("state"));
+        return redirect(`${dashboardUrl}?integration=google&status=connected`);
+      } catch (error) {
+        const message = encodeURIComponent(error?.message || "Collegamento Google non riuscito.");
+        return redirect(`${dashboardUrl}?integration=google&status=error&message=${message}`);
+      }
+    }
+
+    if (method === "POST" && path === "/api/integrations/google/disconnect") {
+      const { user } = await requireActiveUser(request);
+      await disconnectGoogleCalendar(user.id);
+      return response({ status: await getCalendarStatus(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/email/status") {
+      const { user } = await requireActiveUser(request);
+      return response({ status: await getEmailStatus(user.id) });
+    }
+
+    if (method === "POST" && path === "/api/integrations/email/connect") {
+      const { user } = await requireActiveUser(request);
+      const status = await connectEmailAccount(user.id, await jsonBody(request));
+      return response({ status });
+    }
+
+    if (method === "POST" && path === "/api/integrations/email/disconnect") {
+      const { user } = await requireActiveUser(request);
+      await disconnectEmailAccount(user.id);
+      return response({ status: await getEmailStatus(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/email/drafts") {
+      const { user } = await requireActiveUser(request);
+      return response({ drafts: await listEmailDrafts(user.id) });
+    }
+
+    if (method === "POST" && path === "/api/email/drafts/send") {
+      const { user } = await requireActiveUser(request);
+      const draftId = url.searchParams.get("id");
+      if (!draftId) throw apiError(400, "ID bozza mancante.");
+      const body = await jsonBody(request);
+      const result = await sendEmailDraft(user.id, draftId, body.body);
+      return response({ ...result, drafts: await listEmailDrafts(user.id) });
+    }
+
+    if (method === "POST" && path === "/api/email/drafts/discard") {
+      const { user } = await requireActiveUser(request);
+      const draftId = url.searchParams.get("id");
+      if (!draftId) throw apiError(400, "ID bozza mancante.");
+      const result = await discardEmailDraft(user.id, draftId);
+      return response({ ...result, drafts: await listEmailDrafts(user.id) });
     }
 
     if (method === "GET" && path === "/api/onboarding") {

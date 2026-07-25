@@ -222,6 +222,49 @@ export async function migrate() {
     )
   `);
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS integrations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL CHECK (provider IN ('google_calendar', 'email_imap')),
+      status TEXT NOT NULL DEFAULT 'disconnected' CHECK (status IN ('disconnected', 'connected', 'error')),
+      secrets JSONB NOT NULL DEFAULT '{}'::jsonb,
+      settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+      last_error TEXT,
+      last_synced_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(user_id, provider)
+    )
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS pending_bookings (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      channel_ref TEXT NOT NULL,
+      proposal JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS email_drafts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      to_address TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      original_snippet TEXT,
+      in_reply_to TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'discarded')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      sent_at TIMESTAMPTZ
+    )
+  `);
+
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)");
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)");
   await query("CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email))");
@@ -233,7 +276,11 @@ export async function migrate() {
   await query("CREATE INDEX IF NOT EXISTS idx_whatsapp_sessions_instance ON whatsapp_sessions(instance_name)");
   await query("CREATE INDEX IF NOT EXISTS idx_token_ledger_user_created ON token_ledger(user_id, created_at DESC)");
   await query("CREATE INDEX IF NOT EXISTS idx_otp_challenges_user ON otp_challenges(user_id, expires_at DESC)");
+  await query("CREATE INDEX IF NOT EXISTS idx_integrations_user ON integrations(user_id)");
+  await query("CREATE INDEX IF NOT EXISTS idx_pending_bookings_lookup ON pending_bookings(user_id, channel, channel_ref, expires_at DESC)");
+  await query("CREATE INDEX IF NOT EXISTS idx_email_drafts_user_status ON email_drafts(user_id, status, created_at DESC)");
   await query("DELETE FROM sessions WHERE expires_at <= NOW()");
+  await query("DELETE FROM pending_bookings WHERE expires_at <= NOW()");
 }
 
 export async function closeDatabase() {

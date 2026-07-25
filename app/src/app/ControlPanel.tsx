@@ -5,7 +5,9 @@ import {
   CreditCard,
   Database,
   Gauge,
+  Mail,
   MessageCircle,
+  Plug,
   Settings,
   ShieldCheck,
   Users as UsersIcon,
@@ -20,6 +22,8 @@ import { AccountSettings } from "./sections/AccountSettings";
 import { AgentProfile } from "./sections/AgentProfile";
 import { Billing } from "./sections/Billing";
 import { Credits } from "./sections/Credits";
+import { EmailDrafts } from "./sections/EmailDrafts";
+import { Integrations } from "./sections/Integrations";
 import { Knowledge } from "./sections/Knowledge";
 import { Overview } from "./sections/Overview";
 import { WhatsAppClientSection } from "./sections/WhatsAppClient";
@@ -30,6 +34,8 @@ type SectionKey =
   | "knowledge"
   | "agent"
   | "whatsapp-client"
+  | "integrations"
+  | "email-drafts"
   | "credits"
   | "billing"
   | "settings"
@@ -57,6 +63,8 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   "whatsapp-client": "WhatsApp",
   credits: "Crediti",
   billing: "Fatturazione",
+  integrations: "Integrazioni",
+  "email-drafts": "Bozze email",
   settings: "Impostazioni",
   "admin-users": "Amministrazione · Utenti",
   "admin-logs": "Amministrazione · Log",
@@ -75,7 +83,9 @@ export function ControlPanel({
   onPortal,
   onLogout,
 }: Props) {
-  const [active, setActive] = useState<SectionKey>("overview");
+  const [active, setActive] = useState<SectionKey>(() =>
+    new URLSearchParams(window.location.search).get("integration") === "google" ? "integrations" : "overview",
+  );
   const [whatsAppContact, setWhatsAppContact] = useState<WhatsAppContact | null>(null);
 
   useEffect(() => {
@@ -90,6 +100,13 @@ export function ControlPanel({
         { key: "knowledge", label: "Documenti", icon: Database, badge: files.length ? String(files.length) : undefined },
         { key: "agent", label: "Assistente", icon: Bot },
         { key: "whatsapp-client", label: "WhatsApp", icon: MessageCircle },
+      ],
+    },
+    {
+      label: "Integrazioni",
+      items: [
+        { key: "integrations", label: "Calendario ed email", icon: Plug },
+        { key: "email-drafts", label: "Bozze email", icon: Mail },
       ],
     },
     {
@@ -146,6 +163,8 @@ export function ControlPanel({
           onGoToSettings={() => setActive("settings")}
         />
       )}
+      {active === "integrations" && <Integrations />}
+      {active === "email-drafts" && <EmailDrafts />}
       {active === "credits" && <Credits user={user} plan={plan} />}
       {active === "billing" && <Billing user={user} plan={plan} onPortal={onPortal} />}
       {active === "settings" && <AccountSettings user={user} onProfileSaved={onUserChange} onLogout={onLogout} />}

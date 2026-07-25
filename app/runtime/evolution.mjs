@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { apiError } from "./auth.mjs";
 import { query } from "./db.mjs";
 import { answerWithKnowledge } from "./assistant.mjs";
+import { handleBookingMessage } from "./booking.mjs";
 import { consumeTokens, estimateTokens } from "./credits.mjs";
 import { createCreditCheckout } from "./stripe.mjs";
 
@@ -380,13 +381,28 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     return { duplicate: true };
   }
 
-  const profile = await query("SELECT onboarding_data FROM agent_config WHERE user_id = $1", [user.id]);
   await query(
     `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
      VALUES ($1, 'incoming', 'whatsapp', $2, $3::jsonb)`,
     [user.id, text, JSON.stringify({ remoteJid, instanceName })],
   );
 
+  const bookingReply = await handleBookingMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
+    console.error("[evolution] errore nel flusso prenotazione", user.id, error?.message || error);
+    return null;
+  });
+  if (bookingReply) {
+    await sendWhatsAppText(instanceName, remoteJid, bookingReply);
+    await query(
+      `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+       VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+      [user.id, bookingReply, JSON.stringify({ remoteJid, instanceName, source: "calendar_booking" })],
+    );
+    console.info("[evolution] risposta prenotazione inviata", { userId: user.id });
+    return { replied: true, reason: "calendar_booking" };
+  }
+
+  const profile = await query("SELECT onboarding_data FROM agent_config WHERE user_id = $1", [user.id]);
   let answer;
   try {
     await consumeTokens(user.id, estimateTokens(text), "whatsapp_input", { remoteJid, instanceName });

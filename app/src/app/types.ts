@@ -81,6 +81,29 @@ export interface WhatsAppContact {
   url: string;
 }
 
+export interface CalendarStatus {
+  status: "disconnected" | "connected" | "error";
+  lastError?: string | null;
+  connectedAt?: string | null;
+  calendarId?: string;
+}
+
+export interface EmailStatus {
+  status: "disconnected" | "connected" | "error";
+  lastError?: string | null;
+  emailAddress?: string | null;
+  lastSyncedAt?: string | null;
+}
+
+export interface EmailDraft {
+  id: string;
+  to: string;
+  subject: string;
+  body: string;
+  originalSnippet?: string | null;
+  createdAt: string;
+}
+
 export interface AdminUserProfile extends UserProfile {
   files: number;
   readyFiles: number;

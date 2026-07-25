@@ -1,4 +1,4 @@
-import type { AdminLogs, AdminUserProfile, CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
+import type { AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, EmailDraft, EmailStatus, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact, WhatsAppSession } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -124,5 +124,22 @@ export const backend = {
       body: JSON.stringify(data),
     }),
   adminLogs: () => api<{ logs: AdminLogs }>("/api/admin/logs"),
+  googleCalendarStatus: () => api<{ status: CalendarStatus }>("/api/integrations/google/status"),
+  googleCalendarConnectUrl: () => api<{ url: string }>("/api/integrations/google/connect"),
+  googleCalendarDisconnect: () => api<{ status: CalendarStatus }>("/api/integrations/google/disconnect", { method: "POST" }),
+  emailStatus: () => api<{ status: EmailStatus }>("/api/integrations/email/status"),
+  emailConnect: (data: {
+    emailAddress: string; imapHost: string; imapPort: number; imapSecure: boolean;
+    smtpHost: string; smtpPort: number; smtpSecure: boolean; password: string;
+  }) => api<{ status: EmailStatus }>("/api/integrations/email/connect", { method: "POST", body: JSON.stringify(data) }),
+  emailDisconnect: () => api<{ status: EmailStatus }>("/api/integrations/email/disconnect", { method: "POST" }),
+  emailDrafts: () => api<{ drafts: EmailDraft[] }>("/api/email/drafts"),
+  sendEmailDraft: (id: string, body?: string) =>
+    api<{ sent: boolean; drafts: EmailDraft[] }>(`/api/email/drafts/send?id=${encodeURIComponent(id)}`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }),
+  discardEmailDraft: (id: string) =>
+    api<{ discarded: boolean; drafts: EmailDraft[] }>(`/api/email/drafts/discard?id=${encodeURIComponent(id)}`, { method: "POST" }),
 };
 

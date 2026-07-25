@@ -59,6 +59,8 @@ server {
 - `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`: risposte AI via OpenRouter. `OPENROUTER_EMBEDDING_MODEL` gestisce gli embeddings RAG se supportato dal provider/modello scelto. Se manca la chiave, il chatbot non va in crash: risponde con fallback locale sulle fonti disponibili.
 - `EVOLUTION_API_KEY`: bridge WhatsApp.
 - `PA_HTTP_PORT`: porta locale loopback per Personale Artificiale, default `8081`; non usare `3000` se `occhioesperto.it` la usa già.
+- `INTEGRATIONS_ENCRYPTION_KEY`: obbligatoria per usare le integrazioni Google Calendar/email (cifra le credenziali salvate per cliente).
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: opzionali, richieste solo per abilitare il collegamento a Google Calendar (vedi `.env.example` per come crearle).
 
 ## Flusso business coperto
 
@@ -66,11 +68,13 @@ server {
 2. Scelta piano e checkout Stripe.
 3. Conferma checkout/webhook e attivazione account.
 4. Onboarding aziendale con bozza salvabile e completamento validato.
-5. Upload documenti PDF/DOCX/TXT/MD con validazione dimensione, estensione, MIME e firma file.
+5. Upload documenti PDF/DOCX/TXT/MD/immagini con validazione dimensione, estensione, MIME e firma file; le immagini vengono lette con un modello vision e poi eliminate (non restano mai salvate).
 6. Indicizzazione Qdrant per tenant/utente.
-7. Test assistente dalla dashboard con salvataggio messaggi in `agent_messages`.
+7. Test assistente dalla dashboard con salvataggio messaggi in `agent_messages`; l'assistente conosce anche token residui, piano e stato abbonamento del cliente.
 8. Provisioning WhatsApp Evolution, QR, webhook autenticato e risposta automatica usando profilo + knowledge base.
 9. Portale Stripe per gestione fatturazione.
+10. Google Calendar collegabile per cliente (OAuth): il bot propone orari liberi via WhatsApp e crea l'evento solo dopo conferma esplicita del cliente.
+11. Casella email IMAP/SMTP collegabile per cliente: il bot legge le email in arrivo e prepara bozze di risposta che il titolare rivede e invia dalla dashboard, non le invia mai in autonomia.
 
 ## Comandi operativi
 
