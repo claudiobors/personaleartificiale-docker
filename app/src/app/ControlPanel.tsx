@@ -9,18 +9,20 @@ import {
   Gauge,
   Loader2,
   MessageCircle,
+  Phone,
   QrCode,
   RefreshCw,
   Search,
   Settings,
+  ShieldCheck,
   Trash2,
   Upload,
 } from "lucide-react";
 import { backend } from "./api";
 import { AppHeader } from "./PlansView";
-import type { KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppSession } from "./types";
+import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppSession } from "./types";
 
-type Tab = "overview" | "knowledge" | "whatsapp" | "profile" | "billing";
+type Tab = "overview" | "knowledge" | "whatsapp" | "profile" | "billing" | "credits";
 
 interface Props {
   user: UserProfile;
@@ -53,8 +55,23 @@ export function ControlPanel({
   const [sources, setSources] = useState<Array<{ score: number; source: string }>>([]);
   const [whatsApp, setWhatsApp] = useState<WhatsAppSession | null>(null);
   const [whatsAppLoading, setWhatsAppLoading] = useState(false);
+  const [accountType, setAccountType] = useState(user.accountType || "business");
+  const [whatsappPhone, setWhatsappPhone] = useState(user.whatsappPhone || "");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [credits, setCredits] = useState<CreditSummary | null>(null);
+  const [creditPacks, setCreditPacks] = useState<CreditPack[]>([]);
+  const [creditsLoading, setCreditsLoading] = useState(false);
   const [privacyLoading, setPrivacyLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const tabs: Array<[Tab, string, typeof Gauge]> = [
+    ["overview", "Panoramica", Gauge],
+    ["knowledge", "Documenti", Database],
+    ["profile", "Profilo", Bot],
+    ["credits", "Crediti", CreditCard],
+    ["billing", "Fatturazione", CreditCard],
+  ];
+  if (user.isAdmin) tabs.splice(2, 0, ["whatsapp", "Admin WhatsApp", MessageCircle]);
 
   const upload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = Array.from(event.target.files || []);
@@ -130,9 +147,53 @@ export function ControlPanel({
     }
   };
 
+  const saveProfile = async () => {
+    setProfileSaving(true);
+    setError("");
+    try {
+      const result = await backend.updateProfile({ accountType, whatsappPhone });
+      setAccountType(result.user.accountType || accountType);
+      setWhatsappPhone(result.user.whatsappPhone || "");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Profilo non aggiornato.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const loadCredits = async () => {
+    setCreditsLoading(true);
+    setError("");
+    try {
+      const result = await backend.credits();
+      setCredits(result.credits);
+      setCreditPacks(result.packs);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Crediti non disponibili.");
+    } finally {
+      setCreditsLoading(false);
+    }
+  };
+
+  const buyCredits = async (packId: string) => {
+    setCreditsLoading(true);
+    setError("");
+    try {
+      const result = await backend.creditCheckout(packId);
+      window.location.assign(result.url);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Checkout crediti non disponibile.");
+      setCreditsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (tab === "whatsapp" && !whatsApp) void loadWhatsApp();
   }, [tab, whatsApp]);
+
+  useEffect(() => {
+    if (tab === "credits" && !credits) void loadCredits();
+  }, [tab, credits]);
 
 
   const exportPrivacy = async () => {
@@ -195,13 +256,7 @@ export function ControlPanel({
         </section>
 
         <nav className="mb-7 flex gap-1 overflow-x-auto rounded-xl border border-white/10 bg-white/[0.025] p-1">
-          {([
-            ["overview", "Panoramica", Gauge],
-            ["knowledge", "Knowledge base", Database],
-            ["whatsapp", "WhatsApp", MessageCircle],
-            ["profile", "Profilo AI", Bot],
-            ["billing", "Fatturazione", CreditCard],
-          ] as const).map(([value, label, Icon]) => (
+          {tabs.map(([value, label, Icon]) => (
             <button
               key={value}
               onClick={() => setTab(value)}
@@ -225,8 +280,8 @@ export function ControlPanel({
             <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Metric icon={Database} label="Documenti" value={String(files.length)} detail={stats.ready_files + " indicizzati"} />
               <Metric icon={Bot} label="Profilo AI" value="Completo" detail={onboarding.toneOfVoice || "Configurato"} />
-              <Metric icon={CreditCard} label="Abbonamento" value="Attivo" detail={"Rinnovo: " + renewal} />
-              <Metric icon={MessageCircle} label="WhatsApp" value={statusLabel(stats.whatsapp_status || whatsApp?.status)} detail="Canale cliente" />
+              <Metric icon={CreditCard} label="Crediti token" value={formatNumber(user.tokenBalance || credits?.balance || 0)} detail={`${formatNumber(user.monthlyTokensUsed || credits?.monthlyUsed || 0)} token usati`} />
+              <Metric icon={Phone} label="Numero personale" value={whatsappPhone || "Da inserire"} detail="Da qui parlerai col bot" />
             </section>
 
             <section className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
@@ -392,6 +447,66 @@ export function ControlPanel({
               <ProfileItem label="Tono di voce" value={onboarding.toneOfVoice} icon={Bot} />
               <ProfileItem label="Obiettivi" value={onboarding.mainGoals} icon={CheckCircle2} />
             </div>
+            <div className="mt-7 rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-5">
+              <h3 className="flex items-center gap-2 font-extrabold"><Phone className="h-4 w-4 text-blue-300" /> Accesso WhatsApp personale</h3>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Questo è il numero da cui parlerai al bot principale della piattaforma. Il QR WhatsApp non è più visibile ai clienti: lo gestisce solo l'amministratore.
+              </p>
+              <div className="mt-5 grid gap-4 md:grid-cols-[.8fr_1fr_auto] md:items-end">
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Tipo profilo</span>
+                  <select value={accountType} onChange={(event) => setAccountType(event.target.value as "private" | "business" | "professional")} className="pa-input">
+                    <option value="business">Azienda</option>
+                    <option value="professional">Professionista</option>
+                    <option value="private">Privato</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Numero WhatsApp personale</span>
+                  <input value={whatsappPhone} onChange={(event) => setWhatsappPhone(event.target.value)} className="pa-input" placeholder="+393331234567" />
+                </label>
+                <button onClick={() => void saveProfile()} disabled={profileSaving} className="pa-button px-5 py-3">
+                  {profileSaving ? "Salvo…" : "Salva"}
+                </button>
+              </div>
+              <p className="mt-3 flex items-center gap-2 text-xs text-emerald-300"><ShieldCheck className="h-3.5 w-3.5" /> Il bot risponde solo ai numeri registrati e associati a un account attivo.</p>
+            </div>
+          </section>
+        )}
+
+        {tab === "credits" && (
+          <section className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+              <p className="text-xs font-black uppercase tracking-widest text-emerald-300">Utilizzo AI</p>
+              <h2 className="mt-2 text-3xl font-black">{formatNumber(credits?.balance ?? user.tokenBalance ?? 0)} token</h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                Ogni messaggio WhatsApp e test dashboard consuma crediti in base ai token stimati. Se finiscono, il bot chiede di acquistare un pacchetto prima di proseguire.
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <BillingItem label="Inclusi nel piano" value={formatNumber(credits?.monthlyAllowance ?? user.monthlyTokenAllowance ?? plan?.includedTokens ?? 0)} />
+                <BillingItem label="Usati questo periodo" value={formatNumber(credits?.monthlyUsed ?? user.monthlyTokensUsed ?? 0)} />
+              </div>
+              <button onClick={() => void loadCredits()} disabled={creditsLoading} className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold hover:bg-white/10 disabled:opacity-60">
+                {creditsLoading ? "Aggiorno…" : "Aggiorna crediti"}
+              </button>
+            </div>
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 sm:p-8">
+              <h3 className="text-xl font-black">Acquista altri crediti</h3>
+              <p className="mt-2 text-sm text-zinc-400">Pagamento sicuro con Stripe. I token vengono accreditati automaticamente al webhook di pagamento.</p>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {creditPacks.map((pack) => (
+                  <article key={pack.id} className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                    <p className="text-xs font-black uppercase tracking-wider text-blue-300">{formatNumber(pack.tokens)} token</p>
+                    <h4 className="mt-2 font-extrabold">{pack.name}</h4>
+                    <p className="mt-2 min-h-12 text-sm leading-6 text-zinc-400">{pack.description}</p>
+                    <div className="mt-5 flex items-center justify-between gap-3">
+                      <span className="text-2xl font-black">{pack.priceFormatted}</span>
+                      <button onClick={() => void buyCredits(pack.id)} disabled={creditsLoading} className="pa-button px-4 py-2.5 text-sm">Compra</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
           </section>
         )}
 
@@ -471,6 +586,10 @@ function formatBytes(bytes: number) {
   if (!bytes) return "?";
   if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + " KB";
   return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(value || 0);
 }
 
 

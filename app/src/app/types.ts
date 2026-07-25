@@ -9,6 +9,15 @@ export interface UserProfile {
   stripeCustomerId?: string | null;
   subscriptionId?: string | null;
   subscriptionCurrentPeriodEnd?: string | null;
+  accountType?: "private" | "business" | "professional";
+  whatsappPhone?: string | null;
+  whatsappPhoneVerifiedAt?: string | null;
+  tokenBalance?: number;
+  monthlyTokenAllowance?: number;
+  monthlyTokensUsed?: number;
+  tokenResetAt?: string | null;
+  otpEnabled?: boolean;
+  isAdmin?: boolean;
   onboardingComplete: boolean;
   createdAt: string;
 }
@@ -20,10 +29,29 @@ export interface Plan {
   description: string;
   setupFee: number;
   monthlyPrice: number;
+  includedTokens?: number;
+  maxDocuments?: number;
   setupFeeFormatted: string;
   monthlyPriceFormatted: string;
   features: string[];
   highlighted?: boolean;
+}
+
+export interface CreditPack {
+  id: string;
+  name: string;
+  description: string;
+  tokens: number;
+  price: number;
+  priceFormatted: string;
+}
+
+export interface CreditSummary {
+  balance: number;
+  monthlyAllowance: number;
+  monthlyUsed: number;
+  resetAt?: string | null;
+  ledger: Array<{ delta: number; balance_after: number; reason: string; created_at: string }>;
 }
 
 export interface KnowledgeFile {
@@ -47,6 +75,8 @@ export interface WhatsAppSession {
 }
 
 export interface OnboardingData {
+  accountType: "private" | "business" | "professional";
+  personalGoal: string;
   companyName: string;
   website: string;
   industry: string;
@@ -72,6 +102,8 @@ export interface OnboardingData {
 }
 
 export const EMPTY_ONBOARDING: OnboardingData = {
+  accountType: "business",
+  personalGoal: "",
   companyName: "",
   website: "",
   industry: "",

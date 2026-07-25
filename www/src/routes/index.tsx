@@ -244,6 +244,34 @@ const included = [
   "nuove funzioni disponibili per il piano",
 ];
 
+const platformPillars = [
+  {
+    title: "WhatsApp fatto nel modo giusto",
+    text: "Il numero principale è gestito dalla piattaforma. Ogni utente registra il proprio numero personale e parla solo con il proprio bot, senza trasformare il suo WhatsApp in un risponditore per altri.",
+  },
+  {
+    title: "Crediti e Stripe automatici",
+    text: "Ogni piano include token. Quando finiscono, l'utente può acquistare pacchetti extra in dashboard o ricevere dal bot un link Stripe sicuro.",
+  },
+  {
+    title: "Documenti aziendali protetti",
+    text: "Listini, FAQ, procedure e cataloghi vengono isolati per cliente e usati dal bot come knowledge base, con cancellazione dati e controlli privacy.",
+  },
+  {
+    title: "Sicurezza by design",
+    text: "Sessioni sicure, OTP login, webhook firmati, permessi admin, rate limit e isolamento tenant riducono rischi operativi e accessi impropri.",
+  },
+];
+
+const antiBan = [
+  "Nessun invio massivo o broadcast automatico non richiesto",
+  "Risposte solo a utenti registrati o conversazioni consentite",
+  "Delay umano e rate limit per evitare pattern robotici",
+  "Messaggi chiari, contestuali e con identità riconoscibile",
+  "Escalation e stop in caso di troppi messaggi ravvicinati",
+  "Numero dedicato della piattaforma, non WhatsApp personale del cliente",
+];
+
 const plans = [
   {
     name: "Assistente",
@@ -458,6 +486,50 @@ function Home() {
                 </li>
               ))}
             </ul>
+          </div>
+        </section>
+
+        <section className="pa-section">
+          <div className="pa-container">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="pa-kicker">Piattaforma completa</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Non è solo una chat: è un sistema operativo per il tuo bot.
+              </h2>
+              <p className="pa-muted mt-5 text-lg leading-8">
+                Account, documenti, crediti, WhatsApp, sicurezza e pagamenti lavorano insieme per dare all'utente un'esperienza semplice e affidabile.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-5 md:grid-cols-2">
+              {platformPillars.map((item) => (
+                <article key={item.title} className="pa-card p-6">
+                  <h3 className="text-xl font-extrabold">{item.title}</h3>
+                  <p className="pa-muted mt-3 text-sm leading-7">{item.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="pa-section border-y border-white/10 bg-white/[0.02]">
+          <div className="pa-container grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <span className="pa-kicker">Protezione WhatsApp</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Metodologie concrete per ridurre il rischio di ban.
+              </h2>
+              <p className="pa-muted mt-5 leading-7">
+                WhatsApp non va usato come uno strumento di spam. Per questo il sistema è progettato per conversazioni richieste dall'utente, risposte contestuali e limiti operativi.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {antiBan.map((item) => (
+                <div key={item} className="flex gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-300">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" />
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

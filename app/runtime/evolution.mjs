@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import { apiError } from "./auth.mjs";
 import { query } from "./db.mjs";
 import { answerWithKnowledge } from "./assistant.mjs";
+import { consumeTokens, estimateTokens } from "./credits.mjs";
+import { createCreditCheckout } from "./stripe.mjs";
 
 const EVOLUTION_URL = (process.env.EVOLUTION_API_URL || "http://evolution:8080").replace(/\/+$/, "");
 
@@ -21,6 +23,24 @@ function safeInstanceName(userId) {
 
 function cleanNumber(value) {
   return String(value || "").replace(/@s\.whatsapp\.net$/i, "").replace(/\D/g, "");
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function assertWhatsAppRateLimit(remoteJid) {
+  const recent = await query(
+    `SELECT COUNT(*)::int AS count
+     FROM agent_messages
+     WHERE channel = 'whatsapp' AND direction = 'incoming'
+       AND metadata->>'remoteJid' = $1
+       AND created_at > NOW() - INTERVAL '1 minute'`,
+    [remoteJid],
+  );
+  if ((recent.rows[0]?.count || 0) > Number(process.env.WHATSAPP_MAX_MSG_PER_MINUTE || 10)) {
+    throw apiError(429, "Troppi messaggi WhatsApp in poco tempo.", "whatsapp_rate_limited");
+  }
 }
 
 async function evolutionFetch(pathname, options = {}) {
@@ -53,15 +73,15 @@ async function evolutionFetch(pathname, options = {}) {
 export async function ensureWhatsAppSession(user, origin) {
   const existing = await query(
     `SELECT instance_name, status, qr_code, last_error, updated_at
-     FROM whatsapp_sessions WHERE user_id = $1`,
+     FROM whatsapp_sessions WHERE user_id = $1 AND purpose = 'platform_main'`,
     [user.id],
   );
   let instanceName = existing.rows[0]?.instance_name || safeInstanceName(user.id);
 
   await query(
-    `INSERT INTO whatsapp_sessions (user_id, instance_name, status, updated_at)
-     VALUES ($1, $2, 'provisioning', NOW())
-     ON CONFLICT (user_id) DO UPDATE SET status = 'provisioning', updated_at = NOW()`,
+    `INSERT INTO whatsapp_sessions (user_id, instance_name, status, purpose, updated_at)
+     VALUES ($1, $2, 'provisioning', 'platform_main', NOW())
+     ON CONFLICT (user_id) DO UPDATE SET status = 'provisioning', purpose = 'platform_main', updated_at = NOW()`,
     [user.id, instanceName],
   );
 
@@ -132,7 +152,7 @@ export async function refreshWhatsAppStatus(userId) {
 async function getSessionByUser(userId) {
   const result = await query(
     `SELECT user_id, instance_name, status, qr_code, last_error, updated_at
-     FROM whatsapp_sessions WHERE user_id = $1`,
+     FROM whatsapp_sessions WHERE user_id = $1 AND purpose = 'platform_main'`,
     [userId],
   );
   const row = result.rows[0];
@@ -147,6 +167,20 @@ async function getSessionByInstance(instanceName) {
   );
   const row = result.rows[0];
   return row ? mapSession(row) : null;
+}
+
+async function getUserByWhatsAppPhone(remoteJid) {
+  const digits = cleanNumber(remoteJid);
+  if (!digits) return null;
+  const result = await query(
+    `SELECT id, email, name, plan_id, status, stripe_customer_id, subscription_id,
+            subscription_current_period_end, token_balance, onboarding_completed_at
+     FROM users
+     WHERE regexp_replace(COALESCE(whatsapp_phone, ''), '\\D', '', 'g') = $1
+     LIMIT 1`,
+    [digits],
+  );
+  return result.rows[0] || null;
 }
 
 function mapSession(row) {
@@ -217,29 +251,70 @@ export async function processEvolutionWebhook(payload) {
   }
 
   if (fromMe || !remoteJid || text.length < 2) return { ignored: true };
+  await assertWhatsAppRateLimit(remoteJid);
+
+  const user = await getUserByWhatsAppPhone(remoteJid);
+  if (!user) {
+    await sendWhatsAppText(
+      instanceName,
+      remoteJid,
+      "Ciao! Questo numero è riservato agli utenti registrati di Personale Artificiale. Accedi alla piattaforma e inserisci questo numero WhatsApp nel tuo profilo per parlare con il tuo bot.",
+    );
+    return { ignored: true, reason: "unknown_sender" };
+  }
+  if (user.status !== "active") {
+    await sendWhatsAppText(instanceName, remoteJid, "Il tuo account non è attivo. Accedi alla piattaforma per completare piano e pagamento.");
+    return { ignored: true, reason: "inactive_user" };
+  }
+  if (!user.onboarding_completed_at) {
+    await sendWhatsAppText(instanceName, remoteJid, "Il tuo bot non è ancora pronto. Completa profilo e knowledge base nella dashboard.");
+    return { ignored: true, reason: "onboarding_incomplete" };
+  }
 
   const recent = await query(
     `SELECT 1 FROM agent_messages
      WHERE user_id = $1 AND direction = 'incoming' AND channel = 'whatsapp'
        AND metadata->>'remoteJid' = $2 AND content = $3 AND created_at > NOW() - INTERVAL '2 minutes'
      LIMIT 1`,
-    [session.userId, remoteJid, text],
+    [user.id, remoteJid, text],
   );
   if (recent.rowCount) return { duplicate: true };
 
-  const profile = await query("SELECT onboarding_data FROM agent_config WHERE user_id = $1", [session.userId]);
+  const profile = await query("SELECT onboarding_data FROM agent_config WHERE user_id = $1", [user.id]);
   await query(
     `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
      VALUES ($1, 'incoming', 'whatsapp', $2, $3::jsonb)`,
-    [session.userId, text, JSON.stringify({ remoteJid, instanceName })],
+    [user.id, text, JSON.stringify({ remoteJid, instanceName })],
   );
 
-  const answer = await answerWithKnowledge(session.userId, text, profile.rows[0]?.onboarding_data || {});
+  let answer;
+  try {
+    await consumeTokens(user.id, estimateTokens(text), "whatsapp_input", { remoteJid, instanceName });
+    answer = await answerWithKnowledge(user.id, text, profile.rows[0]?.onboarding_data || {});
+    await consumeTokens(user.id, estimateTokens(answer.answer), "whatsapp_output", { remoteJid, instanceName, model: answer.model });
+  } catch (error) {
+    if (error?.code !== "token_balance_empty") throw error;
+    const origin = (process.env.APP_URL || "https://app.personaleartificiale.it").replace(/\/+$/, "");
+    const checkout = await createCreditCheckout({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: user.status,
+        stripeCustomerId: user.stripe_customer_id,
+      },
+      packId: process.env.WHATSAPP_DEFAULT_CREDIT_PACK || "crediti-100k",
+      origin,
+    });
+    const recharge = `Hai terminato i crediti token del tuo bot. Puoi acquistare un pacchetto sicuro con Stripe qui:\n${checkout.url}\n\nDopo il pagamento i crediti vengono accreditati automaticamente.`;
+    await sendWhatsAppText(instanceName, remoteJid, recharge);
+    return { replied: true, reason: "credits_checkout_sent" };
+  }
   await sendWhatsAppText(instanceName, remoteJid, answer.answer);
   await query(
     `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
      VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
-    [session.userId, answer.answer, JSON.stringify({ remoteJid, instanceName, model: answer.model, fallback: answer.fallback })],
+    [user.id, answer.answer, JSON.stringify({ remoteJid, instanceName, model: answer.model, fallback: answer.fallback })],
   );
   return { replied: true };
 }
@@ -247,6 +322,9 @@ export async function processEvolutionWebhook(payload) {
 export async function sendWhatsAppText(instanceName, to, text) {
   const number = cleanNumber(to);
   if (!number) throw apiError(400, "Numero WhatsApp non valido.");
+  const minDelay = Number(process.env.WHATSAPP_SEND_DELAY_MIN_MS || 1200);
+  const maxDelay = Number(process.env.WHATSAPP_SEND_DELAY_MAX_MS || 4500);
+  await sleep(Math.max(0, minDelay + Math.random() * Math.max(0, maxDelay - minDelay)));
   return evolutionFetch("/message/sendText/" + encodeURIComponent(instanceName), {
     method: "POST",
     body: JSON.stringify({

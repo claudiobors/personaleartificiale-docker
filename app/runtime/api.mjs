@@ -7,18 +7,22 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  requireAdminUser,
   requireActiveUser,
   requireUser,
   sessionCookie,
+  verifyLoginOtp,
 } from "./auth.mjs";
-import { publicPlans, getPlan } from "./plans.mjs";
+import { publicPlans, publicCreditPacks, getPlan } from "./plans.mjs";
 import {
   confirmCheckout,
   constructWebhook,
+  createCreditCheckout,
   createCheckout,
   createPortal,
   processWebhook,
 } from "./stripe.mjs";
+import { consumeTokens, creditSummary, estimateTokens } from "./credits.mjs";
 import {
   deleteKnowledge,
   indexOnboarding,
@@ -96,6 +100,7 @@ function originFor(request) {
 
 function cleanOnboarding(input) {
   const fields = [
+    "accountType", "personalGoal",
     "companyName", "website", "industry", "vatNumber", "address",
     "businessDescription", "productsServices", "targetAudience", "competitors",
     "differentiators", "commonQuestions", "policies", "mainGoals",
@@ -107,22 +112,60 @@ function cleanOnboarding(input) {
   for (const key of fields) {
     data[key] = typeof input?.[key] === "string" ? input[key].trim().slice(0, 12_000) : "";
   }
+  data.accountType = cleanAccountType(data.accountType);
   return data;
 }
 
 function validateOnboarding(data) {
-  const required = {
-    companyName: "nome dell'azienda",
-    industry: "settore",
-    businessDescription: "descrizione dell'attività",
-    productsServices: "prodotti o servizi",
-    targetAudience: "clienti ideali",
-    mainGoals: "obiettivi dell'assistente",
-    toneOfVoice: "tono di voce",
-    contactEmail: "email di contatto",
-  };
+  const required = data.accountType === "private"
+    ? {
+        personalGoal: "obiettivo personale",
+        businessDescription: "contesto personale",
+        mainGoals: "obiettivi dell'assistente",
+        toneOfVoice: "tono di voce",
+        contactEmail: "email di contatto",
+      }
+    : {
+        companyName: data.accountType === "professional" ? "nome professionale/studio" : "nome dell'azienda",
+        industry: "settore",
+        businessDescription: "descrizione dell'attività",
+        productsServices: "prodotti o servizi",
+        targetAudience: "clienti ideali",
+        mainGoals: "obiettivi dell'assistente",
+        toneOfVoice: "tono di voce",
+        contactEmail: "email di contatto",
+      };
   const missing = Object.entries(required).filter(([key]) => !data[key]).map(([, label]) => label);
   if (missing.length) throw apiError(400, "Completa questi campi: " + missing.join(", ") + ".");
+}
+
+function normalizePhone(value) {
+  const raw = String(value || "").trim();
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length < 8 || digits.length > 15) throw apiError(400, "Inserisci un numero WhatsApp valido in formato internazionale.");
+  return raw.startsWith("+") ? "+" + digits : "+" + digits;
+}
+
+function cleanAccountType(value) {
+  return ["private", "business", "professional"].includes(value) ? value : "business";
+}
+
+async function updateUserProfile(userId, input) {
+  const accountType = cleanAccountType(input?.accountType);
+  const whatsappPhone = normalizePhone(input?.whatsappPhone);
+  const result = await query(
+    `UPDATE users
+     SET account_type = $1,
+         whatsapp_phone = NULLIF($2, ''),
+         whatsapp_phone_verified_at = CASE WHEN NULLIF($2, '') IS DISTINCT FROM whatsapp_phone THEN NULL ELSE whatsapp_phone_verified_at END,
+         updated_at = NOW()
+     WHERE id = $3
+     RETURNING id`,
+    [accountType, whatsappPhone, userId],
+  );
+  if (!result.rowCount) throw apiError(404, "Utente non trovato.");
+  return getUserById(userId);
 }
 
 async function onboardingData(userId) {
@@ -172,9 +215,10 @@ async function saveOnboarding(userId, data, complete) {
   );
   await query(
     `UPDATE users SET tone_of_voice = $1,
+       account_type = $4,
        onboarding_completed_at = CASE WHEN $2 THEN COALESCE(onboarding_completed_at, NOW()) ELSE onboarding_completed_at END,
        updated_at = NOW() WHERE id = $3`,
-    [data.toneOfVoice, complete, userId],
+    [data.toneOfVoice, complete, userId, data.accountType],
   );
 }
 
@@ -209,7 +253,7 @@ export async function dispatchApi(request, url) {
     }
 
     if (method === "GET" && path === "/api/plans") {
-      return response({ plans: publicPlans() });
+      return response({ plans: publicPlans(), creditPacks: publicCreditPacks() });
     }
 
     if (method === "POST" && path === "/api/auth/register") {
@@ -217,7 +261,12 @@ export async function dispatchApi(request, url) {
     }
 
     if (method === "POST" && path === "/api/auth/login") {
-      return authResponse(await loginUser(await jsonBody(request)));
+      const result = await loginUser(await jsonBody(request));
+      return result.token ? authResponse(result) : response(result);
+    }
+
+    if (method === "POST" && path === "/api/auth/otp/verify") {
+      return authResponse(await verifyLoginOtp(await jsonBody(request)));
     }
 
     if (method === "POST" && path === "/api/auth/logout") {
@@ -228,6 +277,22 @@ export async function dispatchApi(request, url) {
     if (method === "GET" && path === "/api/auth/me") {
       const { user } = await requireUser(request);
       return response({ user });
+    }
+
+    if (method === "PUT" && path === "/api/profile") {
+      const { user } = await requireActiveUser(request);
+      return response({ user: await updateUserProfile(user.id, await jsonBody(request)) });
+    }
+
+    if (method === "GET" && path === "/api/credits") {
+      const { user } = await requireActiveUser(request);
+      return response({ credits: await creditSummary(user.id), packs: publicCreditPacks() });
+    }
+
+    if (method === "POST" && path === "/api/stripe/credits-checkout") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      return response(await createCreditCheckout({ user, packId: body.packId, origin: originFor(request) }));
     }
 
     if (method === "GET" && path === "/api/privacy/export") {
@@ -285,12 +350,12 @@ export async function dispatchApi(request, url) {
     }
 
     if (method === "GET" && path === "/api/whatsapp/status") {
-      const { user } = await requireActiveUser(request);
+      const { user } = await requireAdminUser(request);
       return response({ session: await refreshWhatsAppStatus(user.id) });
     }
 
     if (method === "POST" && path === "/api/whatsapp/provision") {
-      const { user } = await requireActiveUser(request);
+      const { user } = await requireAdminUser(request);
       return response({ session: await ensureWhatsAppSession(user, originFor(request)) });
     }
 
@@ -381,7 +446,9 @@ export async function dispatchApi(request, url) {
          VALUES ($1, 'incoming', 'dashboard', $2, $3::jsonb)`,
         [user.id, question, JSON.stringify({ source: "dashboard-test" })],
       );
+      await consumeTokens(user.id, estimateTokens(question), "dashboard_input", { source: "dashboard-test" });
       const result = await answerWithKnowledge(user.id, question, profile.data);
+      await consumeTokens(user.id, estimateTokens(result.answer), "dashboard_output", { model: result.model });
       await query(
         `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
          VALUES ($1, 'outgoing', 'dashboard', $2, $3::jsonb)`,

@@ -6,6 +6,8 @@ export const PLANS = {
     description: "Per professionisti, freelance e piccole attività che vogliono delegare comunicazioni e lavoro ripetitivo.",
     setupFee: 39900,
     monthlyPrice: 9700,
+    includedTokens: 250000,
+    maxDocuments: 50,
     stripeMonthlyPriceEnv: "STRIPE_PRICE_EXECUTIVE_MONTHLY",
     stripeSetupPriceEnv: "STRIPE_PRICE_EXECUTIVE_SETUP",
     features: [
@@ -24,6 +26,8 @@ export const PLANS = {
     description: "Per PMI, studi e agenzie che vogliono automatizzare più processi e gestire una base informativa estesa.",
     setupFee: 99900,
     monthlyPrice: 29700,
+    includedTokens: 1000000,
+    maxDocuments: 250,
     stripeMonthlyPriceEnv: "STRIPE_PRICE_OFFICE_MONTHLY",
     stripeSetupPriceEnv: "STRIPE_PRICE_OFFICE_SETUP",
     features: [
@@ -38,6 +42,25 @@ export const PLANS = {
   },
 };
 
+export const CREDIT_PACKS = {
+  "crediti-100k": {
+    id: "crediti-100k",
+    name: "Pacchetto 100k token",
+    description: "Credito extra per continuare a parlare con il bot via WhatsApp e dashboard.",
+    tokens: 100000,
+    price: 1900,
+    stripePriceEnv: "STRIPE_PRICE_CREDITS_100K",
+  },
+  "crediti-500k": {
+    id: "crediti-500k",
+    name: "Pacchetto 500k token",
+    description: "Credito extra consigliato per uso continuativo e knowledge base ampia.",
+    tokens: 500000,
+    price: 7900,
+    stripePriceEnv: "STRIPE_PRICE_CREDITS_500K",
+  },
+};
+
 export function publicPlans() {
   return Object.values(PLANS).map(({ stripeMonthlyPriceEnv, stripeSetupPriceEnv, ...plan }) => ({
     ...plan,
@@ -48,6 +71,17 @@ export function publicPlans() {
 
 export function getPlan(planId) {
   return PLANS[planId] ?? null;
+}
+
+export function publicCreditPacks() {
+  return Object.values(CREDIT_PACKS).map(({ stripePriceEnv, ...pack }) => ({
+    ...pack,
+    priceFormatted: euro(pack.price),
+  }));
+}
+
+export function getCreditPack(packId) {
+  return CREDIT_PACKS[packId] ?? null;
 }
 
 export function euro(cents) {

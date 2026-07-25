@@ -1,7 +1,8 @@
 import Stripe from "stripe";
 import { query } from "./db.mjs";
 import { apiError } from "./auth.mjs";
-import { getPlan } from "./plans.mjs";
+import { getPlan, getCreditPack } from "./plans.mjs";
+import { addCredits, grantPlanAllowance } from "./credits.mjs";
 
 let stripeClient;
 
@@ -32,6 +33,23 @@ function itemFor(plan, kind) {
   };
   if (recurring) priceData.recurring = { interval: "month" };
   return { price_data: priceData, quantity: 1 };
+}
+
+function creditItemFor(pack) {
+  const configuredPrice = process.env[pack.stripePriceEnv];
+  if (configuredPrice) return { price: configuredPrice, quantity: 1 };
+  return {
+    price_data: {
+      currency: "eur",
+      unit_amount: pack.price,
+      product_data: {
+        name: pack.name,
+        description: pack.description,
+        metadata: { pack_id: pack.id, tokens: String(pack.tokens), charge_type: "credits" },
+      },
+    },
+    quantity: 1,
+  };
 }
 
 function statusFromStripe(status) {
@@ -89,6 +107,7 @@ export async function createCheckout({ user, planId, origin }) {
        WHERE id = $2`,
       [plan.id, user.id],
     );
+    await grantPlanAllowance(user.id, plan.id);
     return { url: origin.replace(/\/+$/, "") + "/dashboard?checkout=dev-bypass" };
   }
 
@@ -115,6 +134,24 @@ export async function createCheckout({ user, planId, origin }) {
     [plan.id, session.id, user.id],
   );
 
+  return { url: session.url, sessionId: session.id };
+}
+
+export async function createCreditCheckout({ user, packId, origin }) {
+  const pack = getCreditPack(packId);
+  if (!pack) throw apiError(400, "Pacchetto crediti non valido.");
+  if (user.status !== "active") throw apiError(402, "Serve un account attivo per acquistare crediti.");
+  const customer = await ensureCustomer(user);
+  const session = await stripe().checkout.sessions.create({
+    mode: "payment",
+    customer,
+    line_items: [creditItemFor(pack)],
+    success_url: origin + "/dashboard?credits=success&session_id={CHECKOUT_SESSION_ID}",
+    cancel_url: origin + "/dashboard?credits=cancelled",
+    locale: "it",
+    allow_promotion_codes: true,
+    metadata: { user_id: user.id, pack_id: pack.id, tokens: String(pack.tokens), checkout_type: "credits" },
+  });
   return { url: session.url, sessionId: session.id };
 }
 
@@ -149,6 +186,15 @@ async function activateFromSession(session) {
       userId,
     ],
   );
+  await grantPlanAllowance(userId, planId);
+}
+
+async function activateCreditsFromSession(session) {
+  const userId = session.metadata?.user_id;
+  const packId = session.metadata?.pack_id;
+  const pack = getCreditPack(packId);
+  if (!userId || !pack || session.payment_status !== "paid") return;
+  await addCredits(userId, pack.tokens, "credit_purchase", { packId, stripeSessionId: session.id });
 }
 
 export async function confirmCheckout({ sessionId, userId }) {
@@ -200,7 +246,11 @@ export async function processWebhook(event) {
 
   switch (event.type) {
     case "checkout.session.completed":
-      await activateFromSession(event.data.object);
+      if (event.data.object?.metadata?.checkout_type === "credits") {
+        await activateCreditsFromSession(event.data.object);
+      } else {
+        await activateFromSession(event.data.object);
+      }
       break;
     case "customer.subscription.created":
     case "customer.subscription.updated":

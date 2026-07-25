@@ -1,4 +1,4 @@
-import type { KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppSession } from "./types";
+import type { CreditPack, CreditSummary, KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppSession } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -34,19 +34,28 @@ export async function api<T>(
 }
 
 export const backend = {
-  plans: () => api<{ plans: Plan[] }>("/api/plans", {}, false),
+  plans: () => api<{ plans: Plan[]; creditPacks: CreditPack[] }>("/api/plans", {}, false),
   register: (data: { name: string; email: string; password: string; termsAccepted: boolean }) =>
     api<{ token: string; user: UserProfile }>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(data),
     }, false),
   login: (data: { email: string; password: string }) =>
-    api<{ token: string; user: UserProfile }>("/api/auth/login", {
+    api<{ token?: string; user: UserProfile | { email: string; name: string }; otpRequired?: boolean; challengeId?: string; expiresAt?: string; devCode?: string }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }, false),
+  verifyOtp: (data: { challengeId: string; code: string }) =>
+    api<{ token: string; user: UserProfile }>("/api/auth/otp/verify", {
       method: "POST",
       body: JSON.stringify(data),
     }, false),
   logout: () => api<{ success: boolean }>("/api/auth/logout", { method: "POST" }),
   me: () => api<{ user: UserProfile }>("/api/auth/me"),
+  updateProfile: (data: { accountType: string; whatsappPhone: string }) => api<{ user: UserProfile }>("/api/profile", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  }),
   checkout: (planId: string) =>
     api<{ url: string }>("/api/stripe/checkout", {
       method: "POST",
@@ -57,6 +66,11 @@ export const backend = {
       `/api/stripe/checkout-session?session_id=${encodeURIComponent(sessionId)}`,
     ),
   portal: () => api<{ url: string }>("/api/stripe/portal", { method: "POST" }),
+  credits: () => api<{ credits: CreditSummary; packs: CreditPack[] }>("/api/credits"),
+  creditCheckout: (packId: string) => api<{ url: string }>("/api/stripe/credits-checkout", {
+    method: "POST",
+    body: JSON.stringify({ packId }),
+  }),
   onboarding: () =>
     api<{ data: Partial<OnboardingData>; complete: boolean; files: KnowledgeFile[] }>("/api/onboarding"),
   saveOnboarding: (data: OnboardingData, complete: boolean) =>

@@ -32,7 +32,7 @@ const STEPS = [
 
 export function Onboarding({ user, initial, initialFiles, editing = false, onDone, onLogout }: Props) {
   const [step, setStep] = useState(0);
-  const [data, setData] = useState<OnboardingData>({ ...EMPTY_ONBOARDING, ...initial });
+  const [data, setData] = useState<OnboardingData>({ ...EMPTY_ONBOARDING, accountType: user.accountType || "business", ...initial });
   const [files, setFiles] = useState(initialFiles);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -175,15 +175,32 @@ export function Onboarding({ user, initial, initialFiles, editing = false, onDon
             <div>
               <SectionTitle title="Raccontaci chi sei" description="Questi dati identificano l'azienda e aiutano l?assistente a contestualizzare ogni conversazione." />
               <div className="grid gap-5 md:grid-cols-2">
-                <Input label="Nome azienda *" value={data.companyName} onChange={(value) => update("companyName", value)} placeholder="Ragione sociale o nome attività" />
-                <Input label="Settore *" value={data.industry} onChange={(value) => update("industry", value)} placeholder="Es. consulenza, e-commerce, studio legale" />
-                <Input label="Sito web" value={data.website} onChange={(value) => update("website", value)} placeholder="https://?" type="url" />
-                <Input label="Partita IVA" value={data.vatNumber} onChange={(value) => update("vatNumber", value)} placeholder="IT?" />
+                <label className="block md:col-span-2">
+                  <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Sei un privato, professionista o azienda?</span>
+                  <select value={data.accountType} onChange={(event) => update("accountType", event.target.value)} className="pa-input">
+                    <option value="business">Azienda</option>
+                    <option value="professional">Professionista / studio</option>
+                    <option value="private">Privato</option>
+                  </select>
+                </label>
+                {data.accountType === "private" ? (
+                  <>
+                    <Input label="Obiettivo personale *" value={data.personalGoal} onChange={(value) => update("personalGoal", value)} placeholder="Es. organizzare lavoro, studio, appuntamenti" />
+                    <Input label="Area o interesse principale" value={data.industry} onChange={(value) => update("industry", value)} placeholder="Es. fitness, studio, finanza personale" />
+                  </>
+                ) : (
+                  <>
+                    <Input label={data.accountType === "professional" ? "Nome professionale / studio *" : "Nome azienda *"} value={data.companyName} onChange={(value) => update("companyName", value)} placeholder="Ragione sociale, studio o nome attività" />
+                    <Input label="Settore *" value={data.industry} onChange={(value) => update("industry", value)} placeholder="Es. consulenza, e-commerce, studio legale" />
+                    <Input label="Sito web" value={data.website} onChange={(value) => update("website", value)} placeholder="https://…" type="url" />
+                    <Input label={data.accountType === "professional" ? "P. IVA / codice fiscale" : "Partita IVA"} value={data.vatNumber} onChange={(value) => update("vatNumber", value)} placeholder="IT…" />
+                  </>
+                )}
                 <div className="md:col-span-2">
-                  <Input label="Sede / area geografica" value={data.address} onChange={(value) => update("address", value)} placeholder="Indirizzo o territorio servito" />
+                  <Input label={data.accountType === "private" ? "Città / fuso orario" : "Sede / area geografica"} value={data.address} onChange={(value) => update("address", value)} placeholder="Indirizzo, territorio servito o fuso orario" />
                 </div>
                 <div className="md:col-span-2">
-                  <Textarea label="Descrizione dell'attività *" value={data.businessDescription} onChange={(value) => update("businessDescription", value)} placeholder="Cosa fa l?azienda, come lavora e in cosa ? specializzata?" />
+                  <Textarea label={data.accountType === "private" ? "Contesto personale *" : "Descrizione dell'attività *"} value={data.businessDescription} onChange={(value) => update("businessDescription", value)} placeholder={data.accountType === "private" ? "Cosa deve sapere il bot su di te, sulle tue preferenze e routine?" : "Cosa fa l'azienda, come lavora e in cosa è specializzata?"} />
                 </div>
               </div>
             </div>

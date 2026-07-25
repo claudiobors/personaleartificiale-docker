@@ -12,6 +12,9 @@ export function AuthView({ onAuthenticated }: Props) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpChallengeId, setOtpChallengeId] = useState("");
+  const [devOtp, setDevOtp] = useState("");
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -24,10 +27,31 @@ export function AuthView({ onAuthenticated }: Props) {
       const result = mode === "register"
         ? await backend.register({ name, email, password, termsAccepted: terms })
         : await backend.login({ email, password });
+      if ("otpRequired" in result && result.otpRequired && result.challengeId) {
+        setOtpChallengeId(result.challengeId);
+        setDevOtp(result.devCode || "");
+        return;
+      }
+      if (!result.token) throw new Error("Sessione non ricevuta.");
+      setToken(result.token);
+      onAuthenticated(result.user as UserProfile);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Accesso non riuscito.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitOtp = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const result = await backend.verifyOtp({ challengeId: otpChallengeId, code: otpCode });
       setToken(result.token);
       onAuthenticated(result.user);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Accesso non riuscito.");
+      setError(cause instanceof Error ? cause.message : "OTP non valido.");
     } finally {
       setBusy(false);
     }
@@ -118,70 +142,98 @@ export function AuthView({ onAuthenticated }: Props) {
             </div>
           )}
 
-          <form onSubmit={submit} className="space-y-4">
-            {mode === "register" && (
-              <Field label="Nome e cognome">
+          {otpChallengeId ? (
+            <form onSubmit={submitOtp} className="space-y-4">
+              <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100">
+                Ti abbiamo inviato un codice OTP via email. Inseriscilo per completare l'accesso.
+                {devOtp && <p className="mt-2 font-mono text-xs text-emerald-300">Dev OTP: {devOtp}</p>}
+              </div>
+              <Field label="Codice OTP">
                 <input
                   required
-                  autoComplete="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  className="pa-input"
-                  placeholder="Mario Rossi"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, ""))}
+                  className="pa-input text-center text-2xl tracking-[0.45em]"
+                  placeholder="000000"
                 />
               </Field>
-            )}
-            <Field label="Email">
-              <input
-                required
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="pa-input"
-                placeholder="mario@azienda.it"
-              />
-            </Field>
-            <Field label="Password">
-              <input
-                required
-                minLength={8}
-                type="password"
-                autoComplete={mode === "register" ? "new-password" : "current-password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="pa-input"
-                placeholder="Almeno 8 caratteri"
-              />
-            </Field>
-
-            {mode === "register" && (
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-zinc-400">
+              <button disabled={busy || otpCode.length !== 6} className="pa-button flex w-full items-center justify-center gap-2 py-3.5">
+                {busy ? "Verifico…" : "Verifica e accedi"}
+                {!busy && <ArrowRight className="h-4 w-4" />}
+              </button>
+              <button type="button" onClick={() => { setOtpChallengeId(""); setOtpCode(""); }} className="w-full text-xs font-bold text-zinc-400 hover:text-white">
+                Torna a email e password
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={submit} className="space-y-4">
+              {mode === "register" && (
+                <Field label="Nome e cognome">
+                  <input
+                    required
+                    autoComplete="name"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    className="pa-input"
+                    placeholder="Mario Rossi"
+                  />
+                </Field>
+              )}
+              <Field label="Email">
                 <input
                   required
-                  type="checkbox"
-                  checked={terms}
-                  onChange={(event) => setTerms(event.target.checked)}
-                  className="mt-1 accent-blue-500"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="pa-input"
+                  placeholder="mario@azienda.it"
                 />
-                <span>
-                  Accetto i{" "}
-                  <a className="text-blue-300 underline" href="https://www.personaleartificiale.it/termini-servizio" target="_blank" rel="noreferrer">
-                    Termini di servizio
-                  </a>{" "}
-                  e la{" "}
-                  <a className="text-blue-300 underline" href="https://www.personaleartificiale.it/privacy" target="_blank" rel="noreferrer">
-                    Privacy Policy
-                  </a>.
-                </span>
-              </label>
-            )}
+              </Field>
+              <Field label="Password">
+                <input
+                  required
+                  minLength={8}
+                  type="password"
+                  autoComplete={mode === "register" ? "new-password" : "current-password"}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="pa-input"
+                  placeholder="Almeno 8 caratteri"
+                />
+              </Field>
 
-            <button disabled={busy} className="pa-button flex w-full items-center justify-center gap-2 py-3.5">
-              {busy ? "Attendi…" : mode === "register" ? "Crea account" : "Accedi"}
-              {!busy && <ArrowRight className="h-4 w-4" />}
-            </button>
-          </form>
+              {mode === "register" && (
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-zinc-400">
+                  <input
+                    required
+                    type="checkbox"
+                    checked={terms}
+                    onChange={(event) => setTerms(event.target.checked)}
+                    className="mt-1 accent-blue-500"
+                  />
+                  <span>
+                    Accetto i{" "}
+                    <a className="text-blue-300 underline" href="https://www.personaleartificiale.it/termini-servizio" target="_blank" rel="noreferrer">
+                      Termini di servizio
+                    </a>{" "}
+                    e la{" "}
+                    <a className="text-blue-300 underline" href="https://www.personaleartificiale.it/privacy" target="_blank" rel="noreferrer">
+                      Privacy Policy
+                    </a>.
+                  </span>
+                </label>
+              )}
+
+              <button disabled={busy} className="pa-button flex w-full items-center justify-center gap-2 py-3.5">
+                {busy ? "Attendi…" : mode === "register" ? "Crea account" : "Accedi"}
+                {!busy && <ArrowRight className="h-4 w-4" />}
+              </button>
+            </form>
+          )}
 
           <div className="mt-6 flex items-center justify-center gap-4 border-t border-white/10 pt-5 text-[11px] text-zinc-500">
             <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Dati protetti</span>

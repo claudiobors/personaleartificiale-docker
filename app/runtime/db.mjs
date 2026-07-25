@@ -52,7 +52,17 @@ export async function migrate() {
       tone_of_voice TEXT DEFAULT 'Professionale, cortese e amichevole',
       status TEXT NOT NULL DEFAULT 'pending',
       terms_accepted_at TIMESTAMPTZ,
-      onboarding_completed_at TIMESTAMPTZ
+      onboarding_completed_at TIMESTAMPTZ,
+      account_type TEXT NOT NULL DEFAULT 'business',
+      whatsapp_phone TEXT,
+      whatsapp_phone_verified_at TIMESTAMPTZ,
+      token_balance INTEGER NOT NULL DEFAULT 0,
+      monthly_token_allowance INTEGER NOT NULL DEFAULT 0,
+      monthly_tokens_used INTEGER NOT NULL DEFAULT 0,
+      token_reset_at TIMESTAMPTZ,
+      otp_secret_hash TEXT,
+      otp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+      last_login_at TIMESTAMPTZ
     )
   `);
 
@@ -63,6 +73,16 @@ export async function migrate() {
     "ADD COLUMN IF NOT EXISTS last_payment_error TEXT",
     "ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ",
     "ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ",
+    "ADD COLUMN IF NOT EXISTS account_type TEXT NOT NULL DEFAULT 'business'",
+    "ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT",
+    "ADD COLUMN IF NOT EXISTS whatsapp_phone_verified_at TIMESTAMPTZ",
+    "ADD COLUMN IF NOT EXISTS token_balance INTEGER NOT NULL DEFAULT 0",
+    "ADD COLUMN IF NOT EXISTS monthly_token_allowance INTEGER NOT NULL DEFAULT 0",
+    "ADD COLUMN IF NOT EXISTS monthly_tokens_used INTEGER NOT NULL DEFAULT 0",
+    "ADD COLUMN IF NOT EXISTS token_reset_at TIMESTAMPTZ",
+    "ADD COLUMN IF NOT EXISTS otp_secret_hash TEXT",
+    "ADD COLUMN IF NOT EXISTS otp_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+    "ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ",
   ];
   for (const definition of userColumns) {
     await query(`ALTER TABLE users ${definition}`);
@@ -72,6 +92,13 @@ export async function migrate() {
   await query(`
     ALTER TABLE users ADD CONSTRAINT users_status_check
     CHECK (status IN ('pending', 'active', 'past_due', 'cancelled'))
+  `).catch((error) => {
+    if (error.code !== "42710") throw error;
+  });
+  await query("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_account_type_check");
+  await query(`
+    ALTER TABLE users ADD CONSTRAINT users_account_type_check
+    CHECK (account_type IN ('private', 'business', 'professional'))
   `).catch((error) => {
     if (error.code !== "42710") throw error;
   });
@@ -155,6 +182,7 @@ export async function migrate() {
   `);
   await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS qr_code TEXT");
   await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS last_error TEXT");
+  await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'platform_main'");
   await query("ALTER TABLE whatsapp_sessions DROP CONSTRAINT IF EXISTS whatsapp_sessions_status_check");
   await query(`
     ALTER TABLE whatsapp_sessions ADD CONSTRAINT whatsapp_sessions_status_check
@@ -169,14 +197,42 @@ export async function migrate() {
     )
   `);
 
+  await query(`
+    CREATE TABLE IF NOT EXISTS token_ledger (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      delta INTEGER NOT NULL,
+      balance_after INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      metadata JSONB DEFAULT '{}',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS otp_challenges (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      purpose TEXT NOT NULL DEFAULT 'login',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      consumed_at TIMESTAMPTZ
+    )
+  `);
+
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)");
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)");
   await query("CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email))");
   await query("CREATE INDEX IF NOT EXISTS idx_users_stripe ON users(stripe_customer_id)");
+  await query("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_whatsapp_phone ON users(regexp_replace(whatsapp_phone, '\\D', '', 'g')) WHERE whatsapp_phone IS NOT NULL AND whatsapp_phone <> ''");
   await query("CREATE INDEX IF NOT EXISTS idx_knowledge_user ON knowledge_files(user_id)");
   await query("CREATE INDEX IF NOT EXISTS idx_messages_user_created ON agent_messages(user_id, created_at DESC)");
   await query("CREATE INDEX IF NOT EXISTS idx_messages_whatsapp_dedupe ON agent_messages(user_id, channel, created_at DESC)");
   await query("CREATE INDEX IF NOT EXISTS idx_whatsapp_sessions_instance ON whatsapp_sessions(instance_name)");
+  await query("CREATE INDEX IF NOT EXISTS idx_token_ledger_user_created ON token_ledger(user_id, created_at DESC)");
+  await query("CREATE INDEX IF NOT EXISTS idx_otp_challenges_user ON otp_challenges(user_id, expires_at DESC)");
   await query("DELETE FROM sessions WHERE expires_at <= NOW()");
 }
 
