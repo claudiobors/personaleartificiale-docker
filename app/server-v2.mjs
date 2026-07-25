@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dispatchApi } from "./runtime/api.mjs";
 import { closeDatabase, migrate } from "./runtime/db.mjs";
 import { pollEmailAccounts } from "./runtime/email-integration.mjs";
+import { pollGmailAccounts } from "./runtime/gmail.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -356,6 +357,7 @@ server.listen(PORT, HOST, () => {
 const EMAIL_POLL_INTERVAL_MS = Number(process.env.EMAIL_POLL_INTERVAL_MS || 3 * 60_000);
 const emailPollInterval = setInterval(() => {
   pollEmailAccounts().catch((error) => console.error("[email] poller fallito", error?.message || error));
+  pollGmailAccounts().catch((error) => console.error("[gmail] poller fallito", error?.message || error));
 }, EMAIL_POLL_INTERVAL_MS).unref();
 
 async function shutdown(signal) {

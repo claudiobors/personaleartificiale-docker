@@ -7,6 +7,7 @@ import { assertIntegrationSlot } from "./integration-quota.mjs";
 import { encryptSecret, decryptSecret } from "./secrets.mjs";
 import { answerWithKnowledge } from "./assistant.mjs";
 import { consumeTokens, estimateTokens } from "./credits.mjs";
+import { sendGmailReply } from "./gmail.mjs";
 
 const POLL_TIMEOUT_MS = Number(process.env.EMAIL_POLL_TIMEOUT_MS || 20000);
 const MAX_MESSAGES_PER_POLL = Number(process.env.EMAIL_MAX_MESSAGES_PER_POLL || 10);
@@ -181,6 +182,7 @@ function mapDraft(row) {
     subject: row.subject,
     body: row.body,
     originalSnippet: row.original_snippet,
+    provider: row.provider,
     createdAt: row.created_at,
   };
 }
@@ -197,21 +199,24 @@ export async function sendEmailDraft(userId, draftId, editedBody) {
   const draftResult = await query(`SELECT * FROM email_drafts WHERE id = $1 AND user_id = $2 AND status = 'pending'`, [draftId, userId]);
   const draft = draftResult.rows[0];
   if (!draft) throw apiError(404, "Bozza non trovata.");
-
-  const integration = await loadIntegration(userId);
-  if (!integration || integration.status !== "connected") throw apiError(409, "Nessun account email collegato.");
-  const password = decryptSecret(integration.secrets?.password);
-  const transport = buildSmtpTransport(integration.settings, password);
   const body = String(editedBody ?? draft.body).slice(0, 8000);
 
-  await transport.sendMail({
-    from: integration.settings.emailAddress,
-    to: draft.to_address,
-    subject: draft.subject,
-    text: body,
-    inReplyTo: draft.in_reply_to || undefined,
-    references: draft.in_reply_to || undefined,
-  });
+  if (draft.provider === "gmail") {
+    await sendGmailReply(userId, { to: draft.to_address, subject: draft.subject, body, inReplyTo: draft.in_reply_to });
+  } else {
+    const integration = await loadIntegration(userId);
+    if (!integration || integration.status !== "connected") throw apiError(409, "Nessun account email collegato.");
+    const password = decryptSecret(integration.secrets?.password);
+    const transport = buildSmtpTransport(integration.settings, password);
+    await transport.sendMail({
+      from: integration.settings.emailAddress,
+      to: draft.to_address,
+      subject: draft.subject,
+      text: body,
+      inReplyTo: draft.in_reply_to || undefined,
+      references: draft.in_reply_to || undefined,
+    });
+  }
 
   await query(`UPDATE email_drafts SET status = 'sent', body = $1, sent_at = NOW() WHERE id = $2`, [body, draftId]);
   await query(

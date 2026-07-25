@@ -1,4 +1,4 @@
-import type { Addon, AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, EmailDraft, EmailStatus, KnowledgeFile, OnboardingData, Plan, Quota, UserProfile, WhatsAppContact, WhatsAppSession, WhatsappNumber } from "./types";
+import type { Addon, AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, EmailDraft, EmailStatus, InternetAccessSettings, KnowledgeFile, OnboardingData, Plan, Quota, UserProfile, WhatsAppContact, WhatsAppSession, WhatsappNumber } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -127,6 +127,9 @@ export const backend = {
   googleCalendarStatus: () => api<{ status: CalendarStatus }>("/api/integrations/google/status"),
   googleCalendarConnectUrl: () => api<{ url: string }>("/api/integrations/google/connect"),
   googleCalendarDisconnect: () => api<{ status: CalendarStatus }>("/api/integrations/google/disconnect", { method: "POST" }),
+  gmailStatus: () => api<{ status: EmailStatus }>("/api/integrations/gmail/status"),
+  gmailConnectUrl: () => api<{ url: string }>("/api/integrations/gmail/connect"),
+  gmailDisconnect: () => api<{ status: EmailStatus }>("/api/integrations/gmail/disconnect", { method: "POST" }),
   emailStatus: () => api<{ status: EmailStatus }>("/api/integrations/email/status"),
   emailConnect: (data: {
     emailAddress: string; imapHost: string; imapPort: number; imapSecure: boolean;
@@ -149,5 +152,8 @@ export const backend = {
   integrationQuota: () => api<{ quota: Quota }>("/api/integrations/quota"),
   addonCheckout: (addonType: Addon["type"]) =>
     api<{ url: string }>("/api/billing/addon-checkout", { method: "POST", body: JSON.stringify({ addonType }) }),
+  internetAccess: () => api<{ settings: InternetAccessSettings }>("/api/assistant/internet-access"),
+  saveInternetAccess: (data: InternetAccessSettings) =>
+    api<{ settings: InternetAccessSettings }>("/api/assistant/internet-access", { method: "PUT", body: JSON.stringify(data) }),
 };
 

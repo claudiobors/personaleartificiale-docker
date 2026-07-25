@@ -70,6 +70,11 @@ export interface WhatsappNumber {
   createdAt: string;
 }
 
+export interface InternetAccessSettings {
+  enabled: boolean;
+  restrictions: string;
+}
+
 export interface CreditSummary {
   balance: number;
   monthlyAllowance: number;

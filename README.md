@@ -76,9 +76,13 @@ Il bot è un **dipendente artificiale personale**: risponde solo al titolare del
 7. Test assistente dalla dashboard con salvataggio messaggi in `agent_messages`; l'assistente conosce anche token residui, piano e stato abbonamento dell'account.
 8. Provisioning WhatsApp Evolution (istanza condivisa di piattaforma), QR, webhook autenticato e risposta automatica usando profilo + knowledge base — instradata in base ai **numeri WhatsApp personali** che ogni account registra (piano base: 1 incluso; piano pro: 2 inclusi; extra a 5€/mese ciascuno).
 9. Portale Stripe per gestione fatturazione.
-10. Google Calendar collegabile per account (OAuth): il bot propone orari liberi via WhatsApp e crea l'evento solo dopo conferma esplicita — mai una prenotazione autonoma.
-11. Casella email IMAP/SMTP collegabile per account: il bot legge le email in arrivo e prepara bozze di risposta che il titolare rivede e invia dalla dashboard, non le invia mai in autonomia.
-12. **Quote integrazioni**: piano base 2 integrazioni incluse (Google Calendar + Email contano entrambe), piano pro 6 incluse; extra a 9€/mese ciascuna. Se un account passa a un piano con quote più basse mentre ha più risorse attive di quante ne includa il nuovo piano, l'eccedenza viene fatturata automaticamente come extra dal webhook Stripe.
+10. **Marketplace integrazioni** (dashboard → Integrazioni): il cliente sceglie e attiva quelle che vuole nel limite degli slot del piano.
+    - Google Calendar (OAuth): propone orari liberi via WhatsApp e crea l'evento solo dopo conferma esplicita — mai una prenotazione autonoma.
+    - Gmail (OAuth diretto, senza password): legge le email in arrivo e prepara bozze di risposta via Gmail API.
+    - Qualsiasi altra casella email (IMAP/SMTP): preset pronti per Gmail (manuale), Outlook, Aruba, Libero, Virgilio, TIM/Alice, Yahoo, oltre a configurazione manuale; il provider viene anche rilevato automaticamente dal dominio dell'indirizzo digitato.
+    - In entrambi i casi email, il titolare rivede e invia le bozze dalla dashboard: l'assistente non invia mai email in autonomia.
+11. **Quote integrazioni**: piano base 2 integrazioni incluse (qualunque combinazione tra Calendar/Gmail/altra email), piano pro 6 incluse; extra a 9€/mese ciascuna. Se un account passa a un piano con quote più basse mentre ha più risorse attive di quante ne includa il nuovo piano, l'eccedenza viene fatturata automaticamente come extra dal webhook Stripe.
+12. **Accesso a internet** (dashboard → Assistente, disattivato di default): se attivato, l'assistente può integrare la knowledge base con ricerche web in tempo reale (via plugin web di OpenRouter) — il titolare può anche descrivere limiti in linguaggio naturale (es. "solo orari ed eventi pubblici, mai concorrenti") rispettati dal prompt. Le fonti web citate vengono riportate in fondo alla risposta.
 
 ## Comandi operativi
 

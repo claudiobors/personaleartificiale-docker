@@ -137,6 +137,8 @@ export async function migrate() {
   await query("ALTER TABLE agent_config ADD COLUMN IF NOT EXISTS competitors TEXT");
   await query("ALTER TABLE agent_config ADD COLUMN IF NOT EXISTS onboarding_data JSONB NOT NULL DEFAULT '{}'::jsonb");
   await query("ALTER TABLE agent_config ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN NOT NULL DEFAULT FALSE");
+  await query("ALTER TABLE agent_config ADD COLUMN IF NOT EXISTS internet_access_enabled BOOLEAN NOT NULL DEFAULT FALSE");
+  await query("ALTER TABLE agent_config ADD COLUMN IF NOT EXISTS internet_access_restrictions TEXT");
 
   await query(`
     CREATE TABLE IF NOT EXISTS knowledge_files (
@@ -228,7 +230,7 @@ export async function migrate() {
     CREATE TABLE IF NOT EXISTS integrations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      provider TEXT NOT NULL CHECK (provider IN ('google_calendar', 'email_imap')),
+      provider TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'disconnected' CHECK (status IN ('disconnected', 'connected', 'error')),
       secrets JSONB NOT NULL DEFAULT '{}'::jsonb,
       settings JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -239,6 +241,13 @@ export async function migrate() {
       UNIQUE(user_id, provider)
     )
   `);
+  await query("ALTER TABLE integrations DROP CONSTRAINT IF EXISTS integrations_provider_check");
+  await query(`
+    ALTER TABLE integrations ADD CONSTRAINT integrations_provider_check
+    CHECK (provider IN ('google_calendar', 'email_imap', 'gmail'))
+  `).catch((error) => {
+    if (error.code !== "42710") throw error;
+  });
 
   await query(`
     CREATE TABLE IF NOT EXISTS pending_bookings (
@@ -261,11 +270,13 @@ export async function migrate() {
       body TEXT NOT NULL,
       original_snippet TEXT,
       in_reply_to TEXT,
+      provider TEXT NOT NULL DEFAULT 'email_imap',
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'discarded')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       sent_at TIMESTAMPTZ
     )
   `);
+  await query("ALTER TABLE email_drafts ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email_imap'");
 
   await query(`
     CREATE TABLE IF NOT EXISTS whatsapp_numbers (

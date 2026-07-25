@@ -31,7 +31,7 @@ import {
   searchKnowledge,
   uploadAndIndex,
 } from "./rag.mjs";
-import { answerWithKnowledge } from "./assistant.mjs";
+import { answerWithKnowledge, getInternetAccessSettings, saveInternetAccessSettings } from "./assistant.mjs";
 import {
   assertEvolutionWebhook,
   disconnectWhatsAppSession,
@@ -55,6 +55,12 @@ import {
   listEmailDrafts,
   sendEmailDraft,
 } from "./email-integration.mjs";
+import {
+  disconnectGmail,
+  getGmailStatus,
+  gmailAuthUrl,
+  handleGmailCallback,
+} from "./gmail.mjs";
 import {
   addWhatsappNumber,
   listWhatsappNumbers,
@@ -542,6 +548,34 @@ export async function dispatchApi(request, url) {
       return response({ status: await getCalendarStatus(user.id) });
     }
 
+    if (method === "GET" && path === "/api/integrations/gmail/status") {
+      const { user } = await requireActiveUser(request);
+      return response({ status: await getGmailStatus(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/gmail/connect") {
+      const { user } = await requireActiveUser(request);
+      await assertIntegrationSlot(user.id, "gmail");
+      return response({ url: gmailAuthUrl(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/gmail/callback") {
+      const dashboardUrl = originFor(request) + "/dashboard";
+      try {
+        await handleGmailCallback(url.searchParams.get("code"), url.searchParams.get("state"));
+        return redirect(`${dashboardUrl}?integration=gmail&status=connected`);
+      } catch (error) {
+        const message = encodeURIComponent(error?.message || "Collegamento Gmail non riuscito.");
+        return redirect(`${dashboardUrl}?integration=gmail&status=error&message=${message}`);
+      }
+    }
+
+    if (method === "POST" && path === "/api/integrations/gmail/disconnect") {
+      const { user } = await requireActiveUser(request);
+      await disconnectGmail(user.id);
+      return response({ status: await getGmailStatus(user.id) });
+    }
+
     if (method === "GET" && path === "/api/integrations/email/status") {
       const { user } = await requireActiveUser(request);
       return response({ status: await getEmailStatus(user.id) });
@@ -638,6 +672,17 @@ export async function dispatchApi(request, url) {
         }
       }
       return response({ success: true, complete, rag });
+    }
+
+    if (method === "GET" && path === "/api/assistant/internet-access") {
+      const { user } = await requireActiveUser(request);
+      return response({ settings: await getInternetAccessSettings(user.id) });
+    }
+
+    if (method === "PUT" && path === "/api/assistant/internet-access") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      return response({ settings: await saveInternetAccessSettings(user.id, body) });
     }
 
     if (method === "GET" && path === "/api/knowledge") {
