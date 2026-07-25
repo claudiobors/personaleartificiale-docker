@@ -240,12 +240,12 @@ export function Onboarding({ user, initial, initialFiles, editing = false, onDon
 
           {step === 3 && (
             <div>
-              <SectionTitle title="Documenti per il RAG" description="Carica materiale affidabile: listini, cataloghi, FAQ, procedure, manuali e policy. Ogni file viene estratto e indicizzato separatamente." />
+              <SectionTitle title="Documenti per il RAG" description="Carica materiale affidabile: listini, cataloghi, FAQ, procedure, manuali, policy o foto/scansioni. Ogni file viene estratto e indicizzato separatamente; le immagini vengono lette e poi eliminate, resta solo il testo." />
               <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-blue-400/30 bg-blue-500/[0.05] px-6 py-10 text-center hover:bg-blue-500/[0.08]">
                 {uploading ? <Loader2 className="h-8 w-8 animate-spin text-blue-300" /> : <Upload className="h-8 w-8 text-blue-300" />}
                 <span className="mt-3 text-sm font-extrabold">{uploading ? "Indicizzazione in corso…" : "Seleziona uno o più documenti"}</span>
-                <span className="mt-1 text-xs text-zinc-500">PDF, DOCX, TXT o MD · massimo 15 MB per file</span>
-                <input disabled={uploading} type="file" multiple accept=".pdf,.docx,.txt,.md" onChange={uploadFiles} className="sr-only" />
+                <span className="mt-1 text-xs text-zinc-500">PDF, DOCX, TXT, MD o immagini (JPG, PNG, WEBP, GIF) · massimo 15 MB per file</span>
+                <input disabled={uploading} type="file" multiple accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp,.gif" onChange={uploadFiles} className="sr-only" />
               </label>
 
               <div className="mt-5 space-y-2">

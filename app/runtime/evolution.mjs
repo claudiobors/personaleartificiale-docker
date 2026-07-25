@@ -423,15 +423,19 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
 export async function sendWhatsAppText(instanceName, to, text) {
   const number = cleanNumber(to);
   if (!number) throw apiError(400, "Numero WhatsApp non valido.");
-  const minDelay = Number(process.env.WHATSAPP_SEND_DELAY_MIN_MS || 1200);
-  const maxDelay = Number(process.env.WHATSAPP_SEND_DELAY_MAX_MS || 4500);
+  const cleanText = String(text).slice(0, 3500);
+  // Attesa prima di chiamare Evolution: rende il ritmo delle risposte meno istantaneo/robotico.
+  const minDelay = Number(process.env.WHATSAPP_SEND_DELAY_MIN_MS || 2500);
+  const maxDelay = Number(process.env.WHATSAPP_SEND_DELAY_MAX_MS || 7000);
   await sleep(Math.max(0, minDelay + Math.random() * Math.max(0, maxDelay - minDelay)));
+  // "delay" lato Evolution simula l'indicatore "sta scrivendo…"; lo scaliamo con la lunghezza del testo.
+  const typingDelay = Math.min(6000, Math.max(1200, cleanText.length * 30));
   return evolutionFetch("/message/sendText/" + encodeURIComponent(instanceName), {
     method: "POST",
     body: JSON.stringify({
       number,
-      text: String(text).slice(0, 3500),
-      delay: 900,
+      text: cleanText,
+      delay: typingDelay,
     }),
   });
 }

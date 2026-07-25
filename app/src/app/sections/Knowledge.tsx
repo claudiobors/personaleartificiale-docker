@@ -49,12 +49,12 @@ export function Knowledge({ files, onFilesChange }: Props) {
       <PageHeader
         eyebrow="Knowledge base"
         title="Documenti"
-        description="Isolati nel tuo spazio e indicizzati in Qdrant per le risposte del bot."
+        description="Isolati nel tuo spazio e indicizzati in Qdrant per le risposte del bot. Le immagini vengono lette e poi eliminate: resta solo il testo estratto."
         action={
           <label className="pa-button flex cursor-pointer items-center justify-center gap-2 px-5 py-2.5 text-sm">
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
             {uploading ? "Indicizzo…" : "Carica documenti"}
-            <input disabled={uploading} type="file" multiple accept=".pdf,.docx,.txt,.md" className="sr-only" onChange={upload} />
+            <input disabled={uploading} type="file" multiple accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.webp,.gif" className="sr-only" onChange={upload} />
           </label>
         }
       />
@@ -71,7 +71,7 @@ export function Knowledge({ files, onFilesChange }: Props) {
             <div className="rounded-2xl border border-dashed border-white/10 py-14 text-center">
               <Database className="mx-auto h-9 w-9 text-zinc-700" />
               <p className="mt-3 text-sm font-bold text-zinc-400">Nessun documento</p>
-              <p className="mt-1 text-xs text-zinc-600">Aggiungi listini, FAQ, procedure o cataloghi.</p>
+              <p className="mt-1 text-xs text-zinc-600">Aggiungi listini, FAQ, procedure, cataloghi o foto/scansioni di documenti.</p>
             </div>
           ) : (
             files.map((file) => (

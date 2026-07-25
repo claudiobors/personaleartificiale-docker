@@ -19,7 +19,17 @@ const TYPES = {
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ".txt": "text/plain",
   ".md": "text/markdown",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
 };
+
+// Immagini: il file grezzo non viene mai conservato. Si estrae il testo/contenuto informativo
+// via modello vision e si cancella subito il file dal disco (privacy: niente foto/documenti
+// scansionati che restano in giro, resta solo il testo indicizzato nella knowledge base).
+const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 
 const MIME_ALIASES = {
   ".md": ["text/markdown", "text/plain", "application/octet-stream"],
@@ -29,6 +39,11 @@ const MIME_ALIASES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/octet-stream",
   ],
+  ".jpg": ["image/jpeg", "image/jpg", "application/octet-stream"],
+  ".jpeg": ["image/jpeg", "image/jpg", "application/octet-stream"],
+  ".png": ["image/png", "application/octet-stream"],
+  ".webp": ["image/webp", "application/octet-stream"],
+  ".gif": ["image/gif", "application/octet-stream"],
 };
 
 function safeOriginalName(value) {
@@ -40,12 +55,25 @@ function assertAllowedMime(extension, mimeType = "") {
   if (!cleanMime) return;
   const allowed = MIME_ALIASES[extension] || [TYPES[extension]];
   if (!allowed.includes(cleanMime)) {
-    throw apiError(415, "Tipo file non coerente con l'estensione. Carica PDF, DOCX, TXT o MD validi.");
+    throw apiError(415, "Tipo file non coerente con l'estensione. Carica PDF, DOCX, TXT, MD o immagini (JPG, PNG, WEBP, GIF) validi.");
   }
 }
 
 function assertFileSignature(extension, buffer) {
-  const head = buffer.subarray(0, 8).toString("latin1");
+  const headBytes = buffer.subarray(0, 12);
+  const head = headBytes.toString("latin1");
+  if ((extension === ".jpg" || extension === ".jpeg") && !(headBytes[0] === 0xff && headBytes[1] === 0xd8 && headBytes[2] === 0xff)) {
+    throw apiError(415, "L'immagine JPEG non sembra valida o è corrotta.");
+  }
+  if (extension === ".png" && !(headBytes[0] === 0x89 && headBytes[1] === 0x50 && headBytes[2] === 0x4e && headBytes[3] === 0x47)) {
+    throw apiError(415, "L'immagine PNG non sembra valida o è corrotta.");
+  }
+  if (extension === ".webp" && !(head.startsWith("RIFF") && headBytes.subarray(8, 12).toString("latin1") === "WEBP")) {
+    throw apiError(415, "L'immagine WEBP non sembra valida o è corrotta.");
+  }
+  if (extension === ".gif" && !(head.startsWith("GIF87a") || head.startsWith("GIF89a"))) {
+    throw apiError(415, "L'immagine GIF non sembra valida o è corrotta.");
+  }
   if (extension === ".pdf" && !head.startsWith("%PDF-")) {
     throw apiError(415, "Il PDF non sembra valido o è corrotto.");
   }
@@ -153,7 +181,33 @@ async function extractText(filePath, extension) {
     const result = await mammoth.extractRawText({ buffer });
     return result.value;
   }
+  if (IMAGE_EXTENSIONS.has(extension)) {
+    return extractImageText(buffer, TYPES[extension]);
+  }
   throw apiError(400, "Formato non supportato.");
+}
+
+async function extractImageText(buffer, mimeType) {
+  const model = process.env.OPENROUTER_VISION_MODEL || "openai/gpt-4o-mini";
+  const completion = await embeddingClient().chat.completions.create({
+    model,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Estrai in italiano tutte le informazioni utili da questa immagine: testo leggibile, numeri, prezzi, tabelle, elenchi, contatti. Se è un documento o listino, riportane il contenuto in modo fedele e strutturato. Se è una foto generica, descrivi brevemente cosa mostra. Rispondi solo con il contenuto informativo, senza commenti o premesse.",
+          },
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${buffer.toString("base64")}` } },
+        ],
+      },
+    ],
+    max_tokens: 1500,
+  });
+  const text = String(completion.choices?.[0]?.message?.content || "").trim();
+  if (!text) throw new Error("Il modello vision non ha estratto alcun contenuto dall'immagine.");
+  return text;
 }
 
 async function embedTexts(texts) {
@@ -228,7 +282,7 @@ export async function uploadAndIndex({ userId, originalName, mimeType, buffer, m
   const cleanOriginalName = safeOriginalName(originalName);
   const extension = path.extname(cleanOriginalName).toLowerCase();
   if (!TYPES[extension]) {
-    throw apiError(400, "Formato non supportato. Usa PDF, DOCX, TXT o MD.");
+    throw apiError(400, "Formato non supportato. Usa PDF, DOCX, TXT, MD o un'immagine (JPG, PNG, WEBP, GIF).");
   }
   assertAllowedMime(extension, mimeType);
   assertFileSignature(extension, buffer);
@@ -278,6 +332,12 @@ export async function uploadAndIndex({ userId, originalName, mimeType, buffer, m
       [message.slice(0, 500), row.id],
     );
     return fileDto(updated.rows[0]);
+  } finally {
+    // Le immagini non vengono mai conservate su disco: una volta estratto il contenuto
+    // (o fallito il tentativo), il file grezzo viene cancellato subito per privacy.
+    if (IMAGE_EXTENSIONS.has(extension)) {
+      await unlink(filePath).catch(() => {});
+    }
   }
 }
 
