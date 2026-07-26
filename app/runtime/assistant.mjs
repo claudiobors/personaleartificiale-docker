@@ -3,6 +3,9 @@ import { apiError } from "./auth.mjs";
 import { query } from "./db.mjs";
 import { getPlan } from "./plans.mjs";
 import { searchKnowledge } from "./rag.mjs";
+import { executeTool, getToolDefinitions, hasSkills, resolvePendingSkillAction } from "./skills.mjs";
+
+const MAX_TOOL_ROUNDS = 3;
 
 const STATUS_LABELS = {
   active: "attivo",
@@ -86,7 +89,7 @@ function openRouterConfig() {
   };
 }
 
-function openRouter() {
+export function openRouter() {
   const config = openRouterConfig();
   client ??= new OpenAI({
     apiKey: config.apiKey,
@@ -139,9 +142,20 @@ function buildLocalAnswer(question, sources, onboarding = {}, status = null) {
   };
 }
 
-export async function answerWithKnowledge(userId, question, onboarding = {}) {
+export async function answerWithKnowledge(userId, question, onboarding = {}, toolContext = {}) {
   const cleanQuestion = String(question || "").trim().slice(0, 4000);
   if (cleanQuestion.length < 2) throw apiError(400, "Inserisci una domanda per l'assistente.");
+
+  const toolsEnabled = Boolean(toolContext.enableTools && toolContext.channel && toolContext.channelRef && hasSkills());
+  if (toolsEnabled) {
+    const pendingReply = await resolvePendingSkillAction(userId, toolContext.channel, toolContext.channelRef, cleanQuestion).catch((error) => {
+      console.warn("[assistant] verifica azione skill in sospeso fallita", error?.message || error);
+      return null;
+    });
+    if (pendingReply) {
+      return { answer: pendingReply, sources: [], model: "skills", fallback: false };
+    }
+  }
 
   const [sources, status, internetAccess] = await Promise.all([
     searchKnowledge(userId, cleanQuestion, 5).catch((error) => {
@@ -180,6 +194,7 @@ Non inventare prezzi, policy, disponibilità o promesse. Rispetta questi limiti:
 Quando necessario applica questa escalation: ${onboarding.escalationRules || "coinvolgi una persona per casi sensibili o non documentati"}.
 
 Se l'utente chiede token residui, piano, stato abbonamento o rinnovo, rispondi usando SOLO i dati in STATO ACCOUNT qui sotto (sono dati reali e aggiornati, non knowledge aziendale): non hai altre fonti per queste informazioni, quindi se STATO ACCOUNT è assente dillo chiaramente invece di inventare numeri.
+${toolsEnabled ? "\nHai a disposizione alcuni strumenti (tool) per compiti pratici (creare file, generare immagini, ecc). Usali solo quando la richiesta lo richiede davvero, mai per inventare dati: se ti mancano informazioni specifiche, chiedile prima all'utente invece di supporre." : ""}
 
 STATO ACCOUNT:
 ${platformStatusText(status) || "Non disponibile in questo momento."}
@@ -188,18 +203,55 @@ CONTESTO AZIENDALE:
 ${context || "Nessuna fonte pertinente disponibile."}`;
 
   const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+  const tools = toolsEnabled ? getToolDefinitions() : [];
 
   try {
-    const completion = await openRouter().chat.completions.create({
+    const messages = [
+      { role: "system", content: instructions },
+      { role: "user", content: cleanQuestion },
+    ];
+
+    let completion = await openRouter().chat.completions.create({
       model,
-      messages: [
-        { role: "system", content: instructions },
-        { role: "user", content: cleanQuestion },
-      ],
+      messages,
       max_tokens: 700,
       ...(internetAccess.enabled ? { plugins: [{ id: "web", max_results: 5 }] } : {}),
+      ...(tools.length ? { tools, tool_choice: "auto" } : {}),
     });
-    const message = completion.choices?.[0]?.message;
+    let message = completion.choices?.[0]?.message;
+
+    let rounds = 0;
+    while (toolsEnabled && message?.tool_calls?.length && rounds < MAX_TOOL_ROUNDS) {
+      rounds += 1;
+      messages.push(message);
+      let pendingApprovalMessage = null;
+      for (const call of message.tool_calls) {
+        let args = {};
+        try {
+          args = JSON.parse(call.function?.arguments || "{}");
+        } catch {
+          args = {};
+        }
+        const result = await executeTool(call.function?.name, args, {
+          userId,
+          channel: toolContext.channel,
+          channelRef: toolContext.channelRef,
+        });
+        if (result?.pendingApproval) pendingApprovalMessage = result.message;
+        messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result || {}) });
+      }
+      if (pendingApprovalMessage) {
+        return { answer: pendingApprovalMessage, sources: [], model, fallback: false };
+      }
+      completion = await openRouter().chat.completions.create({
+        model,
+        messages,
+        max_tokens: 700,
+        ...(tools.length ? { tools, tool_choice: "auto" } : {}),
+      });
+      message = completion.choices?.[0]?.message;
+    }
+
     let answer = String(message?.content || "").trim();
 
     const citations = (message?.annotations || [])

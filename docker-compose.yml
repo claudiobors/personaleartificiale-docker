@@ -40,6 +40,8 @@ services:
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
       EVOLUTION_API_URL: http://evolution:8080
+      SPEECH_API_URL: http://speech:8090
+      OFFICE_API_URL: http://office:8091
       APP_URL: ${APP_URL:-https://app.personaleartificiale.it}
       WWW_URL: ${WWW_URL:-https://www.personaleartificiale.it}
       UPLOADS_DIR: /app/uploads
@@ -50,6 +52,10 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      speech:
+        condition: service_healthy
+      office:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - pa-net
@@ -120,6 +126,44 @@ services:
     networks:
       - pa-net
 
+  speech:
+    build:
+      context: ./speech
+      dockerfile: Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      WHISPER_MODEL_SIZE: ${WHISPER_MODEL_SIZE:-small}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WHISPER_LANGUAGE: ${WHISPER_LANGUAGE:-it}
+      EDGE_TTS_VOICE: ${EDGE_TTS_VOICE:-it-IT-IsabellaNeural}
+    volumes:
+      - speech-models:/root/.cache/huggingface
+    restart: unless-stopped
+    networks:
+      - pa-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 180s
+
+  office:
+    build:
+      context: ./office
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - pa-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/health', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 45s
+
   evolution:
     image: evoapicloud/evolution-api:latest
     env_file:
@@ -171,6 +215,7 @@ volumes:
   app-uploads:
   app-logs:
   evolution-instances:
+  speech-models:
 
 networks:
   pa-net:

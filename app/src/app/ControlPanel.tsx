@@ -85,7 +85,7 @@ export function ControlPanel({
 }: Props) {
   const [active, setActive] = useState<SectionKey>(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("integration") === "google" || params.get("integration") === "gmail") return "integrations";
+    if (["google", "gmail", "drive"].includes(params.get("integration") || "")) return "integrations";
     if (params.get("addon") === "extra_integration") return "integrations";
     if (params.get("addon") === "extra_whatsapp_number") return "whatsapp-client";
     return "overview";

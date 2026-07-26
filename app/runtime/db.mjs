@@ -244,7 +244,7 @@ export async function migrate() {
   await query("ALTER TABLE integrations DROP CONSTRAINT IF EXISTS integrations_provider_check");
   await query(`
     ALTER TABLE integrations ADD CONSTRAINT integrations_provider_check
-    CHECK (provider IN ('google_calendar', 'email_imap', 'gmail'))
+    CHECK (provider IN ('google_calendar', 'email_imap', 'gmail', 'google_drive'))
   `).catch((error) => {
     if (error.code !== "42710") throw error;
   });
@@ -260,6 +260,118 @@ export async function migrate() {
       expires_at TIMESTAMPTZ NOT NULL
     )
   `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS pending_drive_actions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      channel_ref TEXT NOT NULL,
+      proposal JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_pending_drive_actions_lookup ON pending_drive_actions(user_id, channel, channel_ref, expires_at DESC)");
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS coach_goals (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      channel_ref TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'interviewing' CHECK (status IN ('interviewing', 'active', 'reviewing', 'completed', 'abandoned')),
+      phase INT NOT NULL DEFAULT 1,
+      wish TEXT,
+      motivation TEXT,
+      outcome TEXT,
+      obstacle TEXT,
+      deadline_at DATE,
+      effort_estimate JSONB,
+      reality_check JSONB,
+      process_goal TEXT,
+      if_then_plan TEXT,
+      interview_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+      last_review_at TIMESTAMPTZ,
+      next_review_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_coach_goals_active_interview ON coach_goals(user_id, channel, channel_ref, status)");
+  await query("CREATE INDEX IF NOT EXISTS idx_coach_goals_review_due ON coach_goals(status, next_review_at)");
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS triage_sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      channel_ref TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'completed')),
+      groups JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_triage_sessions_lookup ON triage_sessions(user_id, channel, channel_ref, status)");
+  await query("CREATE INDEX IF NOT EXISTS idx_triage_sessions_cooldown ON triage_sessions(user_id, created_at DESC)");
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS travel_plans (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      channel_ref TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'collecting' CHECK (status IN ('collecting', 'proposed', 'awaiting_confirmation', 'booked', 'completed', 'abandoned')),
+      origin TEXT,
+      destination TEXT,
+      depart_date DATE,
+      return_date DATE,
+      travelers INT NOT NULL DEFAULT 1,
+      geo_info JSONB,
+      flight_options JSONB,
+      hotel_options JSONB,
+      selected_flight JSONB,
+      selected_hotel JSONB,
+      calendar_event_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      interview_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_travel_plans_lookup ON travel_plans(user_id, channel, channel_ref, status)");
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS pending_tool_actions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      channel_ref TEXT NOT NULL,
+      tool_name TEXT NOT NULL,
+      args JSONB NOT NULL,
+      preview TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_pending_tool_actions_lookup ON pending_tool_actions(user_id, channel, channel_ref, expires_at DESC)");
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS video_recap_sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      channel_ref TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'awaiting_preferences' CHECK (status IN ('awaiting_preferences', 'awaiting_drive_confirmation')),
+      source_url TEXT,
+      source_buffer BYTEA,
+      source_mimetype TEXT,
+      pending_recap JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_video_recap_sessions_lookup ON video_recap_sessions(user_id, channel, channel_ref, expires_at DESC)");
 
   await query(`
     CREATE TABLE IF NOT EXISTS email_drafts (
@@ -331,6 +443,7 @@ export async function migrate() {
   await query("CREATE INDEX IF NOT EXISTS idx_email_drafts_user_status ON email_drafts(user_id, status, created_at DESC)");
   await query("DELETE FROM sessions WHERE expires_at <= NOW()");
   await query("DELETE FROM pending_bookings WHERE expires_at <= NOW()");
+  await query("DELETE FROM pending_drive_actions WHERE expires_at <= NOW()");
 }
 
 export async function closeDatabase() {

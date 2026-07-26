@@ -4,6 +4,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  FolderOpen,
   Inbox,
   Loader2,
   Lock,
@@ -18,7 +19,7 @@ import {
 import { backend } from "../api";
 import { PageHeader } from "../Shell";
 import { formatDate } from "../format";
-import type { CalendarStatus, EmailStatus, Quota } from "../types";
+import type { CalendarStatus, DriveStatus, EmailStatus, Quota } from "../types";
 
 interface EmailPreset {
   label: string;
@@ -102,9 +103,9 @@ export function Integrations() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const integration = params.get("integration");
-    if (integration === "google" || integration === "gmail") {
+    if (integration === "google" || integration === "gmail" || integration === "drive") {
       const status = params.get("status");
-      const label = integration === "google" ? "Google Calendar" : "Gmail";
+      const label = integration === "google" ? "Google Calendar" : integration === "gmail" ? "Gmail" : "Google Drive";
       setCallbackNotice(
         status === "connected"
           ? { ok: true, message: `${label} collegato correttamente.` }
@@ -176,6 +177,7 @@ export function Integrations() {
         <div className="grid gap-5 lg:grid-cols-2">
           <GoogleCalendarCard atLimit={atLimit} onQuotaChange={loadQuota} />
           <GmailCard atLimit={atLimit} onQuotaChange={loadQuota} />
+          <GoogleDriveCard atLimit={atLimit} onQuotaChange={loadQuota} />
           <EmailCard atLimit={atLimit} onQuotaChange={loadQuota} />
         </div>
       </div>
@@ -408,6 +410,105 @@ function GmailCard({ atLimit, onQuotaChange }: { atLimit: boolean; onQuotaChange
         ) : (
           <button onClick={() => void connect()} disabled={loading} className="pa-button flex items-center justify-center gap-2 px-5 py-3">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Un clic per collegare
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function GoogleDriveCard({ atLimit, onQuotaChange }: { atLimit: boolean; onQuotaChange: () => void }) {
+  const [status, setStatus] = useState<DriveStatus | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await backend.driveStatus();
+      setStatus(result.status);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Stato Google Drive non disponibile.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const connect = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await backend.driveConnectUrl();
+      window.location.assign(result.url);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Impossibile avviare il collegamento a Google Drive.");
+      setLoading(false);
+    }
+  };
+
+  const disconnect = async () => {
+    if (!window.confirm("Scollegare Google Drive? L'assistente smetterà di poter cercare, leggere o creare file.")) return;
+    setLoading(true);
+    setError("");
+    try {
+      const result = await backend.driveDisconnect();
+      setStatus(result.status);
+      onQuotaChange();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Disconnessione non riuscita.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connected = status?.status === "connected";
+
+  return (
+    <section className="pa-panel p-6 sm:p-7">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300">
+            <FolderOpen className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="font-extrabold">Google Drive</h2>
+            <p className="text-xs text-zinc-500">Cerca, legge e crea file su richiesta via WhatsApp</p>
+          </div>
+        </div>
+        <button onClick={() => void load()} disabled={loading} className="rounded-lg p-2 text-zinc-500 hover:bg-white/5 hover:text-white disabled:opacity-60" aria-label="Aggiorna">
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p className="flex items-center gap-2 text-sm font-bold">
+          {connected ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Unplug className="h-4 w-4 text-zinc-500" />}
+          {connected ? "Collegato" : status?.status === "error" ? "Errore" : "Non collegato"}
+        </p>
+        {connected && status?.connectedAt && <p className="mt-1 text-xs text-zinc-500">Collegato il {formatDate(status.connectedAt)}</p>}
+        {status?.lastError && <p className="mt-2 text-xs text-red-300">{status.lastError}</p>}
+      </div>
+
+      {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+
+      <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-zinc-500">
+        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+        Le ricerche e le letture avvengono subito; per creare o modificare un file l'assistente ti manda sempre un'anteprima e agisce solo dopo la tua conferma esplicita.
+      </p>
+
+      <div className="mt-5">
+        {connected ? (
+          <button onClick={() => void disconnect()} disabled={loading} className="flex items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-500/10 px-5 py-3 text-sm font-extrabold text-red-200 hover:bg-red-500/20 disabled:opacity-60">
+            <PowerOff className="h-4 w-4" /> Scollega
+          </button>
+        ) : atLimit ? (
+          <QuotaLockedNotice label="Google Drive" />
+        ) : (
+          <button onClick={() => void connect()} disabled={loading} className="pa-button flex items-center justify-center gap-2 px-5 py-3">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderOpen className="h-4 w-4" />} Un clic per collegare
           </button>
         )}
       </div>

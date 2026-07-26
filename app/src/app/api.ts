@@ -1,4 +1,4 @@
-import type { Addon, AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, EmailDraft, EmailStatus, InternetAccessSettings, KnowledgeFile, OnboardingData, Plan, Quota, UserProfile, WhatsAppContact, WhatsAppSession, WhatsappNumber } from "./types";
+import type { Addon, AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, DriveStatus, EmailDraft, EmailStatus, InternetAccessSettings, KnowledgeFile, OnboardingData, Plan, Quota, UserProfile, WhatsAppContact, WhatsAppSession, WhatsappNumber } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -130,6 +130,9 @@ export const backend = {
   gmailStatus: () => api<{ status: EmailStatus }>("/api/integrations/gmail/status"),
   gmailConnectUrl: () => api<{ url: string }>("/api/integrations/gmail/connect"),
   gmailDisconnect: () => api<{ status: EmailStatus }>("/api/integrations/gmail/disconnect", { method: "POST" }),
+  driveStatus: () => api<{ status: DriveStatus }>("/api/integrations/drive/status"),
+  driveConnectUrl: () => api<{ url: string }>("/api/integrations/drive/connect"),
+  driveDisconnect: () => api<{ status: DriveStatus }>("/api/integrations/drive/disconnect", { method: "POST" }),
   emailStatus: () => api<{ status: EmailStatus }>("/api/integrations/email/status"),
   emailConnect: (data: {
     emailAddress: string; imapHost: string; imapPort: number; imapSecure: boolean;

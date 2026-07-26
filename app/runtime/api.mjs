@@ -62,6 +62,14 @@ import {
   handleGmailCallback,
 } from "./gmail.mjs";
 import {
+  disconnectGoogleDrive,
+  driveAuthUrl,
+  getDriveStatus,
+  handleDriveCallback,
+} from "./google-drive.mjs";
+import "./office-skills.mjs";
+import "./image-skills.mjs";
+import {
   addWhatsappNumber,
   listWhatsappNumbers,
   removeWhatsappNumber,
@@ -574,6 +582,34 @@ export async function dispatchApi(request, url) {
       const { user } = await requireActiveUser(request);
       await disconnectGmail(user.id);
       return response({ status: await getGmailStatus(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/drive/status") {
+      const { user } = await requireActiveUser(request);
+      return response({ status: await getDriveStatus(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/drive/connect") {
+      const { user } = await requireActiveUser(request);
+      await assertIntegrationSlot(user.id, "google_drive");
+      return response({ url: driveAuthUrl(user.id) });
+    }
+
+    if (method === "GET" && path === "/api/integrations/drive/callback") {
+      const dashboardUrl = originFor(request) + "/dashboard";
+      try {
+        await handleDriveCallback(url.searchParams.get("code"), url.searchParams.get("state"));
+        return redirect(`${dashboardUrl}?integration=drive&status=connected`);
+      } catch (error) {
+        const message = encodeURIComponent(error?.message || "Collegamento Google Drive non riuscito.");
+        return redirect(`${dashboardUrl}?integration=drive&status=error&message=${message}`);
+      }
+    }
+
+    if (method === "POST" && path === "/api/integrations/drive/disconnect") {
+      const { user } = await requireActiveUser(request);
+      await disconnectGoogleDrive(user.id);
+      return response({ status: await getDriveStatus(user.id) });
     }
 
     if (method === "GET" && path === "/api/integrations/email/status") {

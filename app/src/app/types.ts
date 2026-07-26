@@ -124,6 +124,12 @@ export interface EmailStatus {
   lastSyncedAt?: string | null;
 }
 
+export interface DriveStatus {
+  status: "disconnected" | "connected" | "error";
+  lastError?: string | null;
+  connectedAt?: string | null;
+}
+
 export interface EmailDraft {
   id: string;
   to: string;

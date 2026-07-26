@@ -219,6 +219,39 @@ async function pollAccount(row) {
   }
 }
 
+// LL-23: mai proporre un indirizzo email inventato. Cerca il nome nella cronologia REALE di Gmail
+// (mittenti/destinatari di email scambiate davvero) e restituisce solo un indirizzo trovato lì.
+export async function searchPersonEmail(userId, name) {
+  const cleanName = String(name || "").trim();
+  if (!cleanName) return null;
+  const row = await loadIntegration(userId);
+  if (!row || row.status !== "connected") return null;
+  const accessToken = await getValidAccessToken(userId, row);
+
+  const list = await gmailFetch(accessToken, `/users/me/messages?q=${encodeURIComponent(cleanName)}&maxResults=8`).catch(() => null);
+  const messages = list?.messages || [];
+  const tally = new Map();
+  const needle = cleanName.toLowerCase();
+
+  for (const item of messages) {
+    const full = await gmailFetch(
+      accessToken,
+      `/users/me/messages/${item.id}?format=metadata&metadataHeaders=From&metadataHeaders=To`,
+    ).catch(() => null);
+    for (const header of full?.payload?.headers || []) {
+      if (header.name !== "From" && header.name !== "To") continue;
+      if (!String(header.value).toLowerCase().includes(needle)) continue;
+      const match = String(header.value).match(/([^\s<]+@[^\s>]+)/);
+      if (!match) continue;
+      const email = match[1].toLowerCase();
+      tally.set(email, (tally.get(email) || 0) + 1);
+    }
+  }
+  if (!tally.size) return null;
+  const sorted = [...tally.entries()].sort((a, b) => b[1] - a[1]);
+  return { email: sorted[0][0], confident: sorted.length === 1 };
+}
+
 export async function pollGmailAccounts() {
   const result = await query(`SELECT * FROM integrations WHERE provider = 'gmail' AND status IN ('connected', 'error')`);
   for (const row of result.rows) {

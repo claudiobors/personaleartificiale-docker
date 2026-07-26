@@ -3,9 +3,17 @@ import { apiError } from "./auth.mjs";
 import { query } from "./db.mjs";
 import { answerWithKnowledge } from "./assistant.mjs";
 import { handleBookingMessage } from "./booking.mjs";
+import { handleCoachMessage } from "./coach.mjs";
 import { consumeTokens, estimateTokens } from "./credits.mjs";
+import { handleDriveMessage } from "./drive-actions.mjs";
+import { synthesizeSpeech, transcribeAudio } from "./speech.mjs";
 import { createCreditCheckout } from "./stripe.mjs";
+import { handleTravelImageMessage, handleTravelMessage } from "./travel.mjs";
+import { handleTriageMessage } from "./triage.mjs";
+import { handleVideoRecapFile, handleVideoRecapMessage } from "./video-recap.mjs";
 import { getUserByWhatsAppNumber } from "./whatsapp-numbers.mjs";
+
+const AUDIO_REQUEST_PATTERN = /\b(rispondimi (in|con) (un )?audio|mandami (un |una nota )?audio|un vocale|in vocale|con la voce|rispondi (a |in )?voce|nota vocale|messaggio vocale)\b/i;
 
 const EVOLUTION_URL = (process.env.EVOLUTION_API_URL || "http://evolution:8080").replace(/\/+$/, "");
 
@@ -258,7 +266,9 @@ function extractWebhookMessage(payload) {
   const key = data?.key || data?.message?.key || {};
   const remoteJid = key.remoteJid || data?.remoteJid || data?.from || data?.sender;
   const fromMe = Boolean(key.fromMe || data?.fromMe);
-  const message = data?.message || data?.messages?.[0]?.message || data;
+  // I messaggi effimeri (chat con "messaggi a tempo") avvolgono il contenuto reale in ephemeralMessage.message.
+  let message = data?.message || data?.messages?.[0]?.message || data;
+  message = message?.ephemeralMessage?.message || message;
   const text =
     message?.conversation ||
     message?.extendedTextMessage?.text ||
@@ -266,16 +276,25 @@ function extractWebhookMessage(payload) {
     data?.text ||
     data?.body ||
     "";
-  return { instanceName, remoteJid, fromMe, text: String(text || "").trim() };
+  return {
+    instanceName,
+    remoteJid,
+    fromMe,
+    messageId: key.id || null,
+    audioMessage: message?.audioMessage || null,
+    imageMessage: message?.imageMessage || message?.documentMessage || null,
+    videoMessage: message?.videoMessage || null,
+    text: String(text || "").trim(),
+  };
 }
 
 export async function processEvolutionWebhook(payload) {
   const event = String(payload?.event || payload?.type || "").toUpperCase();
-  const { instanceName, remoteJid, fromMe, text } = extractWebhookMessage(payload);
-  console.info("[evolution] webhook ricevuto", { event, instanceName, remoteJid, fromMe, textLength: text.length });
+  const { instanceName, remoteJid, fromMe, messageId, audioMessage, imageMessage, videoMessage, text } = extractWebhookMessage(payload);
+  console.info("[evolution] webhook ricevuto", { event, instanceName, remoteJid, fromMe, hasAudio: Boolean(audioMessage), hasImage: Boolean(imageMessage), hasVideo: Boolean(videoMessage), textLength: text.length });
 
   try {
-    return await handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, text, payload });
+    return await handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, messageId, audioMessage, imageMessage, videoMessage, text, payload });
   } catch (error) {
     console.error("[evolution] ERRORE non gestito nel webhook", {
       instanceName,
@@ -290,7 +309,7 @@ export async function processEvolutionWebhook(payload) {
   }
 }
 
-async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, text, payload }) {
+async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, messageId, audioMessage, imageMessage, videoMessage, text, payload }) {
   if (!instanceName) {
     console.warn("[evolution] webhook ignorato: instance mancante nel payload", { event, keys: Object.keys(payload || {}) });
     return { ignored: true, reason: "missing_instance" };
@@ -315,8 +334,8 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     return { updated: true, status: "qr_ready" };
   }
 
-  if (fromMe || !remoteJid || text.length < 2) {
-    console.info("[evolution] webhook ignorato: non è un messaggio testuale in ingresso valido", { event, fromMe, hasRemoteJid: Boolean(remoteJid), textLength: text.length });
+  if (fromMe || !remoteJid || (!audioMessage && !imageMessage && !videoMessage && text.length < 2)) {
+    console.info("[evolution] webhook ignorato: non è un messaggio testuale, vocale, immagine o video valido", { event, fromMe, hasRemoteJid: Boolean(remoteJid), hasAudio: Boolean(audioMessage), hasImage: Boolean(imageMessage), hasVideo: Boolean(videoMessage), textLength: text.length });
     return { ignored: true };
   }
 
@@ -356,6 +375,68 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     return { ignored: true, reason: "onboarding_incomplete" };
   }
 
+  if (imageMessage && !text) {
+    console.info("[evolution] immagine/documento ricevuto", { userId: user.id, mimetype: imageMessage.mimetype });
+    const travelReply = await downloadEvolutionMedia(instanceName, messageId)
+      .then((buffer) => handleTravelImageMessage(user, buffer, imageMessage.mimetype, { channel: "whatsapp", channelRef: remoteJid }))
+      .catch((error) => {
+        console.error("[evolution] errore elaborazione immagine per travel planner", user.id, error?.message || error);
+        return null;
+      });
+    if (travelReply) {
+      await sendAssistantReply(instanceName, remoteJid, travelReply, { requestText: text });
+      await query(
+        `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+         VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+        [user.id, travelReply, JSON.stringify({ remoteJid, instanceName, source: "travel_planner" })],
+      );
+      return { replied: true, reason: "travel_planner_image" };
+    }
+    return { ignored: true, reason: "image_no_active_flow" };
+  }
+
+  if (videoMessage && !text) {
+    console.info("[evolution] video ricevuto", { userId: user.id, mimetype: videoMessage.mimetype, seconds: videoMessage.seconds });
+    const recapReply = await downloadEvolutionMedia(instanceName, messageId)
+      .then((buffer) => handleVideoRecapFile(user, buffer, videoMessage.mimetype, { channel: "whatsapp", channelRef: remoteJid }))
+      .catch((error) => {
+        console.error("[evolution] errore elaborazione video per recap", user.id, error?.message || error);
+        return null;
+      });
+    if (recapReply) {
+      await sendWhatsAppText(instanceName, remoteJid, recapReply);
+      await query(
+        `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+         VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+        [user.id, recapReply, JSON.stringify({ remoteJid, instanceName, source: "video_recap" })],
+      );
+      return { replied: true, reason: "video_recap" };
+    }
+    return { ignored: true, reason: "video_no_active_flow" };
+  }
+
+  if (audioMessage && !text) {
+    console.info("[evolution] messaggio vocale ricevuto, avvio trascrizione locale", { userId: user.id, seconds: audioMessage.seconds });
+    try {
+      const audioBuffer = await downloadEvolutionMedia(instanceName, messageId);
+      text = await transcribeAudio(audioBuffer);
+    } catch (error) {
+      console.error("[evolution] trascrizione audio fallita", user.id, error?.message || error, error?.detail);
+      if (autoReplyAllowed(remoteJid)) {
+        await sendWhatsAppText(instanceName, remoteJid, "Non sono riuscito a capire il messaggio vocale. Puoi riscrivermelo in testo?");
+      }
+      return { ignored: true, reason: "audio_transcription_failed" };
+    }
+    if (text.length < 2) {
+      console.warn("[evolution] trascrizione audio vuota", { userId: user.id });
+      if (autoReplyAllowed(remoteJid)) {
+        await sendWhatsAppText(instanceName, remoteJid, "Non sono riuscito a capire il messaggio vocale. Puoi riscrivermelo in testo?");
+      }
+      return { ignored: true, reason: "audio_empty_transcription" };
+    }
+    console.info("[evolution] messaggio vocale trascritto", { userId: user.id, textLength: text.length });
+  }
+
   const recent = await query(
     `SELECT 1 FROM agent_messages
      WHERE user_id = $1 AND direction = 'incoming' AND channel = 'whatsapp'
@@ -374,12 +455,81 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     [user.id, text, JSON.stringify({ remoteJid, instanceName })],
   );
 
+  const videoRecapReply = await handleVideoRecapMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
+    console.error("[evolution] errore nel flusso recap video", user.id, error?.message || error);
+    return null;
+  });
+  if (videoRecapReply) {
+    const replyText = typeof videoRecapReply === "string" ? videoRecapReply : videoRecapReply.text;
+    await sendWhatsAppText(instanceName, remoteJid, replyText);
+    if (typeof videoRecapReply === "object" && videoRecapReply.audioText) {
+      try {
+        const audioBuffer = await synthesizeSpeech(videoRecapReply.audioText);
+        await sendWhatsAppAudio(instanceName, remoteJid, audioBuffer);
+      } catch (error) {
+        console.error("[evolution] mini-audio recap video fallito", user.id, error?.message || error);
+      }
+    }
+    await query(
+      `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+       VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+      [user.id, replyText, JSON.stringify({ remoteJid, instanceName, source: "video_recap" })],
+    );
+    console.info("[evolution] risposta recap video inviata", { userId: user.id });
+    return { replied: true, reason: "video_recap" };
+  }
+
+  const coachReply = await handleCoachMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
+    console.error("[evolution] errore nel flusso coach obiettivi", user.id, error?.message || error);
+    return null;
+  });
+  if (coachReply) {
+    await sendAssistantReply(instanceName, remoteJid, coachReply, { requestText: text });
+    await query(
+      `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+       VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+      [user.id, coachReply, JSON.stringify({ remoteJid, instanceName, source: "coach" })],
+    );
+    console.info("[evolution] risposta coach obiettivi inviata", { userId: user.id });
+    return { replied: true, reason: "coach" };
+  }
+
+  const travelReplyText = await handleTravelMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
+    console.error("[evolution] errore nel flusso travel planner", user.id, error?.message || error);
+    return null;
+  });
+  if (travelReplyText) {
+    await sendAssistantReply(instanceName, remoteJid, travelReplyText, { requestText: text });
+    await query(
+      `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+       VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+      [user.id, travelReplyText, JSON.stringify({ remoteJid, instanceName, source: "travel_planner" })],
+    );
+    console.info("[evolution] risposta travel planner inviata", { userId: user.id });
+    return { replied: true, reason: "travel_planner" };
+  }
+
+  const triageReply = await handleTriageMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
+    console.error("[evolution] errore nel flusso triage posta", user.id, error?.message || error);
+    return null;
+  });
+  if (triageReply) {
+    await sendAssistantReply(instanceName, remoteJid, triageReply, { requestText: text });
+    await query(
+      `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+       VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+      [user.id, triageReply, JSON.stringify({ remoteJid, instanceName, source: "triage" })],
+    );
+    console.info("[evolution] risposta triage posta inviata", { userId: user.id });
+    return { replied: true, reason: "triage" };
+  }
+
   const bookingReply = await handleBookingMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
     console.error("[evolution] errore nel flusso prenotazione", user.id, error?.message || error);
     return null;
   });
   if (bookingReply) {
-    await sendWhatsAppText(instanceName, remoteJid, bookingReply);
+    await sendAssistantReply(instanceName, remoteJid, bookingReply, { requestText: text });
     await query(
       `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
        VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
@@ -389,11 +539,30 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     return { replied: true, reason: "calendar_booking" };
   }
 
+  const driveReply = await handleDriveMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
+    console.error("[evolution] errore nel flusso Google Drive", user.id, error?.message || error);
+    return null;
+  });
+  if (driveReply) {
+    await sendAssistantReply(instanceName, remoteJid, driveReply, { requestText: text });
+    await query(
+      `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
+       VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
+      [user.id, driveReply, JSON.stringify({ remoteJid, instanceName, source: "google_drive" })],
+    );
+    console.info("[evolution] risposta Google Drive inviata", { userId: user.id });
+    return { replied: true, reason: "google_drive" };
+  }
+
   const profile = await query("SELECT onboarding_data FROM agent_config WHERE user_id = $1", [user.id]);
   let answer;
   try {
     await consumeTokens(user.id, estimateTokens(text), "whatsapp_input", { remoteJid, instanceName });
-    answer = await answerWithKnowledge(user.id, text, profile.rows[0]?.onboarding_data || {});
+    answer = await answerWithKnowledge(user.id, text, profile.rows[0]?.onboarding_data || {}, {
+      channel: "whatsapp",
+      channelRef: remoteJid,
+      enableTools: true,
+    });
     await consumeTokens(user.id, estimateTokens(answer.answer), "whatsapp_output", { remoteJid, instanceName, model: answer.model });
   } catch (error) {
     if (error?.code !== "token_balance_empty") throw error;
@@ -413,7 +582,7 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     await sendWhatsAppText(instanceName, remoteJid, recharge);
     return { replied: true, reason: "credits_checkout_sent" };
   }
-  await sendWhatsAppText(instanceName, remoteJid, answer.answer);
+  await sendAssistantReply(instanceName, remoteJid, answer.answer, { requestText: text });
   await query(
     `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
      VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
@@ -441,6 +610,77 @@ export async function sendWhatsAppText(instanceName, to, text) {
       delay: typingDelay,
     }),
   });
+}
+
+export async function sendWhatsAppAudio(instanceName, to, audioBuffer) {
+  const number = cleanNumber(to);
+  if (!number) throw apiError(400, "Numero WhatsApp non valido.");
+  const minDelay = Number(process.env.WHATSAPP_SEND_DELAY_MIN_MS || 2500);
+  const maxDelay = Number(process.env.WHATSAPP_SEND_DELAY_MAX_MS || 7000);
+  await sleep(Math.max(0, minDelay + Math.random() * Math.max(0, maxDelay - minDelay)));
+  return evolutionFetch("/message/sendWhatsAppAudio/" + encodeURIComponent(instanceName), {
+    method: "POST",
+    body: JSON.stringify({
+      number,
+      audio: audioBuffer.toString("base64"),
+      encoding: true,
+      delay: 1200,
+    }),
+  });
+}
+
+export async function sendWhatsAppDocument(instanceName, to, { buffer, fileName, mimetype, caption, mediatype = "document" }) {
+  const number = cleanNumber(to);
+  if (!number) throw apiError(400, "Numero WhatsApp non valido.");
+  return evolutionFetch("/message/sendMedia/" + encodeURIComponent(instanceName), {
+    method: "POST",
+    body: JSON.stringify({
+      number,
+      mediatype,
+      mimetype,
+      fileName,
+      caption: caption || undefined,
+      media: buffer.toString("base64"),
+    }),
+  });
+}
+
+export async function instanceNameForUser(userId) {
+  const session = await getSessionByUser(userId);
+  return session?.instanceName || null;
+}
+
+// Invia la risposta come nota vocale solo se il cliente l'ha chiesto esplicitamente in questo messaggio;
+// se la sintesi/l'invio audio falliscono, torna sempre al testo. Regola non negoziabile: mai chiamata
+// per messaggi di errore/limite (quei punti del codice usano sempre sendWhatsAppText direttamente).
+async function sendAssistantReply(instanceName, remoteJid, replyText, { requestText = "" } = {}) {
+  if (AUDIO_REQUEST_PATTERN.test(requestText)) {
+    try {
+      const audioBuffer = await synthesizeSpeech(replyText);
+      await sendWhatsAppAudio(instanceName, remoteJid, audioBuffer);
+      return;
+    } catch (error) {
+      console.error("[evolution] sintesi/invio vocale falliti, rispondo in testo", error?.message || error, error?.detail);
+    }
+  }
+  await sendWhatsAppText(instanceName, remoteJid, replyText);
+}
+
+async function downloadEvolutionMedia(instanceName, messageId) {
+  if (!messageId) throw apiError(400, "Messaggio senza identificativo.", "evolution_media_no_id");
+  const payload = await evolutionFetch("/chat/getBase64FromMediaMessage/" + encodeURIComponent(instanceName), {
+    method: "POST",
+    body: JSON.stringify({ message: { key: { id: messageId } }, convertToMp4: false }),
+  });
+  const base64 = payload?.base64 || payload?.data || payload?.media || payload?.buffer;
+  if (!base64) {
+    console.error("[evolution] risposta getBase64FromMediaMessage senza contenuto riconoscibile", {
+      instanceName,
+      keys: Object.keys(payload || {}),
+    });
+    throw apiError(502, "Download del media non riuscito.", "evolution_media_download_error");
+  }
+  return Buffer.from(base64, "base64");
 }
 
 export function newWebhookToken() {
