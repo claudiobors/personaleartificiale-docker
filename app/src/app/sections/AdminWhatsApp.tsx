@@ -151,9 +151,13 @@ export function AdminWhatsApp() {
             <li>• I messaggi in ingresso vengono salvati e deduplicati.</li>
             <li>• Le risposte usano RAG, onboarding e fallback sicuro.</li>
             <li>• Il webhook rifiuta chiamate senza API key Evolution.</li>
+            <li>• Chi scrive "a se stesso" (chat "Messaggi a te stesso") sul numero appena collegato viene trattato come un messaggio in arrivo, non ignorato come un normale <code>fromMe</code>: funziona solo se quel numero è anche quello impostato in <code>WHATSAPP_BOT_NUMBER</code>/<code>WHATSAPP_PUBLIC_NUMBER</code> nel <code>.env</code>, ed è comunque registrato tra i "Numeri WhatsApp" di un account per essere riconosciuto.</li>
           </ul>
           <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-xs leading-5 text-zinc-500">
             Se lo stato resta "Connesso" ma nessuno riceve risposta, controlla <strong>Amministrazione → Log → Sessioni WhatsApp</strong> per l'ultimo errore e i log del container (<code>docker compose logs -f app</code>) subito dopo aver scritto un messaggio di prova.
+          </div>
+          <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-xs leading-5 text-amber-100/80">
+            Se cambi il numero collegato con un nuovo QR, aggiorna anche <code>WHATSAPP_BOT_NUMBER</code> nel <code>.env</code> e riavvia l'app: altrimenti la chat "Messaggi a te stesso" del nuovo numero non verrà riconosciuta.
           </div>
         </aside>
       </section>

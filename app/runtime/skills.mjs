@@ -20,12 +20,30 @@ function isCancellation(text) {
 // - needsApproval + preview: se true, la prima invocazione mostra solo un'anteprima testuale e salva
 //   un'azione in sospeso; l'esecuzione vera avviene solo dopo conferma esplicita dell'utente (mai un'azione
 //   scrivente eseguita in autonomia, coerente con il resto della piattaforma).
-export function registerSkill(name, { description, parameters, handler, needsApproval = false, preview = null }) {
-  registry.set(name, { description, parameters, handler, needsApproval, preview });
+// - requiresIntegration: valore di "integrations.provider" (es. "google_drive") se la skill ha senso solo
+//   per utenti che hanno collegato quel connettore. getToolDefinitions() la nasconde al modello per gli
+//   altri utenti, così ogni nuovo connettore aggiunto in futuro resta invisibile finché non è attivo,
+//   senza bisogno di logica su misura per ogni skill.
+export function registerSkill(name, { description, parameters, handler, needsApproval = false, preview = null, requiresIntegration = null }) {
+  registry.set(name, { description, parameters, handler, needsApproval, preview, requiresIntegration });
 }
 
-export function getToolDefinitions() {
-  return [...registry.entries()].map(([name, skill]) => ({
+async function isIntegrationConnected(userId, provider) {
+  const result = await query(`SELECT 1 FROM integrations WHERE user_id = $1 AND provider = $2 AND status = 'connected'`, [userId, provider]);
+  return result.rowCount > 0;
+}
+
+export async function getToolDefinitions(context = {}) {
+  const entries = [...registry.entries()];
+  const visible = [];
+  for (const [name, skill] of entries) {
+    if (skill.requiresIntegration && context.userId) {
+      const connected = await isIntegrationConnected(context.userId, skill.requiresIntegration).catch(() => true);
+      if (!connected) continue;
+    }
+    visible.push([name, skill]);
+  }
+  return visible.map(([name, skill]) => ({
     type: "function",
     function: { name, description: skill.description, parameters: skill.parameters },
   }));

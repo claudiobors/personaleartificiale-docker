@@ -3,9 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatchApi } from "./runtime/api.mjs";
+import { assertProductionSecrets } from "./runtime/auth.mjs";
 import { closeDatabase, migrate } from "./runtime/db.mjs";
 import { pollEmailAccounts } from "./runtime/email-integration.mjs";
 import { pollGmailAccounts } from "./runtime/gmail.mjs";
+
+assertProductionSecrets();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
@@ -157,8 +160,22 @@ function dashboardShellHtml() {
 </html>`;
 }
 
+// nginx (unico reverse proxy pubblico, vedi nginx/conf.d/*.conf) imposta X-Real-IP da $remote_addr,
+// cioè dalla connessione TCP reale: un client non può falsificarlo. X-Forwarded-For invece viene
+// APPESO da nginx al valore che il client ha già mandato, quindi il primo elemento resta sotto il
+// controllo del client: prenderlo (come faceva prima questo codice) permette di aggirare ogni rate
+// limit basato su IP semplicemente mandando un header diverso ad ogni richiesta. Usiamo quindi
+// X-Real-IP quando c'è (sempre, dietro nginx), altrimenti l'ultimo hop di X-Forwarded-For (il più
+// vicino al nostro processo), e solo in ultima istanza il socket diretto (dev locale senza proxy).
 function clientIp(req) {
-  return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+  const realIp = req.headers["x-real-ip"];
+  if (realIp) return String(realIp).trim();
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) {
+    const hops = String(forwarded).split(",").map((part) => part.trim()).filter(Boolean);
+    if (hops.length) return hops[hops.length - 1];
+  }
+  return req.socket.remoteAddress || "unknown";
 }
 
 function allowedOrigins(req) {
@@ -179,6 +196,16 @@ function originAllowed(req) {
   return allowedOrigins(req).has(String(origin).replace(/\/+$/, ""));
 }
 
+// Ogni chiave (IP:path) resta in memoria finché non scade la sua finestra: senza una pulizia
+// periodica, un numero elevato di IP distinti nel tempo farebbe crescere la mappa senza limite.
+const RATE_LIMIT_SWEEP_MS = 5 * 60_000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimits) {
+    if (now > entry.resetAt) rateLimits.delete(key);
+  }
+}, RATE_LIMIT_SWEEP_MS).unref();
+
 function incrementLimit(key, limit, windowMs) {
   const now = Date.now();
   const current = rateLimits.get(key);
@@ -190,8 +217,16 @@ function incrementLimit(key, limit, windowMs) {
   return current.count > limit;
 }
 
+const AUTH_RATE_LIMITED_PATHS = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/auth/change-password",
+];
+
 function authRateLimited(req, pathname) {
-  if (!["/api/auth/login", "/api/auth/register"].includes(pathname)) return false;
+  if (!AUTH_RATE_LIMITED_PATHS.includes(pathname)) return false;
   return incrementLimit(clientIp(req) + ":" + pathname, AUTH_LIMIT, API_WINDOW_MS);
 }
 

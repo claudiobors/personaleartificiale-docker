@@ -53,6 +53,12 @@ export const backend = {
     }, false),
   logout: () => api<{ success: boolean }>("/api/auth/logout", { method: "POST" }),
   me: () => api<{ user: UserProfile }>("/api/auth/me"),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    api<{ success: boolean }>("/api/auth/change-password", { method: "POST", body: JSON.stringify(data) }),
+  forgotPassword: (data: { email: string }) =>
+    api<{ success: boolean }>("/api/auth/forgot-password", { method: "POST", body: JSON.stringify(data) }, false),
+  resetPassword: (data: { email: string; code: string; newPassword: string }) =>
+    api<{ success: boolean }>("/api/auth/reset-password", { method: "POST", body: JSON.stringify(data) }, false),
   updateProfile: (data: { accountType: string }) => api<{ user: UserProfile }>("/api/profile", {
     method: "PUT",
     body: JSON.stringify(data),

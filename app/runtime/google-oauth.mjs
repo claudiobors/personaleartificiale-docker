@@ -5,8 +5,12 @@ const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 
+// Solo per sviluppo locale: vedi il commento su DEV_FALLBACK_SECRET in auth.mjs. In produzione
+// assertProductionSecrets() impone JWT_SECRET, quindi questo ramo non viene mai raggiunto.
+const DEV_FALLBACK_SECRET = crypto.randomBytes(32).toString("hex");
+
 function stateSecret() {
-  return process.env.JWT_SECRET || process.env.OTP_SECRET || "personale-artificiale-dev-state";
+  return process.env.JWT_SECRET || process.env.OTP_SECRET || DEV_FALLBACK_SECRET;
 }
 
 function signGoogleState(userId) {

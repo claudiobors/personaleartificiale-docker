@@ -1,3 +1,4 @@
+import dns from "node:dns/promises";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import nodemailer from "nodemailer";
@@ -11,6 +12,48 @@ import { sendGmailReply } from "./gmail.mjs";
 
 const POLL_TIMEOUT_MS = Number(process.env.EMAIL_POLL_TIMEOUT_MS || 20000);
 const MAX_MESSAGES_PER_POLL = Number(process.env.EMAIL_MAX_MESSAGES_PER_POLL || 10);
+
+// Nomi degli altri servizi Docker sulla stessa rete interna (docker-compose.yml): un vero provider
+// IMAP/SMTP non ha mai uno di questi come host, quindi bloccarli non toglie nulla a un uso legittimo.
+const BLOCKED_HOSTNAMES = new Set(["localhost", "postgres", "redis", "qdrant", "evolution", "speech", "office", "app", "www", "nginx"]);
+
+function isPrivateIPv4(ip) {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return true;
+  const [a, b] = parts;
+  return (
+    a === 10 || a === 127 || a === 0 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254) // include il metadata endpoint cloud 169.254.169.254
+  );
+}
+
+function isPrivateIPv6(ip) {
+  const normalized = ip.toLowerCase();
+  return normalized === "::1" || normalized === "::" || normalized.startsWith("fe80:") || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("::ffff:");
+}
+
+// Impedisce che un cliente registri come host IMAP/SMTP un indirizzo della rete interna Docker
+// (o localhost/link-local/metadata cloud): senza questo controllo, l'app server accetterebbe di
+// aprire connessioni TCP arbitrarie verso postgres/redis/qdrant/evolution o altri servizi interni
+// per conto di un cliente, restituendogli nel messaggio di errore dettagli sulla connessione.
+async function assertPublicMailHost(host) {
+  const clean = String(host || "").trim().toLowerCase();
+  if (!clean || BLOCKED_HOSTNAMES.has(clean)) {
+    throw apiError(400, `Host non consentito: "${host}".`);
+  }
+  let addresses;
+  try {
+    addresses = await dns.lookup(clean, { all: true });
+  } catch {
+    throw apiError(400, `Impossibile risolvere l'host "${host}".`);
+  }
+  for (const { address, family } of addresses) {
+    const blocked = family === 4 ? isPrivateIPv4(address) : isPrivateIPv6(address);
+    if (blocked) throw apiError(400, `Host non consentito: "${host}" punta a un indirizzo di rete privato.`);
+  }
+}
 
 async function loadIntegration(userId) {
   const result = await query(`SELECT * FROM integrations WHERE user_id = $1 AND provider = 'email_imap'`, [userId]);
@@ -70,6 +113,9 @@ export async function connectEmailAccount(userId, input) {
   const settings = cleanSettings(input);
   const password = String(input?.password || "");
   if (!password) throw apiError(400, "Password (o app-password) mancante.");
+
+  await assertPublicMailHost(settings.imapHost);
+  await assertPublicMailHost(settings.smtpHost);
 
   const client = new ImapFlow(buildImapConfig(settings, password));
   try {

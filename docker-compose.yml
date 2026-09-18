@@ -172,9 +172,14 @@ services:
     environment:
       SERVER_PORT: 8080
       SERVER_URL: http://evolution:8080
+      # CORS_ORIGIN "*" è sicuro solo perché Evolution non è mai raggiungibile da un browser (nessuna
+      # porta pubblicata sull'host, solo rete interna pa-net: vedi il commento sul servizio nginx).
+      # "*" insieme a CORS_CREDENTIALS true non è comunque valido per lo standard CORS (i browser
+      # rifiutano wildcard+credenziali): CORS_CREDENTIALS resta false per avere una configurazione
+      # coerente, dato che nessuna richiesta verso Evolution usa credenziali browser.
       CORS_ORIGIN: "*"
       CORS_METHODS: GET,POST,PUT,DELETE
-      CORS_CREDENTIALS: "true"
+      CORS_CREDENTIALS: "false"
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:?set EVOLUTION_API_KEY in .env}
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
       DATABASE_ENABLED: "true"

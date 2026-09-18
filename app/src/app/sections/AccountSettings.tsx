@@ -97,6 +97,7 @@ export function AccountSettings({ user, onProfileSaved, onNavigateToNumbers, onL
         <h3 className="flex items-center gap-2 font-extrabold"><MessageCircle className="h-4 w-4 text-blue-300" /> Numeri WhatsApp autorizzati</h3>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
           Il tuo assistente risponde solo ai numeri che aggiungi tu: sono numeri personali, non un canale di assistenza per i tuoi clienti.
+          Aggiungi il tuo stesso numero per parlargli da "Messaggi a te stesso", oppure altri numeri di persone che vuoi autorizzare.
         </p>
         <button onClick={onNavigateToNumbers} className="mt-5 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-extrabold hover:bg-white/10">
           Gestisci numeri WhatsApp <ArrowRight className="h-4 w-4" />

@@ -262,19 +262,6 @@ export async function migrate() {
   `);
 
   await query(`
-    CREATE TABLE IF NOT EXISTS pending_drive_actions (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      channel TEXT NOT NULL,
-      channel_ref TEXT NOT NULL,
-      proposal JSONB NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      expires_at TIMESTAMPTZ NOT NULL
-    )
-  `);
-  await query("CREATE INDEX IF NOT EXISTS idx_pending_drive_actions_lookup ON pending_drive_actions(user_id, channel, channel_ref, expires_at DESC)");
-
-  await query(`
     CREATE TABLE IF NOT EXISTS coach_goals (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -429,7 +416,18 @@ export async function migrate() {
 
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)");
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)");
-  await query("CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email))");
+  // Indice UNICO (non solo di ricerca) su LOWER(email): il vincolo UNIQUE su users.email è invece
+  // case-sensitive, quindi due registrazioni concorrenti che differiscono solo per maiuscole/minuscole
+  // (es. "Test@x.com" e "test@x.com") potevano entrambe superare il controllo "nessuna riga esistente"
+  // in registerUser e creare due account per quella che login/admin trattano ovunque come un'unica identità.
+  await query("DROP INDEX IF EXISTS idx_users_email_lower");
+  await query("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_lower_unique ON users(LOWER(email))").catch((error) => {
+    // 23505 = unique_violation: se esistono già righe duplicate solo per maiuscole/minuscole,
+    // non blocchiamo l'avvio dell'app per questo — ma va risolto a mano (unire o rinominare gli
+    // account duplicati) perché finché resta così il vincolo non protegge da nuovi duplicati.
+    if (error.code !== "23505") throw error;
+    console.warn("[migrate] ATTENZIONE: impossibile creare l'indice unico su LOWER(email): esistono già email duplicate a meno di maiuscole/minuscole. Vanno unificate manualmente.");
+  });
   await query("CREATE INDEX IF NOT EXISTS idx_users_stripe ON users(stripe_customer_id)");
   await query("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_whatsapp_phone ON users(regexp_replace(whatsapp_phone, '\\D', '', 'g')) WHERE whatsapp_phone IS NOT NULL AND whatsapp_phone <> ''");
   await query("CREATE INDEX IF NOT EXISTS idx_knowledge_user ON knowledge_files(user_id)");
@@ -443,7 +441,6 @@ export async function migrate() {
   await query("CREATE INDEX IF NOT EXISTS idx_email_drafts_user_status ON email_drafts(user_id, status, created_at DESC)");
   await query("DELETE FROM sessions WHERE expires_at <= NOW()");
   await query("DELETE FROM pending_bookings WHERE expires_at <= NOW()");
-  await query("DELETE FROM pending_drive_actions WHERE expires_at <= NOW()");
 }
 
 export async function closeDatabase() {

@@ -2,14 +2,17 @@ import { query } from "./db.mjs";
 import {
   apiError,
   bearerToken,
+  changePassword,
   clearSessionCookie,
   getUserById,
   loginUser,
   logoutUser,
   registerUser,
+  requestPasswordReset,
   requireAdminUser,
   requireActiveUser,
   requireUser,
+  resetPasswordWithOtp,
   sessionCookie,
   verifyLoginOtp,
 } from "./auth.mjs";
@@ -69,6 +72,9 @@ import {
 } from "./google-drive.mjs";
 import "./office-skills.mjs";
 import "./image-skills.mjs";
+import "./drive-skills.mjs";
+import "./calendar-skills.mjs";
+import "./gmail-skills.mjs";
 import {
   addWhatsappNumber,
   listWhatsappNumbers,
@@ -425,6 +431,20 @@ export async function dispatchApi(request, url) {
     if (method === "POST" && path === "/api/auth/logout") {
       await logoutUser(bearerToken(request));
       return clearAuthResponse();
+    }
+
+    if (method === "POST" && path === "/api/auth/change-password") {
+      const { user, token } = await requireUser(request);
+      return response(await changePassword(user.id, token, await jsonBody(request)));
+    }
+
+    if (method === "POST" && path === "/api/auth/forgot-password") {
+      const body = await jsonBody(request);
+      return response(await requestPasswordReset(body.email));
+    }
+
+    if (method === "POST" && path === "/api/auth/reset-password") {
+      return response(await resetPasswordWithOtp(await jsonBody(request)));
     }
 
     if (method === "GET" && path === "/api/auth/me") {

@@ -170,6 +170,17 @@ export async function proposeSlots(userId, { durationMinutes = 60, daysAhead = 7
   return slots;
 }
 
+export async function isSlotAvailable(userId, { start, end }) {
+  const row = await loadIntegration(userId);
+  const calendarId = row?.settings?.calendarId || "primary";
+  const freebusy = await calendarFetch(userId, "/freeBusy", {
+    method: "POST",
+    body: JSON.stringify({ timeMin: start, timeMax: end, items: [{ id: calendarId }] }),
+  });
+  const busy = freebusy.calendars?.[calendarId]?.busy || [];
+  return busy.length === 0;
+}
+
 export async function createCalendarEvent(userId, { summary, description, start, end, attendeeEmail }) {
   const row = await loadIntegration(userId);
   const calendarId = row?.settings?.calendarId || "primary";

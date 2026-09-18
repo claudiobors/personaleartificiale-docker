@@ -466,3 +466,25 @@ export async function retrieveSubscription(subscriptionId) {
   return stripe().subscriptions.retrieve(subscriptionId);
 }
 
+// Chiamata da privacy.mjs durante l'eliminazione account: senza questo, cancellare i dati locali
+// lasciava l'abbonamento Stripe attivo e la carta continuava a essere addebitata, senza più alcun
+// riferimento locale per fermarla in futuro.
+export async function cancelStripeSubscriptionForDeletion({ stripeCustomerId, subscriptionId }) {
+  if (!process.env.STRIPE_SECRET_KEY) return { cancelled: false, reason: "stripe_not_configured" };
+  try {
+    if (subscriptionId) {
+      await stripe().subscriptions.cancel(subscriptionId);
+    }
+  } catch (error) {
+    console.warn("[stripe] cancellazione abbonamento durante eliminazione account fallita", subscriptionId, error?.message || error);
+  }
+  try {
+    if (stripeCustomerId) {
+      await stripe().customers.del(stripeCustomerId);
+    }
+  } catch (error) {
+    console.warn("[stripe] eliminazione cliente Stripe durante eliminazione account fallita", stripeCustomerId, error?.message || error);
+  }
+  return { cancelled: true };
+}
+

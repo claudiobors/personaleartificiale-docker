@@ -5,7 +5,6 @@ import { answerWithKnowledge } from "./assistant.mjs";
 import { handleBookingMessage } from "./booking.mjs";
 import { handleCoachMessage } from "./coach.mjs";
 import { consumeTokens, estimateTokens } from "./credits.mjs";
-import { handleDriveMessage } from "./drive-actions.mjs";
 import { synthesizeSpeech, transcribeAudio } from "./speech.mjs";
 import { createCreditCheckout } from "./stripe.mjs";
 import { handleTravelImageMessage, handleTravelMessage } from "./travel.mjs";
@@ -69,6 +68,40 @@ function autoReplyAllowed(remoteJid) {
   }
   entry.count += 1;
   return entry.count <= AUTO_REPLY_LIMIT;
+}
+
+// La chat "Messaggi a te stesso" di WhatsApp non ha un "altro" interlocutore: sia la nota originale
+// del titolare sia l'eco della risposta che il bot stesso invia in quella chat arrivano come fromMe:true
+// con lo stesso remoteJid (il numero collegato all'istanza). Per rispondere solo alla prima e mai alla
+// seconda (che altrimenti genererebbe un ciclo infinito), teniamo per qualche minuto gli ID dei messaggi
+// che il bot ha inviato lui stesso, e li riconosciamo/ignoriamo quando tornano indietro nel webhook.
+const SENT_MESSAGE_ID_TTL_MS = Number(process.env.WHATSAPP_SENT_ID_TTL_MS || 5 * 60_000);
+const sentMessageIds = new Map();
+
+function extractSentMessageId(payload) {
+  return payload?.key?.id || payload?.message?.key?.id || payload?.data?.key?.id || null;
+}
+
+function rememberSentMessageId(payload) {
+  const id = extractSentMessageId(payload);
+  if (id) sentMessageIds.set(id, Date.now() + SENT_MESSAGE_ID_TTL_MS);
+  return payload;
+}
+
+function wasSentByBot(messageId) {
+  if (!messageId) return false;
+  const expiresAt = sentMessageIds.get(messageId);
+  if (!expiresAt) return false;
+  sentMessageIds.delete(messageId);
+  return expiresAt > Date.now();
+}
+
+// Il numero WhatsApp condiviso della piattaforma (stesso valore mostrato ai clienti in "Numero da
+// contattare"): è l'unico remoteJid per cui un messaggio fromMe può essere una nota a se stessi del
+// titolare del telefono collegato, invece che il titolare che scrive manualmente in una chat altrui
+// (quel caso resta ignorato come sempre, per non intromettersi in conversazioni personali).
+function ownBotNumberDigits() {
+  return cleanNumber(process.env.WHATSAPP_BOT_NUMBER || process.env.WHATSAPP_PUBLIC_NUMBER || "");
 }
 
 async function evolutionFetch(pathname, options = {}) {
@@ -253,8 +286,13 @@ export async function getWhatsAppStatus(userId) {
 export function assertEvolutionWebhook(request, url) {
   const configured = process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY;
   if (!configured) throw apiError(503, "Webhook Evolution non configurato.");
-  const provided = request.headers.apikey || request.headers["x-api-key"] || url.searchParams.get("apikey");
-  if (provided !== configured) {
+  const provided = String(request.headers.apikey || request.headers["x-api-key"] || url.searchParams.get("apikey") || "");
+  // Confronto a tempo costante: una normale "!==" su stringhe esce prima al primo carattere diverso,
+  // il che in teoria lascia trapelare la chiave un carattere alla volta osservando i tempi di risposta.
+  const providedBuf = Buffer.from(provided);
+  const configuredBuf = Buffer.from(configured);
+  const valid = providedBuf.length === configuredBuf.length && crypto.timingSafeEqual(providedBuf, configuredBuf);
+  if (!valid) {
     console.warn("[evolution] webhook rifiutato: apikey mancante o errata", { hasHeader: Boolean(request.headers.apikey || request.headers["x-api-key"]), hasQuery: url.searchParams.has("apikey") });
     throw apiError(401, "Webhook Evolution non autorizzato.");
   }
@@ -334,7 +372,21 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     return { updated: true, status: "qr_ready" };
   }
 
-  if (fromMe || !remoteJid || (!audioMessage && !imageMessage && !videoMessage && text.length < 2)) {
+  if (fromMe) {
+    if (wasSentByBot(messageId)) {
+      console.info("[evolution] webhook ignorato: eco di un messaggio già inviato dal bot", { instanceName, messageId });
+      return { ignored: true, reason: "own_echo" };
+    }
+    const ownDigits = ownBotNumberDigits();
+    const isSelfChat = Boolean(ownDigits) && cleanNumber(remoteJid) === ownDigits;
+    if (!isSelfChat) {
+      console.info("[evolution] webhook ignorato: messaggio scritto manualmente dal titolare in un'altra chat", { instanceName, remoteJid: cleanNumber(remoteJid) });
+      return { ignored: true, reason: "from_me_other_chat" };
+    }
+    console.info("[evolution] messaggio 'a te stesso' rilevato: lo tratto come richiesta all'assistente", { instanceName });
+  }
+
+  if (!remoteJid || (!audioMessage && !imageMessage && !videoMessage && text.length < 2)) {
     console.info("[evolution] webhook ignorato: non è un messaggio testuale, vocale, immagine o video valido", { event, fromMe, hasRemoteJid: Boolean(remoteJid), hasAudio: Boolean(audioMessage), hasImage: Boolean(imageMessage), hasVideo: Boolean(videoMessage), textLength: text.length });
     return { ignored: true };
   }
@@ -539,21 +591,6 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     return { replied: true, reason: "calendar_booking" };
   }
 
-  const driveReply = await handleDriveMessage(user, text, { channel: "whatsapp", channelRef: remoteJid }).catch((error) => {
-    console.error("[evolution] errore nel flusso Google Drive", user.id, error?.message || error);
-    return null;
-  });
-  if (driveReply) {
-    await sendAssistantReply(instanceName, remoteJid, driveReply, { requestText: text });
-    await query(
-      `INSERT INTO agent_messages (user_id, direction, channel, content, metadata)
-       VALUES ($1, 'outgoing', 'whatsapp', $2, $3::jsonb)`,
-      [user.id, driveReply, JSON.stringify({ remoteJid, instanceName, source: "google_drive" })],
-    );
-    console.info("[evolution] risposta Google Drive inviata", { userId: user.id });
-    return { replied: true, reason: "google_drive" };
-  }
-
   const profile = await query("SELECT onboarding_data FROM agent_config WHERE user_id = $1", [user.id]);
   let answer;
   try {
@@ -609,7 +646,7 @@ export async function sendWhatsAppText(instanceName, to, text) {
       text: cleanText,
       delay: typingDelay,
     }),
-  });
+  }).then(rememberSentMessageId);
 }
 
 export async function sendWhatsAppAudio(instanceName, to, audioBuffer) {
@@ -626,7 +663,7 @@ export async function sendWhatsAppAudio(instanceName, to, audioBuffer) {
       encoding: true,
       delay: 1200,
     }),
-  });
+  }).then(rememberSentMessageId);
 }
 
 export async function sendWhatsAppDocument(instanceName, to, { buffer, fileName, mimetype, caption, mediatype = "document" }) {
@@ -642,7 +679,7 @@ export async function sendWhatsAppDocument(instanceName, to, { buffer, fileName,
       caption: caption || undefined,
       media: buffer.toString("base64"),
     }),
-  });
+  }).then(rememberSentMessageId);
 }
 
 export async function instanceNameForUser(userId) {

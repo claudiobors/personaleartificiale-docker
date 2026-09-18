@@ -5,14 +5,14 @@ const BOOKING_INTENT_PATTERN = /appuntament|prenot|disponibil|calendari|meeting|
 const CANCEL_PATTERN = /\b(annulla|cancella|niente|lascia stare|no grazie)\b/i;
 const ORDINAL_WORDS = { primo: 1, prima: 1, secondo: 2, seconda: 2, terzo: 3, terza: 3 };
 
-function formatSlot(slot) {
+export function formatSlot(slot) {
   const date = new Date(slot.start);
   const day = new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(date);
   const time = new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(date);
   return `${day} alle ${time}`;
 }
 
-function formatSlotList(slots) {
+export function formatSlotList(slots) {
   return slots.map((slot, index) => `${index + 1}. ${formatSlot(slot)}`).join("\n");
 }
 

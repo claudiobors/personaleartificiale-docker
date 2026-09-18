@@ -20,7 +20,7 @@ export function WhatsAppClientSection({ contact, whatsappPhone, onGoToSettings }
       />
       <div className="grid gap-5 lg:grid-cols-2">
         <WhatsAppClientCard contact={contact} whatsappPhone={whatsappPhone} onConfigure={onGoToSettings} full />
-        <WhatsappNumbersCard />
+        <WhatsappNumbersCard contact={contact} />
       </div>
     </div>
   );
@@ -107,7 +107,11 @@ export function WhatsAppClientCard({
   );
 }
 
-function WhatsappNumbersCard() {
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
   const [numbers, setNumbers] = useState<WhatsappNumber[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
   const [loading, setLoading] = useState(false);
@@ -115,6 +119,7 @@ function WhatsappNumbersCard() {
   const [phone, setPhone] = useState("");
   const [label, setLabel] = useState("");
   const [adding, setAdding] = useState(false);
+  const [addingSelf, setAddingSelf] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [buyingAddon, setBuyingAddon] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
@@ -191,6 +196,25 @@ function WhatsappNumbersCard() {
   };
 
   const atLimit = quota ? quota.used >= quota.total : false;
+  const ownNumberDigits = contact?.number ? onlyDigits(contact.number) : "";
+  const ownNumberAlreadyAdded = ownNumberDigits ? numbers.some((n) => onlyDigits(n.phone) === ownNumberDigits) : false;
+
+  const addSelfNumber = async () => {
+    if (!contact?.number) return;
+    setAddingSelf(true);
+    setError("");
+    setQuotaExceeded(false);
+    try {
+      const result = await backend.addWhatsappNumber({ phone: contact.number, label: "Io (nota a te stesso)" });
+      setNumbers(result.numbers);
+      setQuota(result.quota);
+    } catch (cause) {
+      if (cause instanceof Error && cause.message.includes("limite")) setQuotaExceeded(true);
+      setError(cause instanceof Error ? cause.message : "Aggiunta numero non riuscita.");
+    } finally {
+      setAddingSelf(false);
+    }
+  };
 
   return (
     <section className="pa-panel p-6 sm:p-7">
@@ -203,6 +227,27 @@ function WhatsappNumbersCard() {
           <p className="text-xs text-zinc-500">Solo questi numeri possono scrivere al tuo assistente</p>
         </div>
       </div>
+
+      <ul className="mt-4 space-y-1.5 text-xs leading-5 text-zinc-400">
+        <li>• <strong className="text-zinc-300">Il tuo numero</strong> (quello collegato con il QR): aggiungilo qui sotto per parlare con l'assistente aprendo la chat "Messaggi a te stesso" su WhatsApp, invece di scrivere da un altro numero.</li>
+        <li>• <strong className="text-zinc-300">Numeri di altre persone</strong> (socio, familiare, collega…): aggiungili per farli scrivere anche loro al numero del bot e ricevere risposta.</li>
+      </ul>
+
+      {contact?.configured && !ownNumberAlreadyAdded && (
+        <div className="mt-4 rounded-2xl border border-blue-400/25 bg-blue-500/10 p-4">
+          <p className="text-sm font-bold text-blue-100">Vuoi scrivere all'assistente da solo?</p>
+          <p className="mt-1 text-xs leading-5 text-blue-100/80">
+            Aggiungi il numero del bot ({contact.number}) tra i tuoi numeri autorizzati: da quel momento la chat "Messaggi a te stesso" su quel WhatsApp diventa una conversazione con il tuo assistente.
+          </p>
+          <button
+            onClick={() => void addSelfNumber()}
+            disabled={addingSelf || atLimit}
+            className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/15 px-4 py-2.5 text-sm font-extrabold text-blue-100 hover:bg-blue-500/25 disabled:opacity-60"
+          >
+            {addingSelf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Abilita "scrivi a te stesso"
+          </button>
+        </div>
+      )}
 
       {addonNotice && (
         <div role="alert" className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">

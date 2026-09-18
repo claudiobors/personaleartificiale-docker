@@ -6,13 +6,44 @@ const scrypt = promisify(crypto.scrypt);
 const SESSION_DAYS = 30;
 const SESSION_COOKIE = "pa_session";
 const OTP_TTL_MINUTES = 10;
+const MIN_SECRET_LENGTH = 32;
+
+// Solo per sviluppo locale senza .env completo: un segreto casuale generato una volta all'avvio di
+// questo processo (mai scritto su disco, mai lo stesso tra due riavvii). Non è MAI usato in
+// produzione: assertProductionSecrets() qui sotto blocca l'avvio se mancano le variabili vere,
+// proprio per evitare che un deploy dimentichi JWT_SECRET/OTP_SECRET e finisca per firmare
+// sessioni/OTP con un valore fisso e leggibile nel codice sorgente.
+const DEV_FALLBACK_SECRET = crypto.randomBytes(32).toString("hex");
+
+// Chiamata una sola volta all'avvio del processo (vedi server-v2.mjs). docker-compose imposta
+// NODE_ENV=production anche in locale, quindi questo controllo gira sempre, non solo sul VPS reale.
+// JWT_SECRET protegge sessioni e OTP per OGNI utente ad ogni richiesta: prima, se mancava, il codice
+// ripiegava silenziosamente su una stringa fissa scritta nel sorgente (chiunque legga il repo potrebbe
+// forgiare sessioni/OTP validi su un deploy che se lo fosse dimenticato) — per questo blocca l'avvio.
+// INTEGRATIONS_ENCRYPTION_KEY invece non ha mai avuto un fallback insicuro: senza di lei le
+// integrazioni Google/email restano semplicemente disattivate (secrets.mjs rifiuta di salvare
+// credenziali in chiaro) — bloccare l'avvio anche per questa spegnerebbe l'intera piattaforma solo
+// perché nessuno ha ancora collegato un'integrazione, quindi qui ci si limita ad avvisare forte.
+export function assertProductionSecrets() {
+  if (process.env.NODE_ENV !== "production") return;
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < MIN_SECRET_LENGTH) {
+    throw new Error(`Configurazione non sicura: JWT_SECRET mancante o più corta di ${MIN_SECRET_LENGTH} caratteri.`);
+  }
+  const key = process.env.INTEGRATIONS_ENCRYPTION_KEY;
+  if (!key || key.length < MIN_SECRET_LENGTH) {
+    console.warn(
+      `[startup] ATTENZIONE: INTEGRATIONS_ENCRYPTION_KEY mancante o più corta di ${MIN_SECRET_LENGTH} caratteri. ` +
+      "Le integrazioni Google Calendar/Gmail/Drive ed email restano disattivate finché non la imposti nel .env.",
+    );
+  }
+}
 
 function hashSessionToken(token) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
 function hashOtp(code) {
-  const secret = process.env.OTP_SECRET || process.env.JWT_SECRET || "personale-artificiale-dev-otp";
+  const secret = process.env.OTP_SECRET || process.env.JWT_SECRET || DEV_FALLBACK_SECRET;
   return crypto.createHmac("sha256", secret).update(String(code)).digest("hex");
 }
 
@@ -85,16 +116,36 @@ export function validatePassword(password) {
   return null;
 }
 
+// N=2^17 segue le linee guida OWASP correnti per scrypt su login interattivo (il default di Node,
+// N=2^14, è ormai considerato debole). Il costo N usato è scritto dentro l'hash stesso: le password
+// già salvate con il vecchio default continuano a verificarsi correttamente con quel valore, mentre
+// ogni nuovo hash (registrazione, o un futuro cambio password) usa il nuovo costo più alto.
+const SCRYPT_N = Number(process.env.PASSWORD_SCRYPT_N || 131072);
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_MAXMEM = 256 * 1024 * 1024;
+const LEGACY_SCRYPT_N = 16384;
+
 export async function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
-  const derived = await scrypt(password, salt, 64);
-  return `scrypt:${salt}:${Buffer.from(derived).toString("hex")}`;
+  const derived = await scrypt(password, salt, 64, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM });
+  return `scrypt:${SCRYPT_N}:${salt}:${Buffer.from(derived).toString("hex")}`;
 }
 
 export async function verifyPassword(password, encoded) {
   if (!encoded?.startsWith("scrypt:")) return false;
-  const [, salt, storedHex] = encoded.split(":");
-  const derived = Buffer.from(await scrypt(password, salt, 64));
+  const parts = encoded.split(":");
+  let n, salt, storedHex;
+  if (parts.length === 4) {
+    [, n, salt, storedHex] = parts;
+    n = Number(n);
+  } else if (parts.length === 3) {
+    [, salt, storedHex] = parts;
+    n = LEGACY_SCRYPT_N;
+  } else {
+    return false;
+  }
+  const derived = Buffer.from(await scrypt(password, salt, 64, { N: n, r: SCRYPT_R, p: SCRYPT_P, maxmem: SCRYPT_MAXMEM }));
   const stored = Buffer.from(storedHex, "hex");
   return stored.length === derived.length && crypto.timingSafeEqual(stored, derived);
 }
@@ -247,7 +298,7 @@ export async function verifyLoginOtp({ challengeId, code }) {
               users.token_balance, users.monthly_token_allowance,
               users.monthly_tokens_used, users.token_reset_at, users.otp_enabled
        FROM otp_challenges c JOIN users ON users.id = c.user_id
-       WHERE c.id = $1 FOR UPDATE`,
+       WHERE c.id = $1 AND c.purpose = 'login' FOR UPDATE`,
       [challengeId],
     );
     const row = challenge.rows[0];
@@ -272,6 +323,94 @@ export async function verifyLoginOtp({ challengeId, code }) {
     await client.query("UPDATE users SET last_login_at = NOW(), updated_at = NOW() WHERE id = $1", [row.user_id]);
     return { token, user: mapUser(row) };
   });
+}
+
+// Cambio password da utente già autenticato: invalida ogni ALTRA sessione attiva (su altri
+// dispositivi/browser), in modo che se la password stava per essere cambiata perché sospettata
+// compromessa, un eventuale accesso non autorizzato altrove venga chiuso subito. La sessione da cui
+// arriva questa richiesta resta valida, per non disconnettere l'utente che ha appena agito.
+export async function changePassword(userId, currentToken, { currentPassword, newPassword }) {
+  const result = await query(`${USER_SELECT} WHERE users.id = $1`, [userId]);
+  const row = result.rows[0];
+  if (!row || !(await verifyPassword(String(currentPassword ?? ""), row.password_hash))) {
+    throw apiError(401, "Password attuale non corretta.");
+  }
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) throw apiError(400, passwordError);
+
+  const newHash = await hashPassword(newPassword);
+  await withTransaction(async (client) => {
+    await client.query("UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2", [newHash, userId]);
+    await client.query("DELETE FROM sessions WHERE user_id = $1 AND token != $2", [userId, hashSessionToken(currentToken)]);
+  });
+  return { success: true };
+}
+
+// Non rivela mai se l'email esiste o meno (stesso messaggio di successo in entrambi i casi), per non
+// trasformare questo endpoint in un modo per verificare quali email sono registrate sulla piattaforma.
+export async function requestPasswordReset(email) {
+  const cleanEmail = normalizeEmail(email);
+  const result = await query(`${USER_SELECT} WHERE LOWER(email) = $1`, [cleanEmail]);
+  const row = result.rows[0];
+  if (row) {
+    const code = String(crypto.randomInt(100000, 1000000));
+    await query(
+      `INSERT INTO otp_challenges (user_id, code_hash, purpose, expires_at)
+       VALUES ($1, $2, 'password_reset', NOW() + ($3 || ' minutes')::interval)`,
+      [row.id, hashOtp(code), OTP_TTL_MINUTES],
+    );
+    await deliverOtp({ email: row.email, name: row.name, code }).catch((error) => {
+      console.warn("[auth] invio codice reset password fallito", cleanEmail, error?.message || error);
+    });
+    if (process.env.NODE_ENV !== "production" && !process.env.RESEND_API_KEY) {
+      console.info(`[password-reset-dev] ${cleanEmail}: ${code}`);
+    }
+  }
+  return { success: true };
+}
+
+// Come il cambio password da autenticati: invalida TUTTE le sessioni esistenti, dato che chi usa
+// questo flusso non ha (o non usa) una sessione valida da preservare — è comunque la scelta giusta
+// in un recupero password, che spesso segue proprio il sospetto di un accesso non autorizzato.
+export async function resetPasswordWithOtp({ email, code, newPassword }) {
+  const cleanCode = String(code || "").replace(/\D/g, "");
+  const cleanEmail = normalizeEmail(email);
+  if (cleanCode.length !== 6) throw apiError(400, "Codice non valido.");
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) throw apiError(400, passwordError);
+  // Calcolato prima di aprire la transazione: scrypt è volutamente lento (vedi SCRYPT_N sopra), e non
+  // ha senso tenere una riga di otp_challenges bloccata con FOR UPDATE per tutta la sua durata.
+  const newHash = await hashPassword(newPassword);
+
+  await withTransaction(async (client) => {
+    const userResult = await client.query(`${USER_SELECT} WHERE LOWER(email) = $1`, [cleanEmail]);
+    const user = userResult.rows[0];
+    if (!user) throw apiError(401, "Codice non corretto o scaduto.");
+
+    const challenge = await client.query(
+      `SELECT id, code_hash, attempts, expires_at, consumed_at FROM otp_challenges
+       WHERE user_id = $1 AND purpose = 'password_reset' AND consumed_at IS NULL
+       ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
+      [user.id],
+    );
+    const row = challenge.rows[0];
+    if (!row || new Date(row.expires_at).getTime() < Date.now()) {
+      throw apiError(401, "Codice non corretto o scaduto.");
+    }
+    if (row.attempts >= 5) throw apiError(429, "Troppi tentativi. Richiedi un nuovo codice.");
+    const expected = Buffer.from(row.code_hash);
+    const provided = Buffer.from(hashOtp(cleanCode));
+    const valid = expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
+    if (!valid) {
+      await client.query("UPDATE otp_challenges SET attempts = attempts + 1 WHERE id = $1", [row.id]);
+      throw apiError(401, "Codice non corretto o scaduto.");
+    }
+
+    await client.query("UPDATE otp_challenges SET consumed_at = NOW() WHERE id = $1", [row.id]);
+    await client.query("UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2", [newHash, user.id]);
+    await client.query("DELETE FROM sessions WHERE user_id = $1", [user.id]);
+  });
+  return { success: true };
 }
 
 function parseCookies(header = "") {

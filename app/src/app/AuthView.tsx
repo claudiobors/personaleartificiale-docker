@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function AuthView({ onAuthenticated }: Props) {
-  const [mode, setMode] = useState<"login" | "register">("register");
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("register");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +18,43 @@ export function AuthView({ onAuthenticated }: Props) {
   const [terms, setTerms] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const [resetSent, setResetSent] = useState(false);
+  const [resetCode, setResetCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetNotice, setResetNotice] = useState("");
+
+  const submitForgot = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await backend.forgotPassword({ email });
+      setResetSent(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Richiesta non riuscita.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitReset = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await backend.resetPassword({ email, code: resetCode, newPassword: resetPassword });
+      setResetNotice("Password aggiornata. Accedi con la nuova password.");
+      setResetSent(false);
+      setResetCode("");
+      setResetPassword("");
+      setMode("login");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Codice non valido.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -108,33 +145,51 @@ export function AuthView({ onAuthenticated }: Props) {
         </section>
 
         <section className="pa-panel p-5 shadow-2xl shadow-black/40 sm:p-8">
-          <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/30 p-1">
+          {mode === "forgot" ? (
             <button
               type="button"
-              onClick={() => { setMode("register"); setError(""); }}
-              className={`rounded-lg px-4 py-2.5 text-sm font-bold transition ${mode === "register" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white"}`}
+              onClick={() => { setMode("login"); setError(""); setResetSent(false); }}
+              className="mb-6 text-xs font-bold text-zinc-400 hover:text-white"
             >
-              Registrati
+              ← Torna al login
             </button>
-            <button
-              type="button"
-              onClick={() => { setMode("login"); setError(""); }}
-              className={`rounded-lg px-4 py-2.5 text-sm font-bold transition ${mode === "login" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white"}`}
-            >
-              Accedi
-            </button>
-          </div>
+          ) : (
+            <div className="mb-6 grid grid-cols-2 rounded-xl bg-black/30 p-1">
+              <button
+                type="button"
+                onClick={() => { setMode("register"); setError(""); }}
+                className={`rounded-lg px-4 py-2.5 text-sm font-bold transition ${mode === "register" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white"}`}
+              >
+                Registrati
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode("login"); setError(""); }}
+                className={`rounded-lg px-4 py-2.5 text-sm font-bold transition ${mode === "login" ? "bg-blue-600 text-white" : "text-zinc-400 hover:text-white"}`}
+              >
+                Accedi
+              </button>
+            </div>
+          )}
 
           <div className="mb-6">
             <h2 className="text-2xl font-extrabold">
-              {mode === "register" ? "Crea il tuo account" : "Bentornato"}
+              {mode === "register" ? "Crea il tuo account" : mode === "forgot" ? "Recupera la password" : "Bentornato"}
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
               {mode === "register"
                 ? "Il piano si sceglie nel passaggio successivo."
-                : "Continua dalla configurazione che avevi lasciato."}
+                : mode === "forgot"
+                  ? "Ti mandiamo un codice via email per impostarne una nuova."
+                  : "Continua dalla configurazione che avevi lasciato."}
             </p>
           </div>
+
+          {resetNotice && (
+            <div role="alert" className="mb-5 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              {resetNotice}
+            </div>
+          )}
 
           {error && (
             <div role="alert" className="mb-5 rounded-xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -142,7 +197,61 @@ export function AuthView({ onAuthenticated }: Props) {
             </div>
           )}
 
-          {otpChallengeId ? (
+          {mode === "forgot" ? (
+            resetSent ? (
+              <form onSubmit={submitReset} className="space-y-4">
+                <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100">
+                  Se {email} è registrata, ti abbiamo mandato un codice via email. Inseriscilo insieme alla nuova password.
+                </div>
+                <Field label="Codice ricevuto via email">
+                  <input
+                    required
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={resetCode}
+                    onChange={(event) => setResetCode(event.target.value.replace(/\D/g, ""))}
+                    className="pa-input text-center text-2xl tracking-[0.45em]"
+                    placeholder="000000"
+                  />
+                </Field>
+                <Field label="Nuova password">
+                  <input
+                    required
+                    minLength={8}
+                    type="password"
+                    autoComplete="new-password"
+                    value={resetPassword}
+                    onChange={(event) => setResetPassword(event.target.value)}
+                    className="pa-input"
+                    placeholder="Almeno 8 caratteri"
+                  />
+                </Field>
+                <button disabled={busy || resetCode.length !== 6} className="pa-button flex w-full items-center justify-center gap-2 py-3.5">
+                  {busy ? "Aggiorno…" : "Imposta nuova password"}
+                  {!busy && <ArrowRight className="h-4 w-4" />}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={submitForgot} className="space-y-4">
+                <Field label="Email">
+                  <input
+                    required
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="pa-input"
+                    placeholder="mario@azienda.it"
+                  />
+                </Field>
+                <button disabled={busy} className="pa-button flex w-full items-center justify-center gap-2 py-3.5">
+                  {busy ? "Invio…" : "Invia codice"}
+                  {!busy && <ArrowRight className="h-4 w-4" />}
+                </button>
+              </form>
+            )
+          ) : otpChallengeId ? (
             <form onSubmit={submitOtp} className="space-y-4">
               <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100">
                 Ti abbiamo inviato un codice OTP via email. Inseriscilo per completare l'accesso.
