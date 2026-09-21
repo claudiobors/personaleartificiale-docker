@@ -19,7 +19,22 @@ export interface UserProfile {
   otpEnabled?: boolean;
   isAdmin?: boolean;
   onboardingComplete: boolean;
+  subscriptionCycleMonths?: number | null;
+  customQuoteRequestedAt?: string | null;
   createdAt: string;
+}
+
+export interface PlanCycle {
+  id: string;
+  months: number;
+  label: string;
+  shortLabel: string;
+  discountPercent: number;
+  totalPrice: number;
+  totalPriceFormatted: string;
+  monthlyEquivalent: number;
+  monthlyEquivalentFormatted: string;
+  savingsFormatted: string | null;
 }
 
 export interface Plan {
@@ -27,14 +42,13 @@ export interface Plan {
   name: string;
   tagline: string;
   description: string;
-  setupFee: number;
   monthlyPrice: number;
   includedTokens?: number;
   maxDocuments?: number;
   includedIntegrations?: number;
   includedWhatsappNumbers?: number;
-  setupFeeFormatted: string;
   monthlyPriceFormatted: string;
+  cycles: PlanCycle[];
   features: string[];
   highlighted?: boolean;
 }
@@ -67,7 +81,17 @@ export interface WhatsappNumber {
   id: string;
   phone: string;
   label?: string | null;
+  verified: boolean;
   createdAt: string;
+}
+
+export interface WhatsappNumberPendingVerification {
+  pendingVerification: true;
+  numberId: string;
+  phone: string;
+  expiresInMinutes: number;
+  devCode?: string;
+  deliveryFailed?: boolean;
 }
 
 export interface InternetAccessSettings {
@@ -100,14 +124,40 @@ export interface WhatsAppSession {
   status: "not_configured" | "provisioning" | "provisioned" | "qr_ready" | "connecting" | "connected" | "disconnected" | "error";
   qrCode?: string | null;
   lastError?: string | null;
+  connectedNumber?: string | null;
   updatedAt?: string | null;
 }
 
-export interface WhatsAppContact {
-  configured: boolean;
-  number: string;
-  message: string;
-  url: string;
+export interface AdminWhatsAppSession {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  instanceName: string | null;
+  status: WhatsAppSession["status"];
+  connectedNumber: string | null;
+  lastError: string | null;
+  updatedAt: string | null;
+}
+
+export interface TelegramChat {
+  chatId: string;
+  username: string | null;
+  label: string | null;
+  isOwner: boolean;
+  createdAt: string;
+}
+
+export interface TelegramStatus {
+  status: "not_configured" | "connected" | "error" | "disconnected";
+  botUsername: string | null;
+  lastError: string | null;
+  chats: TelegramChat[];
+}
+
+export interface TelegramAuthorization {
+  code: string;
+  botUsername?: string | null;
+  expiresInMinutes: number;
 }
 
 export interface CalendarStatus {

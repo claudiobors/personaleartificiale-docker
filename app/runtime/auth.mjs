@@ -42,7 +42,10 @@ function hashSessionToken(token) {
   return crypto.createHash("sha256").update(String(token)).digest("hex");
 }
 
-function hashOtp(code) {
+// Esportato per riuso: qualunque altro flusso che deve inviare un codice a 6 cifre e poi verificarlo
+// (es. la verifica di proprietà dei numeri WhatsApp in whatsapp-numbers.mjs) usa lo stesso HMAC con
+// la stessa gestione del segreto, invece di reinventare la stessa logica con un proprio fallback.
+export function hashOtp(code) {
   const secret = process.env.OTP_SECRET || process.env.JWT_SECRET || DEV_FALLBACK_SECRET;
   return crypto.createHmac("sha256", secret).update(String(code)).digest("hex");
 }
@@ -171,6 +174,8 @@ function mapUser(row) {
     otpEnabled: Boolean(row.otp_enabled),
     isAdmin: isAdminEmail(row.email),
     onboardingComplete: Boolean(row.onboarding_completed_at),
+    subscriptionCycleMonths: row.subscription_cycle_months,
+    customQuoteRequestedAt: row.custom_quote_requested_at,
     createdAt: row.created_at,
   };
 }
@@ -187,7 +192,8 @@ const USER_SELECT = `
          users.onboarding_completed_at, users.created_at, users.password_hash,
          users.account_type, users.whatsapp_phone, users.whatsapp_phone_verified_at,
          users.token_balance, users.monthly_token_allowance, users.monthly_tokens_used,
-         users.token_reset_at, users.otp_enabled
+         users.token_reset_at, users.otp_enabled,
+         users.subscription_cycle_months, users.custom_quote_requested_at
   FROM users
 `;
 

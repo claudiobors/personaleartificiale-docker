@@ -20,6 +20,8 @@ export function AppExperience() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [busyPlan, setBusyPlan] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [initialPlanId, setInitialPlanId] = useState<string | null>(null);
+  const [initialCycleId, setInitialCycleId] = useState<string | null>(null);
 
   const loadWorkspace = useCallback(async (profile: UserProfile) => {
     if (profile.status !== "active") return;
@@ -48,6 +50,8 @@ export function AppExperience() {
 
         const params = new URLSearchParams(window.location.search);
         const sessionId = params.get("session_id");
+        if (params.get("plan")) setInitialPlanId(params.get("plan"));
+        if (params.get("cycle")) setInitialCycleId(params.get("cycle"));
         let profile: UserProfile;
 
         if (params.get("checkout") === "success" && sessionId) {
@@ -87,16 +91,22 @@ export function AppExperience() {
     void loadWorkspace(profile);
   };
 
-  const checkout = async (planId: string) => {
+  const checkout = async (planId: string, cycleId: string) => {
     setBusyPlan(planId);
     setError("");
     try {
-      const result = await backend.checkout(planId);
+      const result = await backend.checkout(planId, cycleId);
       window.location.assign(result.url);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Checkout non disponibile.");
       setBusyPlan(null);
     }
+  };
+
+  const requestQuote = async (data: { companySize: string; useCase: string; notes: string }) => {
+    setError("");
+    const result = await backend.requestQuote(data);
+    setUser(result.user);
   };
 
   const openPortal = async () => {
@@ -150,6 +160,9 @@ export function AppExperience() {
         onCheckout={checkout}
         onPortal={openPortal}
         onLogout={logout}
+        onRequestQuote={requestQuote}
+        initialPlanId={initialPlanId}
+        initialCycleId={initialCycleId}
       />
     );
   }

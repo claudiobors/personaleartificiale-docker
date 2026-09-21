@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { query } from "./db.mjs";
 import { apiError } from "./auth.mjs";
-import { PLANS, getAddon, getPlan, getCreditPack } from "./plans.mjs";
+import { PLANS, CYCLES, getAddon, getPlan, getCreditPack, getCycle, cyclePrice, getPlanCycleStripeEnv } from "./plans.mjs";
 import { addCredits, grantPlanAllowance } from "./credits.mjs";
 
 let stripeClient;
@@ -14,25 +14,26 @@ function stripe() {
   return stripeClient;
 }
 
-function itemFor(plan, kind) {
-  const recurring = kind === "monthly";
-  const envName = recurring ? plan.stripeMonthlyPriceEnv : plan.stripeSetupPriceEnv;
-  const configuredPrice = process.env[envName];
+function itemForCycle(plan, cycle) {
+  const envName = getPlanCycleStripeEnv(plan.id, cycle.id);
+  const configuredPrice = envName && process.env[envName];
   if (configuredPrice) return { price: configuredPrice, quantity: 1 };
 
-  const amount = recurring ? plan.monthlyPrice : plan.setupFee;
-  const suffix = recurring ? "Abbonamento mensile" : "Configurazione iniziale";
-  const priceData = {
-    currency: "eur",
-    unit_amount: amount,
-    product_data: {
-      name: plan.name + " · " + suffix,
-      description: plan.description,
-      metadata: { plan_id: plan.id, charge_type: recurring ? "recurring" : "setup" },
+  const amount = cyclePrice(plan, cycle);
+  const suffix = cycle.months === 1 ? "Abbonamento mensile" : `Abbonamento ${cycle.shortLabel}`;
+  return {
+    price_data: {
+      currency: "eur",
+      unit_amount: amount,
+      recurring: { interval: "month", interval_count: cycle.months },
+      product_data: {
+        name: plan.name + " · " + suffix,
+        description: plan.description,
+        metadata: { plan_id: plan.id, cycle_id: cycle.id, cycle_months: String(cycle.months), charge_type: "recurring" },
+      },
     },
+    quantity: 1,
   };
-  if (recurring) priceData.recurring = { interval: "month" };
-  return { price_data: priceData, quantity: 1 };
 }
 
 function creditItemFor(pack) {
@@ -75,13 +76,29 @@ function planIdFromSubscription(subscription) {
   for (const item of items) {
     const priceId = item.price?.id;
     if (!priceId) continue;
-    const match = Object.values(PLANS).find((plan) => process.env[plan.stripeMonthlyPriceEnv] === priceId);
-    if (match) return match.id;
+    for (const plan of Object.values(PLANS)) {
+      const match = CYCLES.some((cycle) => process.env[getPlanCycleStripeEnv(plan.id, cycle.id)] === priceId);
+      if (match) return plan.id;
+    }
+    const metaPlanId = item.price?.metadata?.plan_id;
+    if (metaPlanId && getPlan(metaPlanId)) return metaPlanId;
   }
   if (subscription?.metadata?.plan_id && getPlan(subscription.metadata.plan_id)) {
     return subscription.metadata.plan_id;
   }
   return null;
+}
+
+function cycleMonthsFromSubscription(subscription) {
+  const items = subscription?.items?.data || [];
+  for (const item of items) {
+    const intervalCount = item.price?.recurring?.interval_count;
+    if (intervalCount) return intervalCount;
+    const metaMonths = Number(item.price?.metadata?.cycle_months);
+    if (metaMonths) return metaMonths;
+  }
+  const metaMonths = Number(subscription?.metadata?.cycle_months);
+  return metaMonths || null;
 }
 
 function statusFromStripe(status) {
@@ -122,9 +139,10 @@ function localBillingBypassAllowed(origin) {
   }
 }
 
-export async function createCheckout({ user, planId, origin }) {
+export async function createCheckout({ user, planId, cycleId, origin }) {
   const plan = getPlan(planId);
   if (!plan) throw apiError(400, "Piano non valido.");
+  const cycle = getCycle(cycleId) || CYCLES[0];
   if (user.status === "active") {
     throw apiError(409, "Hai già un abbonamento attivo. Gestiscilo dalla sezione Fatturazione.");
   }
@@ -134,10 +152,11 @@ export async function createCheckout({ user, planId, origin }) {
       `UPDATE users
        SET plan_id = $1, status = 'active', subscription_id = COALESCE(subscription_id, 'dev_bypass'),
            stripe_checkout_session_id = 'dev_bypass',
-           subscription_current_period_end = NOW() + INTERVAL '30 days',
+           subscription_current_period_end = NOW() + ($3 || ' months')::interval,
+           subscription_cycle_months = $4,
            last_payment_error = NULL, updated_at = NOW()
        WHERE id = $2`,
-      [plan.id, user.id],
+      [plan.id, user.id, String(cycle.months), cycle.months],
     );
     await grantPlanAllowance(user.id, plan.id);
     return { url: origin.replace(/\/+$/, "") + "/dashboard?checkout=dev-bypass" };
@@ -147,7 +166,7 @@ export async function createCheckout({ user, planId, origin }) {
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer,
-    line_items: [itemFor(plan, "monthly"), itemFor(plan, "setup")],
+    line_items: [itemForCycle(plan, cycle)],
     success_url: origin + "/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}",
     cancel_url: origin + "/dashboard?checkout=cancelled",
     locale: "it",
@@ -155,8 +174,8 @@ export async function createCheckout({ user, planId, origin }) {
     tax_id_collection: { enabled: true },
     customer_update: { address: "auto", name: "auto" },
     allow_promotion_codes: true,
-    metadata: { user_id: user.id, plan_id: plan.id },
-    subscription_data: { metadata: { user_id: user.id, plan_id: plan.id } },
+    metadata: { user_id: user.id, plan_id: plan.id, cycle_id: cycle.id, cycle_months: String(cycle.months) },
+    subscription_data: { metadata: { user_id: user.id, plan_id: plan.id, cycle_id: cycle.id, cycle_months: String(cycle.months) } },
   });
 
   await query(
@@ -220,11 +239,14 @@ async function activateFromSession(session) {
     ? session.subscription
     : await stripe().subscriptions.retrieve(subscriptionId);
 
+  const cycleMonths = cycleMonthsFromSubscription(subscription) || Number(session.metadata?.cycle_months) || null;
+
   await query(
     `UPDATE users
      SET plan_id = $1, subscription_id = $2, stripe_customer_id = $3,
          stripe_checkout_session_id = $4, status = $5,
-         subscription_current_period_end = $6, last_payment_error = NULL,
+         subscription_current_period_end = $6, subscription_cycle_months = $8,
+         last_payment_error = NULL,
          updated_at = NOW()
      WHERE id = $7`,
     [
@@ -235,6 +257,7 @@ async function activateFromSession(session) {
       statusFromStripe(subscription.status),
       periodEnd(subscription),
       userId,
+      cycleMonths,
     ],
   );
   await grantPlanAllowance(userId, planId);
@@ -377,15 +400,17 @@ async function updateSubscription(subscription) {
   const existing = await query(`SELECT id, plan_id FROM users WHERE stripe_customer_id = $1`, [customerId]);
   const userRow = existing.rows[0];
   const newPlanId = planIdFromSubscription(subscription);
+  const cycleMonths = cycleMonthsFromSubscription(subscription);
 
   await query(
     `UPDATE users
      SET subscription_id = $1, status = $2,
          subscription_current_period_end = $3,
          plan_id = COALESCE($5, plan_id),
+         subscription_cycle_months = COALESCE($6, subscription_cycle_months),
          updated_at = NOW()
      WHERE stripe_customer_id = $4`,
-    [subscription.id, statusFromStripe(subscription.status), periodEnd(subscription), customerId, newPlanId],
+    [subscription.id, statusFromStripe(subscription.status), periodEnd(subscription), customerId, newPlanId, cycleMonths],
   );
 
   if (userRow && newPlanId && newPlanId !== userRow.plan_id) {

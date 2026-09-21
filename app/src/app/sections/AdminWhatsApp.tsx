@@ -1,89 +1,64 @@
-import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, MessageCircle, PowerOff, QrCode, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, Loader2, PowerOff, RefreshCw, ShieldCheck } from "lucide-react";
 import { backend } from "../api";
 import { PageHeader } from "../Shell";
 import { formatDate } from "../format";
-import type { WhatsAppSession } from "../types";
+import type { AdminWhatsAppSession } from "../types";
 
 const STATUS_LABELS: Record<string, string> = {
-  not_configured: "Da attivare",
+  not_configured: "Non collegato",
   provisioning: "Preparazione",
   provisioned: "Pronto per QR",
-  qr_ready: "QR pronto",
+  qr_ready: "QR in attesa di scansione",
   connecting: "Connessione",
   connected: "Connesso",
   disconnected: "Disconnesso",
   error: "Errore",
 };
 
-const SETTLING_STATUSES = new Set(["provisioning", "qr_ready", "connecting"]);
-
 export function AdminWhatsApp() {
-  const [session, setSession] = useState<WhatsAppSession | null>(null);
+  const [sessions, setSessions] = useState<AdminWhatsAppSession[]>([]);
   const [loading, setLoading] = useState(false);
-  const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState("");
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
-  const load = async (silent = false) => {
-    if (!silent) setLoading(true);
-    setError("");
-    try {
-      const result = await backend.whatsappStatus();
-      setSession(result.session);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Stato WhatsApp non disponibile.");
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  useEffect(() => { void load(); }, []);
-
-  useEffect(() => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-    if (session && SETTLING_STATUSES.has(session.status)) {
-      pollRef.current = setInterval(() => void load(true), 4000);
-    }
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [session?.status]);
-
-  const provision = async () => {
+  const load = async () => {
     setLoading(true);
     setError("");
     try {
-      const result = await backend.provisionWhatsApp();
-      setSession(result.session);
+      const result = await backend.adminWhatsappSessions();
+      setSessions(result.sessions);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Attivazione WhatsApp non riuscita.");
+      setError(cause instanceof Error ? cause.message : "Elenco sessioni WhatsApp non disponibile.");
     } finally {
       setLoading(false);
     }
   };
 
-  const disconnect = async () => {
-    if (!window.confirm("Disconnettere WhatsApp Web? Nessun account riceverà risposte dal proprio assistente finché non ricolleghi un nuovo QR.")) return;
-    setDisconnecting(true);
+  useEffect(() => { void load(); }, []);
+
+  const disconnect = async (session: AdminWhatsAppSession) => {
+    if (!window.confirm(`Disconnettere WhatsApp di ${session.userName}? Il suo bot smetterà di rispondere finché non riscansiona un nuovo QR dalla propria dashboard.`)) return;
+    setDisconnectingId(session.userId);
     setError("");
     try {
-      const result = await backend.disconnectWhatsApp();
-      setSession(result.session);
+      const result = await backend.adminDisconnectWhatsappSession(session.userId);
+      setSessions(result.sessions);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Disconnessione non riuscita.");
     } finally {
-      setDisconnecting(false);
+      setDisconnectingId(null);
     }
   };
 
-  const status = session?.status || "not_configured";
-  const isConnected = status === "connected";
+  const connectedCount = sessions.filter((s) => s.status === "connected").length;
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Canale operativo · Amministrazione"
-        title="Bot WhatsApp della piattaforma"
-        description="Genera l'istanza Evolution e collega il numero condiviso con QR code: da qui passano i messaggi di tutti gli assistenti personali degli account, ognuno riservato al proprio titolare e ai numeri che ha autorizzato."
+        title="WhatsApp dei clienti"
+        description="Da quando ogni account collega il proprio numero WhatsApp, non c'è più un'istanza unica da gestire qui: questa è solo una panoramica per assistenza. Il QR e la connessione restano cosa privata di ogni cliente, mai visibili da qui."
         action={
           <button onClick={() => void load()} disabled={loading} className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold hover:bg-white/10 disabled:opacity-60">
             <RefreshCw className={`mr-2 inline h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Aggiorna
@@ -91,75 +66,62 @@ export function AdminWhatsApp() {
         }
       />
 
-      {!isConnected && (
-        <div role="alert" className="flex items-start gap-3 rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="pa-panel p-5">
+          <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Account connessi</p>
+          <p className="mt-1 text-2xl font-black text-emerald-300">{connectedCount} / {sessions.length}</p>
+        </div>
+        <div className="pa-panel flex items-start gap-3 p-5 text-xs leading-5 text-zinc-400">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
+          <p>Ogni account risponde solo al proprio titolare e ai numeri che ha autorizzato: nessun bot qui è un canale di assistenza clienti condiviso.</p>
+        </div>
+      </div>
+
+      {error && (
+        <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>Finché lo stato non è <strong>Connesso</strong>, il bot non riceve né invia messaggi WhatsApp: nessun titolare riceverà risposta dal proprio assistente, anche scrivendo da un numero autorizzato.</p>
+          <p>{error}</p>
         </div>
       )}
 
-      <section className="grid gap-5 lg:grid-cols-[1fr_.75fr]">
-        <div className="pa-panel p-6 sm:p-8">
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Stato</p>
-                <p className="mt-1 flex items-center gap-2 text-xl font-black">
-                  {isConnected && <CheckCircle2 className="h-5 w-5 text-emerald-400" />}
-                  {STATUS_LABELS[status] || "Da attivare"}
-                </p>
-                {session?.instanceName && <p className="mt-1 text-xs text-zinc-500">Istanza: {session.instanceName}</p>}
-                {session?.updatedAt && <p className="mt-1 text-xs text-zinc-600">Aggiornato: {formatDate(session.updatedAt, true)}</p>}
-                {session?.lastError && <p className="mt-2 text-xs text-red-300">{session.lastError}</p>}
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <button onClick={() => void provision()} disabled={loading} className="pa-button flex items-center justify-center gap-2 px-5 py-3">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
-                  {session?.instanceName ? "Rigenera collegamento" : "Attiva WhatsApp"}
-                </button>
-                {session?.instanceName && status !== "not_configured" && (
-                  <button
-                    onClick={() => void disconnect()}
-                    disabled={disconnecting}
-                    className="flex items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-500/10 px-5 py-3 text-sm font-extrabold text-red-200 hover:bg-red-500/20 disabled:opacity-60"
-                  >
-                    {disconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <PowerOff className="h-4 w-4" />}
-                    Disconnetti
-                  </button>
-                )}
-              </div>
-            </div>
+      <section className="pa-panel overflow-hidden">
+        {loading && sessions.length === 0 ? (
+          <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-zinc-500" /></div>
+        ) : sessions.length === 0 ? (
+          <p className="py-10 text-center text-sm text-zinc-500">Nessun account ha ancora iniziato a collegare WhatsApp.</p>
+        ) : (
+          <div className="divide-y divide-white/8">
+            {sessions.map((session) => {
+              const isConnected = session.status === "connected";
+              return (
+                <div key={session.userId} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-sm font-bold">
+                      {isConnected && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />}
+                      {session.userName} <span className="truncate text-xs font-normal text-zinc-500">{session.userEmail}</span>
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {STATUS_LABELS[session.status] || session.status}
+                      {session.connectedNumber && ` · ${session.connectedNumber}`}
+                      {session.updatedAt && ` · aggiornato ${formatDate(session.updatedAt, true)}`}
+                    </p>
+                    {session.lastError && <p className="mt-1 text-xs text-red-300">{session.lastError}</p>}
+                  </div>
+                  {session.instanceName && session.status !== "not_configured" && (
+                    <button
+                      onClick={() => void disconnect(session)}
+                      disabled={disconnectingId === session.userId}
+                      className="flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border border-red-400/25 bg-red-500/10 px-4 py-2 text-xs font-extrabold text-red-200 hover:bg-red-500/20 disabled:opacity-60 sm:self-auto"
+                    >
+                      {disconnectingId === session.userId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PowerOff className="h-3.5 w-3.5" />}
+                      Disconnetti (assistenza)
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
-
-          {session?.qrCode && (
-            <div className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-5">
-              <p className="flex items-center gap-2 text-sm font-extrabold text-emerald-200"><QrCode className="h-4 w-4" /> Scansiona il QR con WhatsApp</p>
-              <p className="mt-1 text-xs text-zinc-400">Apri WhatsApp sul telefono del numero bot → Impostazioni → Dispositivi collegati → Collega un dispositivo.</p>
-              <div className="mt-4 inline-block rounded-2xl bg-white p-3">
-                <img src={session.qrCode.startsWith("data:") ? session.qrCode : `data:image/png;base64,${session.qrCode}`} alt="QR code WhatsApp" className="h-56 w-56 object-contain" />
-              </div>
-              <p className="mt-3 text-xs text-zinc-500">Lo stato si aggiorna da solo ogni pochi secondi dopo la scansione.</p>
-            </div>
-          )}
-        </div>
-
-        <aside className="pa-panel p-6">
-          <h3 className="font-extrabold">Cosa succede dopo</h3>
-          <ul className="mt-4 space-y-3 text-sm leading-6 text-zinc-400">
-            <li>• Ogni account risponde solo ai numeri WhatsApp che ha autorizzato: non è un canale di assistenza clienti.</li>
-            <li>• I messaggi in ingresso vengono salvati e deduplicati.</li>
-            <li>• Le risposte usano RAG, onboarding e fallback sicuro.</li>
-            <li>• Il webhook rifiuta chiamate senza API key Evolution.</li>
-            <li>• Chi scrive "a se stesso" (chat "Messaggi a te stesso") sul numero appena collegato viene trattato come un messaggio in arrivo, non ignorato come un normale <code>fromMe</code>: funziona solo se quel numero è anche quello impostato in <code>WHATSAPP_BOT_NUMBER</code>/<code>WHATSAPP_PUBLIC_NUMBER</code> nel <code>.env</code>, ed è comunque registrato tra i "Numeri WhatsApp" di un account per essere riconosciuto.</li>
-          </ul>
-          <div className="mt-5 rounded-xl border border-white/10 bg-black/20 p-4 text-xs leading-5 text-zinc-500">
-            Se lo stato resta "Connesso" ma nessuno riceve risposta, controlla <strong>Amministrazione → Log → Sessioni WhatsApp</strong> per l'ultimo errore e i log del container (<code>docker compose logs -f app</code>) subito dopo aver scritto un messaggio di prova.
-          </div>
-          <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-xs leading-5 text-amber-100/80">
-            Se cambi il numero collegato con un nuovo QR, aggiorna anche <code>WHATSAPP_BOT_NUMBER</code> nel <code>.env</code> e riavvia l'app: altrimenti la chat "Messaggi a te stesso" del nuovo numero non verrà riconosciuta.
-          </div>
-        </aside>
+        )}
       </section>
     </div>
   );

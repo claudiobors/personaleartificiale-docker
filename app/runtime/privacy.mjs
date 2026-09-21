@@ -15,6 +15,7 @@ export async function exportUserData(userId) {
   const [
     user, config, files, messages, whatsapp, whatsappNumbers, integrations,
     tokenLedger, emailDrafts, coachGoals, triageSessions, travelPlans, addonSubscriptions,
+    telegramBot, telegramChats,
   ] = await Promise.all([
     query(
       `SELECT id, email, name, created_at, updated_at, plan_id, status,
@@ -82,6 +83,12 @@ export async function exportUserData(userId) {
       `SELECT addon_type, status, created_at FROM addon_subscriptions WHERE user_id = $1 ORDER BY created_at ASC`,
       [userId],
     ),
+    // Mai il token del bot (cifrato): solo se un bot è collegato e a che username risponde.
+    query(`SELECT bot_username, status, last_error, created_at, updated_at FROM telegram_bots WHERE user_id = $1`, [userId]),
+    query(
+      `SELECT chat_id, telegram_username, label, is_owner, created_at FROM telegram_chats WHERE user_id = $1 ORDER BY created_at ASC`,
+      [userId],
+    ),
   ]);
 
   return {
@@ -99,6 +106,8 @@ export async function exportUserData(userId) {
     triageSessions: rows(triageSessions),
     travelPlans: rows(travelPlans),
     addonSubscriptions: rows(addonSubscriptions),
+    telegramBot: rows(telegramBot)[0] || null,
+    telegramChats: rows(telegramChats),
   };
 }
 

@@ -13,6 +13,7 @@ import { Route as TerminiServizioRouteImport } from './routes/termini-servizio'
 import { Route as TerminiRouteImport } from './routes/termini'
 import { Route as RoiRouteImport } from './routes/roi'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as GaranzieRouteImport } from './routes/garanzie'
 import { Route as CookiePolicyRouteImport } from './routes/cookie-policy'
 import { Route as CalcolatoreRouteImport } from './routes/calcolatore'
 import { Route as AdsRouteImport } from './routes/ads'
@@ -36,6 +37,11 @@ const RoiRoute = RoiRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GaranzieRoute = GaranzieRouteImport.update({
+  id: '/garanzie',
+  path: '/garanzie',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CookiePolicyRoute = CookiePolicyRouteImport.update({
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/ads': typeof AdsRoute
   '/calcolatore': typeof CalcolatoreRoute
   '/cookie-policy': typeof CookiePolicyRoute
+  '/garanzie': typeof GaranzieRoute
   '/privacy': typeof PrivacyRoute
   '/roi': typeof RoiRoute
   '/termini': typeof TerminiRoute
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/ads': typeof AdsRoute
   '/calcolatore': typeof CalcolatoreRoute
   '/cookie-policy': typeof CookiePolicyRoute
+  '/garanzie': typeof GaranzieRoute
   '/privacy': typeof PrivacyRoute
   '/roi': typeof RoiRoute
   '/termini': typeof TerminiRoute
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/ads': typeof AdsRoute
   '/calcolatore': typeof CalcolatoreRoute
   '/cookie-policy': typeof CookiePolicyRoute
+  '/garanzie': typeof GaranzieRoute
   '/privacy': typeof PrivacyRoute
   '/roi': typeof RoiRoute
   '/termini': typeof TerminiRoute
@@ -97,6 +106,7 @@ export interface FileRouteTypes {
     | '/ads'
     | '/calcolatore'
     | '/cookie-policy'
+    | '/garanzie'
     | '/privacy'
     | '/roi'
     | '/termini'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
     | '/ads'
     | '/calcolatore'
     | '/cookie-policy'
+    | '/garanzie'
     | '/privacy'
     | '/roi'
     | '/termini'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/ads'
     | '/calcolatore'
     | '/cookie-policy'
+    | '/garanzie'
     | '/privacy'
     | '/roi'
     | '/termini'
@@ -128,6 +140,7 @@ export interface RootRouteChildren {
   AdsRoute: typeof AdsRoute
   CalcolatoreRoute: typeof CalcolatoreRoute
   CookiePolicyRoute: typeof CookiePolicyRoute
+  GaranzieRoute: typeof GaranzieRoute
   PrivacyRoute: typeof PrivacyRoute
   RoiRoute: typeof RoiRoute
   TerminiRoute: typeof TerminiRoute
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/garanzie': {
+      id: '/garanzie'
+      path: '/garanzie'
+      fullPath: '/garanzie'
+      preLoaderRoute: typeof GaranzieRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cookie-policy': {
@@ -200,6 +220,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdsRoute: AdsRoute,
   CalcolatoreRoute: CalcolatoreRoute,
   CookiePolicyRoute: CookiePolicyRoute,
+  GaranzieRoute: GaranzieRoute,
   PrivacyRoute: PrivacyRoute,
   RoiRoute: RoiRoute,
   TerminiRoute: TerminiRoute,

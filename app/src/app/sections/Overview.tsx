@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Bot,
@@ -14,7 +14,7 @@ import {
 import { backend } from "../api";
 import { PageHeader } from "../Shell";
 import { formatNumber } from "../format";
-import type { OnboardingData, Plan, UserProfile, WhatsAppContact } from "../types";
+import type { OnboardingData, Plan, UserProfile, WhatsAppSession } from "../types";
 import { WhatsAppClientCard } from "./WhatsAppClient";
 
 interface Props {
@@ -22,20 +22,24 @@ interface Props {
   plan?: Plan;
   onboarding: Partial<OnboardingData>;
   stats: { files: number; ready_files: number; messages: number };
-  whatsAppContact: WhatsAppContact | null;
   onNavigate: (key: string) => void;
   onEditProfile: () => void;
 }
 
-export function Overview({ user, plan, onboarding, stats, whatsAppContact, onNavigate, onEditProfile }: Props) {
+export function Overview({ user, plan, onboarding, stats, onNavigate, onEditProfile }: Props) {
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [answer, setAnswer] = useState("");
   const [sources, setSources] = useState<Array<{ score: number; source: string }>>([]);
   const [error, setError] = useState("");
+  const [session, setSession] = useState<WhatsAppSession | null>(null);
 
-  const whatsappPhone = user.whatsappPhone || "";
-  const botReady = user.onboardingComplete && stats.ready_files > 0 && Boolean(whatsappPhone);
+  useEffect(() => {
+    backend.whatsappStatus().then((result) => setSession(result.session)).catch(() => undefined);
+  }, []);
+
+  const whatsappConnected = session?.status === "connected";
+  const botReady = user.onboardingComplete && stats.ready_files > 0 && whatsappConnected;
 
   const search = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -70,18 +74,18 @@ export function Overview({ user, plan, onboarding, stats, whatsAppContact, onNav
       onClick: () => onNavigate("knowledge"),
     },
     {
-      title: "Collega il tuo numero",
-      detail: whatsappPhone || "Inserisci il numero da cui scriverai al bot",
-      done: Boolean(whatsappPhone),
-      action: "Configura WhatsApp",
-      onClick: () => onNavigate("settings"),
+      title: "Collega il tuo WhatsApp",
+      detail: whatsappConnected ? (session?.connectedNumber || "Connesso") : "Scansiona il QR con il numero che vuoi usare come bot",
+      done: whatsappConnected,
+      action: "Vai a WhatsApp",
+      onClick: () => onNavigate("whatsapp-client"),
     },
     {
-      title: "Testa la chat",
-      detail: botReady ? "Apri WhatsApp con messaggio preimpostato" : "Disponibile dopo configurazione, documenti e numero",
+      title: "Prova il bot",
+      detail: botReady ? "Scrivi \"a te stesso\" sul numero collegato, oppure testa qui sotto" : "Disponibile dopo profilo, documenti e numero collegato",
       done: botReady,
-      action: "Apri chat",
-      onClick: () => whatsAppContact?.url && window.open(whatsAppContact.url, "_blank", "noopener,noreferrer"),
+      action: "Testa qui sotto",
+      onClick: () => document.getElementById("quick-test")?.scrollIntoView({ behavior: "smooth" }),
     },
   ];
 
@@ -102,7 +106,7 @@ export function Overview({ user, plan, onboarding, stats, whatsAppContact, onNav
         <Metric icon={Database} label="Documenti" value={String(stats.files)} detail={stats.ready_files + " indicizzati"} />
         <Metric icon={Bot} label="Profilo AI" value={user.onboardingComplete ? "Completo" : "Da completare"} detail={onboarding.toneOfVoice || "Configura tono"} />
         <Metric icon={Coins} label="Crediti token" value={formatNumber(user.tokenBalance || 0)} detail={`${formatNumber(user.monthlyTokensUsed || 0)} token usati`} />
-        <Metric icon={Phone} label="WhatsApp" value={whatsAppContact?.number || "Da configurare"} detail={whatsappPhone ? `Scrivi da ${whatsappPhone}` : "Inserisci il tuo numero"} />
+        <Metric icon={Phone} label="WhatsApp" value={whatsappConnected ? "Connesso" : "Da collegare"} detail={session?.connectedNumber || "Scansiona il QR per attivarlo"} />
       </section>
 
       <section className="grid gap-5 lg:grid-cols-[1fr_.9fr]">
@@ -119,7 +123,6 @@ export function Overview({ user, plan, onboarding, stats, whatsAppContact, onNav
               <button
                 key={step.title}
                 onClick={step.onClick}
-                disabled={step.action === "Apri chat" && !whatsAppContact?.url}
                 className="group flex items-center gap-4 rounded-2xl border border-white/8 bg-black/20 p-4 text-left transition hover:border-blue-400/35 hover:bg-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black ${step.done ? "bg-emerald-500/15 text-emerald-300" : "bg-white/5 text-zinc-400"}`}>
@@ -137,10 +140,10 @@ export function Overview({ user, plan, onboarding, stats, whatsAppContact, onNav
           </div>
         </div>
 
-        <WhatsAppClientCard contact={whatsAppContact} whatsappPhone={whatsappPhone} onConfigure={() => onNavigate("settings")} />
+        <WhatsAppClientCard />
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
+      <section id="quick-test" className="grid gap-5 lg:grid-cols-[1.2fr_.8fr] scroll-mt-6">
         <div className="pa-panel p-6">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">

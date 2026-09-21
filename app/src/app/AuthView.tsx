@@ -341,6 +341,15 @@ export function AuthView({ onAuthenticated }: Props) {
                 {busy ? "Attendi…" : mode === "register" ? "Crea account" : "Accedi"}
                 {!busy && <ArrowRight className="h-4 w-4" />}
               </button>
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={() => { setMode("forgot"); setError(""); setResetNotice(""); }}
+                  className="w-full text-xs font-bold text-zinc-400 hover:text-white"
+                >
+                  Password dimenticata?
+                </button>
+              )}
             </form>
           )}
 

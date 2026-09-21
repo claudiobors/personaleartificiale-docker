@@ -1,4 +1,4 @@
-import type { Addon, AdminLogs, AdminUserProfile, CalendarStatus, CreditPack, CreditSummary, DriveStatus, EmailDraft, EmailStatus, InternetAccessSettings, KnowledgeFile, OnboardingData, Plan, Quota, UserProfile, WhatsAppContact, WhatsAppSession, WhatsappNumber } from "./types";
+import type { Addon, AdminLogs, AdminUserProfile, AdminWhatsAppSession, CalendarStatus, CreditPack, CreditSummary, DriveStatus, EmailDraft, EmailStatus, InternetAccessSettings, KnowledgeFile, OnboardingData, Plan, Quota, TelegramAuthorization, TelegramStatus, UserProfile, WhatsAppSession, WhatsappNumber, WhatsappNumberPendingVerification } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -63,10 +63,15 @@ export const backend = {
     method: "PUT",
     body: JSON.stringify(data),
   }),
-  checkout: (planId: string) =>
+  checkout: (planId: string, cycle: string) =>
     api<{ url: string }>("/api/stripe/checkout", {
       method: "POST",
-      body: JSON.stringify({ planId }),
+      body: JSON.stringify({ planId, cycle }),
+    }),
+  requestQuote: (data: { companySize: string; useCase: string; notes: string }) =>
+    api<{ user: UserProfile }>("/api/quote-requests", {
+      method: "POST",
+      body: JSON.stringify(data),
     }),
   confirmCheckout: (sessionId: string) =>
     api<{ complete: boolean; user: UserProfile }>(
@@ -112,7 +117,6 @@ export const backend = {
   whatsappStatus: () => api<{ session: WhatsAppSession }>("/api/whatsapp/status"),
   provisionWhatsApp: () => api<{ session: WhatsAppSession }>("/api/whatsapp/provision", { method: "POST" }),
   disconnectWhatsApp: () => api<{ session: WhatsAppSession }>("/api/whatsapp/disconnect", { method: "POST" }),
-  whatsappContact: () => api<{ contact: WhatsAppContact }>("/api/whatsapp/contact"),
   exportPrivacy: () => api<{ data: unknown }>("/api/privacy/export"),
   deleteAccount: (confirmation: string) => api<{ deleted: boolean; deletedAt: string }>("/api/privacy/account", {
     method: "DELETE",
@@ -130,6 +134,23 @@ export const backend = {
       body: JSON.stringify(data),
     }),
   adminLogs: () => api<{ logs: AdminLogs }>("/api/admin/logs"),
+  adminWhatsappSessions: () => api<{ sessions: AdminWhatsAppSession[] }>("/api/admin/whatsapp-sessions"),
+  adminDisconnectWhatsappSession: (userId: string) =>
+    api<{ sessions: AdminWhatsAppSession[] }>("/api/admin/whatsapp-sessions/disconnect", {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    }),
+  telegramStatus: () => api<TelegramStatus>("/api/telegram/status"),
+  telegramConnect: (token: string) => api<{ botUsername: string; claim: TelegramAuthorization | null }>("/api/telegram/connect", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  }),
+  telegramDisconnect: () => api<TelegramStatus>("/api/telegram/disconnect", { method: "POST" }),
+  telegramAuthorize: (label?: string) => api<TelegramAuthorization>("/api/telegram/authorize", {
+    method: "POST",
+    body: JSON.stringify({ label }),
+  }),
+  telegramRemoveChat: (chatId: string) => api<TelegramStatus>(`/api/telegram/chats?chatId=${encodeURIComponent(chatId)}`, { method: "DELETE" }),
   googleCalendarStatus: () => api<{ status: CalendarStatus }>("/api/integrations/google/status"),
   googleCalendarConnectUrl: () => api<{ url: string }>("/api/integrations/google/connect"),
   googleCalendarDisconnect: () => api<{ status: CalendarStatus }>("/api/integrations/google/disconnect", { method: "POST" }),
@@ -155,7 +176,11 @@ export const backend = {
     api<{ discarded: boolean; drafts: EmailDraft[] }>(`/api/email/drafts/discard?id=${encodeURIComponent(id)}`, { method: "POST" }),
   whatsappNumbers: () => api<{ numbers: WhatsappNumber[]; quota: Quota }>("/api/whatsapp/numbers"),
   addWhatsappNumber: (data: { phone: string; label?: string }) =>
-    api<{ numbers: WhatsappNumber[]; quota: Quota }>("/api/whatsapp/numbers", { method: "POST", body: JSON.stringify(data) }),
+    api<{ numbers: WhatsappNumber[]; quota: Quota } | WhatsappNumberPendingVerification>("/api/whatsapp/numbers", { method: "POST", body: JSON.stringify(data) }),
+  verifyWhatsappNumber: (data: { numberId: string; code: string }) =>
+    api<{ numbers: WhatsappNumber[]; quota: Quota }>("/api/whatsapp/numbers/verify", { method: "POST", body: JSON.stringify(data) }),
+  resendWhatsappVerification: (data: { numberId: string }) =>
+    api<WhatsappNumberPendingVerification | { alreadyVerified: true }>("/api/whatsapp/numbers/resend", { method: "POST", body: JSON.stringify(data) }),
   removeWhatsappNumber: (id: string) =>
     api<{ numbers: WhatsappNumber[]; quota: Quota }>(`/api/whatsapp/numbers?id=${encodeURIComponent(id)}`, { method: "DELETE" }),
   integrationQuota: () => api<{ quota: Quota }>("/api/integrations/quota"),

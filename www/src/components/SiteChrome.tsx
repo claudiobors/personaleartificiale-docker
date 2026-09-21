@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
+export const APP_URL = "//app.personaleartificiale.it";
+
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <Link
@@ -62,9 +64,12 @@ export function SiteHeader() {
               {item.label}
             </a>
           ))}
-          <Link to="/calcolatore" className="pa-button">
-            Calcola le ore
-          </Link>
+          <a href={APP_URL + "/"} className="text-sm font-semibold text-slate-300 transition hover:text-white">
+            Accedi
+          </a>
+          <a href={APP_URL + "/"} className="pa-button">
+            Registrati
+          </a>
         </nav>
         <button
           type="button"
@@ -98,10 +103,24 @@ export function SiteHeader() {
                 {item.label}
               </a>
             ))}
+            <a
+              href={APP_URL + "/"}
+              onClick={() => setOpen(false)}
+              className="flex min-h-12 items-center rounded-xl px-4 font-semibold text-slate-200 hover:bg-white/5"
+            >
+              Accedi
+            </a>
+            <a
+              href={APP_URL + "/"}
+              onClick={() => setOpen(false)}
+              className="pa-button mt-1 w-full"
+            >
+              Registrati ora
+            </a>
             <Link
               to="/calcolatore"
               onClick={() => setOpen(false)}
-              className="pa-button mt-3 w-full"
+              className="pa-button-secondary mt-1 w-full"
             >
               Calcola le ore che puoi liberare
             </Link>
@@ -134,6 +153,9 @@ export function SiteFooter() {
             className="flex flex-wrap gap-x-5 gap-y-3 text-sm"
             aria-label="Link legali"
           >
+            <Link to="/garanzie" className="text-slate-300 hover:text-white">
+              Garanzie e policy
+            </Link>
             <Link to="/privacy" className="text-slate-300 hover:text-white">
               Privacy
             </Link>

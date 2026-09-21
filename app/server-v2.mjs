@@ -141,7 +141,7 @@ function dashboardShellHtml() {
         document.getElementById('login').onsubmit = async e => { e.preventDefault(); try { const f=e.currentTarget; const r=await api('/api/auth/login',{method:'POST',body:JSON.stringify({email:formValue(f,'email'),password:formValue(f,'password')})}); token=r.token; sessionStorage.setItem(TOKEN_KEY, token); user=r.user; show('Accesso riuscito', true); render(); } catch(err){ show(err.message); } };
       }
       function renderPlans(){
-        app.innerHTML = '<section class="card full"><h2>Scegli piano</h2><p class="muted">Dopo il pagamento completi dati azienda, knowledge base e WhatsApp.</p><div class="grid">'+plans.map(p => '<article class="card plan"><h2>'+esc(p.name)+'</h2><p>'+esc(p.description)+'</p><div class="price">'+esc(p.monthlyPriceFormatted)+'</div><p class="muted">+ '+esc(p.setupFeeFormatted)+' setup</p><button data-plan="'+esc(p.id)+'">Scegli questo piano</button></article>').join('')+'</div></section>';
+        app.innerHTML = '<section class="card full"><h2>Scegli piano</h2><p class="muted">Dopo il pagamento completi dati azienda, knowledge base e WhatsApp. Nessun costo di attivazione.</p><div class="grid">'+plans.map(p => '<article class="card plan"><h2>'+esc(p.name)+'</h2><p>'+esc(p.description)+'</p><div class="price">'+esc(p.monthlyPriceFormatted)+'</div><p class="muted">al mese, fatturazione mensile</p><button data-plan="'+esc(p.id)+'">Scegli questo piano</button></article>').join('')+'</div></section>';
         app.querySelectorAll('[data-plan]').forEach(b => b.onclick = async () => { try { b.disabled=true; const r=await api('/api/stripe/checkout',{method:'POST',body:JSON.stringify({planId:b.dataset.plan})}); location.assign(r.url); } catch(err){ show(err.message); b.disabled=false; } });
       }
       function renderOnboarding(){
@@ -231,7 +231,13 @@ function authRateLimited(req, pathname) {
 }
 
 function apiRateLimited(req, pathname) {
-  if (pathname === "/api/health" || pathname === "/api/stripe/webhook" || pathname === "/api/evolution/webhook") return false;
+  // I webhook di terzi (Stripe, Evolution, Telegram) chiamano tutti da IP che non riflettono un
+  // singolo utente: Telegram in particolare chiama con lo stesso pool di IP per TUTTI i bot di TUTTI
+  // i clienti, quindi un limite per-IP qui rischierebbe di bloccare webhook legittimi di account
+  // diversi solo perché arrivano "dallo stesso posto".
+  if (pathname === "/api/health" || pathname === "/api/stripe/webhook" || pathname === "/api/evolution/webhook" || pathname.startsWith("/api/telegram/webhook/")) {
+    return false;
+  }
   return incrementLimit(clientIp(req) + ":api", API_LIMIT, API_WINDOW_MS);
 }
 

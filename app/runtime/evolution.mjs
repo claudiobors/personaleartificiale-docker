@@ -10,7 +10,7 @@ import { createCreditCheckout } from "./stripe.mjs";
 import { handleTravelImageMessage, handleTravelMessage } from "./travel.mjs";
 import { handleTriageMessage } from "./triage.mjs";
 import { handleVideoRecapFile, handleVideoRecapMessage } from "./video-recap.mjs";
-import { getUserByWhatsAppNumber } from "./whatsapp-numbers.mjs";
+import { isNumberAuthorizedForUser } from "./whatsapp-numbers.mjs";
 
 const AUDIO_REQUEST_PATTERN = /\b(rispondimi (in|con) (un )?audio|mandami (un |una nota )?audio|un vocale|in vocale|con la voce|rispondi (a |in )?voce|nota vocale|messaggio vocale)\b/i;
 
@@ -96,13 +96,6 @@ function wasSentByBot(messageId) {
   return expiresAt > Date.now();
 }
 
-// Il numero WhatsApp condiviso della piattaforma (stesso valore mostrato ai clienti in "Numero da
-// contattare"): è l'unico remoteJid per cui un messaggio fromMe può essere una nota a se stessi del
-// titolare del telefono collegato, invece che il titolare che scrive manualmente in una chat altrui
-// (quel caso resta ignorato come sempre, per non intromettersi in conversazioni personali).
-function ownBotNumberDigits() {
-  return cleanNumber(process.env.WHATSAPP_BOT_NUMBER || process.env.WHATSAPP_PUBLIC_NUMBER || "");
-}
 
 async function evolutionFetch(pathname, options = {}) {
   let res;
@@ -207,7 +200,7 @@ export async function disconnectWhatsAppSession(userId) {
     if (![400, 404].includes(Number(error.status))) throw error;
   });
   await query(
-    `UPDATE whatsapp_sessions SET status = 'disconnected', qr_code = NULL, last_error = NULL, updated_at = NOW() WHERE user_id = $1`,
+    `UPDATE whatsapp_sessions SET status = 'disconnected', qr_code = NULL, last_error = NULL, connected_number = NULL, updated_at = NOW() WHERE user_id = $1`,
     [userId],
   );
   return getWhatsAppStatus(userId);
@@ -221,6 +214,23 @@ async function fetchQr(instanceName) {
   };
 }
 
+// Il numero del cliente stesso, letto direttamente da Evolution dopo la connessione (mai chiesto o
+// digitato dal cliente): serve a riconoscere la chat "Messaggi a te stesso" come una richiesta
+// all'assistente, e a mostrare al cliente quale numero ha effettivamente collegato. Lo scudo
+// difensivo su più nomi di campo riflette versioni diverse di Evolution API che usano "number" o
+// "ownerJid" indifferentemente.
+async function fetchConnectedNumber(instanceName) {
+  try {
+    const data = await evolutionFetch("/instance/fetchInstances?instanceName=" + encodeURIComponent(instanceName));
+    const entry = Array.isArray(data) ? data[0] : (data?.instance ? data : (Array.isArray(data?.instances) ? data.instances[0] : data));
+    const raw = entry?.number || entry?.ownerJid || entry?.owner || entry?.instance?.number || entry?.instance?.ownerJid || entry?.instance?.owner || null;
+    return raw ? cleanNumber(raw) : null;
+  } catch (error) {
+    console.warn("[evolution] impossibile recuperare il numero collegato", instanceName, error?.message || error);
+    return null;
+  }
+}
+
 export async function refreshWhatsAppStatus(userId) {
   const current = await getSessionByUser(userId);
   if (!current) return getWhatsAppStatus(userId);
@@ -228,9 +238,12 @@ export async function refreshWhatsAppStatus(userId) {
     const data = await evolutionFetch("/instance/connectionState/" + encodeURIComponent(current.instanceName));
     const state = data?.instance?.state || data?.state || "unknown";
     const status = state === "open" ? "connected" : state === "connecting" ? "connecting" : "disconnected";
+    const connectedNumber = status === "connected" && !current.connectedNumber
+      ? await fetchConnectedNumber(current.instanceName)
+      : undefined;
     await query(
-      `UPDATE whatsapp_sessions SET status = $1, last_error = NULL, updated_at = NOW() WHERE user_id = $2`,
-      [status, userId],
+      `UPDATE whatsapp_sessions SET status = $1, last_error = NULL, connected_number = COALESCE($2, connected_number), updated_at = NOW() WHERE user_id = $3`,
+      [status, connectedNumber || null, userId],
     );
   } catch (error) {
     await query(
@@ -243,7 +256,7 @@ export async function refreshWhatsAppStatus(userId) {
 
 async function getSessionByUser(userId) {
   const result = await query(
-    `SELECT user_id, instance_name, status, qr_code, last_error, updated_at
+    `SELECT user_id, instance_name, status, qr_code, last_error, connected_number, updated_at
      FROM whatsapp_sessions WHERE user_id = $1 AND purpose = 'platform_main'`,
     [userId],
   );
@@ -253,7 +266,7 @@ async function getSessionByUser(userId) {
 
 async function getSessionByInstance(instanceName) {
   const result = await query(
-    `SELECT user_id, instance_name, status, qr_code, last_error, updated_at
+    `SELECT user_id, instance_name, status, qr_code, last_error, connected_number, updated_at
      FROM whatsapp_sessions WHERE instance_name = $1`,
     [instanceName],
   );
@@ -268,6 +281,7 @@ function mapSession(row) {
     status: row.status,
     qrCode: row.qr_code,
     lastError: row.last_error,
+    connectedNumber: row.connected_number,
     updatedAt: row.updated_at,
   };
 }
@@ -279,8 +293,45 @@ export async function getWhatsAppStatus(userId) {
     status: "not_configured",
     qrCode: null,
     lastError: null,
+    connectedNumber: null,
     updatedAt: null,
   };
+}
+
+// Per la panoramica admin: solo stato/numero collegato, mai il QR (che permetterebbe di accedere al
+// WhatsApp del cliente) — l'admin può solo vedere se un account è connesso e forzarne la
+// disconnessione per assistenza, non collegarsi al posto del cliente.
+export async function listAllWhatsAppSessions() {
+  const result = await query(
+    `SELECT ws.user_id, ws.instance_name, ws.status, ws.connected_number, ws.last_error, ws.updated_at,
+            u.name, u.email
+     FROM whatsapp_sessions ws
+     JOIN users u ON u.id = ws.user_id
+     ORDER BY ws.updated_at DESC`,
+  );
+  return result.rows.map((row) => ({
+    userId: row.user_id,
+    userName: row.name,
+    userEmail: row.email,
+    instanceName: row.instance_name,
+    status: row.status,
+    connectedNumber: row.connected_number,
+    lastError: row.last_error,
+    updatedAt: row.updated_at,
+  }));
+}
+
+// Stesse colonne che serviva prima la ricerca globale per numero, ma qui caricate direttamente per
+// l'account proprietario dell'istanza (già noto tramite session.userId), non cercate a partire dal
+// numero del mittente.
+async function getSessionOwner(userId) {
+  const result = await query(
+    `SELECT id, email, name, plan_id, status, stripe_customer_id, subscription_id,
+            subscription_current_period_end, token_balance, onboarding_completed_at
+     FROM users WHERE id = $1`,
+    [userId],
+  );
+  return result.rows[0] || null;
 }
 
 export function assertEvolutionWebhook(request, url) {
@@ -362,7 +413,15 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
   if (event.includes("CONNECTION")) {
     const state = payload?.data?.state || payload?.state;
     const status = state === "open" ? "connected" : state === "connecting" ? "connecting" : "disconnected";
-    await query("UPDATE whatsapp_sessions SET status = $1, updated_at = NOW() WHERE instance_name = $2", [status, instanceName]);
+    // Il numero collegato si legge da Evolution una sola volta (mai chiesto al cliente): appena la
+    // connessione risulta aperta e non lo conosciamo ancora, lo recuperiamo e lo salviamo.
+    const connectedNumber = status === "connected" && !session.connectedNumber
+      ? await fetchConnectedNumber(instanceName)
+      : undefined;
+    await query(
+      "UPDATE whatsapp_sessions SET status = $1, connected_number = COALESCE($2, connected_number), updated_at = NOW() WHERE instance_name = $3",
+      [status, connectedNumber || null, instanceName],
+    );
     return { updated: true, status };
   }
 
@@ -377,7 +436,11 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
       console.info("[evolution] webhook ignorato: eco di un messaggio già inviato dal bot", { instanceName, messageId });
       return { ignored: true, reason: "own_echo" };
     }
-    const ownDigits = ownBotNumberDigits();
+    // Ogni istanza è ormai il numero WhatsApp personale del singolo cliente: "a te stesso" è
+    // riconosciuto confrontando il remoteJid con IL numero che quella specifica istanza ha collegato,
+    // non più con un numero unico di piattaforma. Un fromMe verso qualsiasi altro numero resta
+    // ignorato, per non intromettersi in una chat che il titolare sta gestendo di persona.
+    const ownDigits = session.connectedNumber ? cleanNumber(session.connectedNumber) : "";
     const isSelfChat = Boolean(ownDigits) && cleanNumber(remoteJid) === ownDigits;
     if (!isSelfChat) {
       console.info("[evolution] webhook ignorato: messaggio scritto manualmente dal titolare in un'altra chat", { instanceName, remoteJid: cleanNumber(remoteJid) });
@@ -398,19 +461,25 @@ async function handleEvolutionWebhook({ event, instanceName, remoteJid, fromMe, 
     throw error;
   }
 
-  console.info("[evolution] cerco utente registrato per numero", { remoteJid: cleanNumber(remoteJid) });
-  const user = await getUserByWhatsAppNumber(remoteJid);
-  console.info("[evolution] esito ricerca utente", { found: Boolean(user), userId: user?.id, status: user?.status });
+  // Ogni istanza è ormai il numero personale di UN account: chi scrive deve essere o il numero stesso
+  // collegato (self-chat, già verificato sopra) o un numero che QUELLO specifico account ha
+  // autorizzato — mai una ricerca globale su tutti gli account della piattaforma, altrimenti un
+  // numero autorizzato per un cliente potrebbe far rispondere anche il bot di un altro.
+  console.info("[evolution] verifico se il numero è autorizzato per questo account", { userId: session.userId, remoteJid: cleanNumber(remoteJid) });
+  const isOwnConnectedNumber = Boolean(session.connectedNumber) && cleanNumber(remoteJid) === cleanNumber(session.connectedNumber);
+  const authorized = isOwnConnectedNumber || (await isNumberAuthorizedForUser(session.userId, remoteJid));
+  const user = authorized ? await getSessionOwner(session.userId) : null;
+  console.info("[evolution] esito verifica", { authorized, userId: user?.id, status: user?.status });
   if (!user) {
-    console.warn("[evolution] mittente non riconosciuto: nessun utente con questo numero registrato", { remoteJid: cleanNumber(remoteJid) });
+    console.warn("[evolution] mittente non autorizzato su questo account", { userId: session.userId, remoteJid: cleanNumber(remoteJid) });
     if (autoReplyAllowed(remoteJid)) {
       await sendWhatsAppText(
         instanceName,
         remoteJid,
-        "Ciao! Questo è il numero del tuo assistente artificiale personale, riservato a chi lo ha attivato e ai numeri autorizzati sul suo account. Se sei tu il titolare, accedi alla piattaforma e aggiungi questo numero tra i tuoi \"Numeri WhatsApp\".",
+        "Ciao! Questo è il numero di un assistente artificiale personale, riservato al titolare e ai numeri che ha autorizzato. Se sei tu il titolare, accedi alla piattaforma e aggiungi questo numero tra i tuoi \"Numeri WhatsApp\".",
       );
     }
-    return { ignored: true, reason: "unknown_sender" };
+    return { ignored: true, reason: "unauthorized_sender" };
   }
   if (user.status !== "active") {
     console.warn("[evolution] mittente riconosciuto ma account non attivo", { userId: user.id, status: user.status });
@@ -686,6 +755,7 @@ export async function instanceNameForUser(userId) {
   const session = await getSessionByUser(userId);
   return session?.instanceName || null;
 }
+
 
 // Invia la risposta come nota vocale solo se il cliente l'ha chiesto esplicitamente in questo messaggio;
 // se la sintesi/l'invio audio falliscono, torna sempre al testo. Regola non negoziabile: mai chiamata

@@ -27,6 +27,7 @@ import {
   processWebhook,
 } from "./stripe.mjs";
 import { addCredits, consumeTokens, creditSummary, estimateTokens, grantPlanAllowance } from "./credits.mjs";
+import { createQuoteRequest } from "./quotes.mjs";
 import {
   deleteKnowledge,
   indexOnboarding,
@@ -40,8 +41,11 @@ import {
   disconnectWhatsAppSession,
   ensureWhatsAppSession,
   getWhatsAppStatus,
+  instanceNameForUser,
+  listAllWhatsAppSessions,
   processEvolutionWebhook,
   refreshWhatsAppStatus,
+  sendWhatsAppText,
 } from "./evolution.mjs";
 import { deleteUserData, exportUserData } from "./privacy.mjs";
 import {
@@ -76,9 +80,19 @@ import "./drive-skills.mjs";
 import "./calendar-skills.mjs";
 import "./gmail-skills.mjs";
 import {
+  connectTelegramBot,
+  disconnectTelegramBot,
+  getTelegramStatus,
+  handleTelegramWebhook,
+  removeTelegramChat,
+  requestTelegramAuthorization,
+} from "./telegram.mjs";
+import {
   addWhatsappNumber,
   listWhatsappNumbers,
   removeWhatsappNumber,
+  resendWhatsappVerification,
+  verifyWhatsappNumber,
 } from "./whatsapp-numbers.mjs";
 import { assertIntegrationSlot, integrationQuota } from "./integration-quota.mjs";
 
@@ -99,6 +113,31 @@ function response(data, status = 200, headers = {}) {
 
 function redirect(location) {
   return { status: 302, headers: { Location: location, "Cache-Control": "no-store" }, body: "" };
+}
+
+// Il codice a 6 cifre viaggia sul numero WhatsApp CHE IL CLIENTE HA GIÀ COLLEGATO (ogni account ha
+// ormai la propria istanza): se non l'ha ancora connesso, l'aggiunta fallisce comunque (non
+// riceverebbe mai il codice), ma senza cancellare il numero appena creato — resta "in attesa" e un
+// tentativo di reinvio più tardi può ancora consegnarlo, una volta connesso.
+async function withVerificationCodeSent(callingUserId, result) {
+  if (!result?.pendingVerification) return result;
+  const { code, ...publicResult } = result;
+  const instanceName = await instanceNameForUser(callingUserId);
+  if (!instanceName) {
+    console.warn("[api] impossibile inviare il codice di verifica numero WhatsApp: nessuna istanza Evolution collegata per questo account", callingUserId);
+    return { ...publicResult, deliveryFailed: true };
+  }
+  try {
+    await sendWhatsAppText(
+      instanceName,
+      result.phone,
+      `Il tuo codice per autorizzare questo numero su Personale Artificiale è: ${code}\n\nScade tra ${result.expiresInMinutes} minuti. Se non sei stato tu, ignora questo messaggio.`,
+    );
+  } catch (error) {
+    console.warn("[api] invio codice verifica numero WhatsApp fallito", error?.message || error);
+    return { ...publicResult, deliveryFailed: true };
+  }
+  return { ...publicResult, devCode: process.env.NODE_ENV !== "production" ? code : undefined };
 }
 
 function authResponse(result, status = 200) {
@@ -195,19 +234,6 @@ function normalizePhone(value) {
 
 function cleanAccountType(value) {
   return ["private", "business", "professional"].includes(value) ? value : "business";
-}
-
-function whatsappContactFor(user) {
-  const rawNumber = process.env.WHATSAPP_BOT_NUMBER || process.env.WHATSAPP_PUBLIC_NUMBER || "";
-  const digits = rawNumber.replace(/\D/g, "");
-  const displayNumber = rawNumber.trim() || (digits ? "+" + digits : "");
-  const message = (process.env.WHATSAPP_PREFILLED_MESSAGE || `Ciao, sono ${user.name}. Voglio aprire la chat con il mio assistente Personale Artificiale.`).slice(0, 500);
-  return {
-    configured: Boolean(digits),
-    number: displayNumber,
-    message,
-    url: digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : "",
-  };
 }
 
 async function updateUserProfile(userId, input) {
@@ -495,7 +521,19 @@ export async function dispatchApi(request, url) {
       return response(await createCheckout({
         user,
         planId: body.planId,
+        cycleId: body.cycle,
         origin: originFor(request),
+      }));
+    }
+
+    if (method === "POST" && path === "/api/quote-requests") {
+      const { user } = await requireUser(request);
+      const body = await jsonBody(request);
+      return response(await createQuoteRequest({
+        userId: user.id,
+        companySize: body.companySize,
+        useCase: body.useCase,
+        notes: body.notes,
       }));
     }
 
@@ -523,29 +561,63 @@ export async function dispatchApi(request, url) {
     }
 
     if (method === "GET" && path === "/api/whatsapp/status") {
-      const { user } = await requireAdminUser(request);
+      const { user } = await requireActiveUser(request);
       return response({ session: await refreshWhatsAppStatus(user.id) });
     }
 
     if (method === "POST" && path === "/api/whatsapp/provision") {
-      const { user } = await requireAdminUser(request);
+      const { user } = await requireActiveUser(request);
       return response({ session: await ensureWhatsAppSession(user, originFor(request)) });
     }
 
     if (method === "POST" && path === "/api/whatsapp/disconnect") {
-      const { user } = await requireAdminUser(request);
-      return response({ session: await disconnectWhatsAppSession(user.id) });
-    }
-
-    if (method === "GET" && path === "/api/whatsapp/contact") {
       const { user } = await requireActiveUser(request);
-      return response({ contact: whatsappContactFor(user) });
+      return response({ session: await disconnectWhatsAppSession(user.id) });
     }
 
     if (method === "POST" && path === "/api/evolution/webhook") {
       assertEvolutionWebhook(request, url);
       const result = await processEvolutionWebhook(await jsonBody(request));
       return response({ received: true, ...result });
+    }
+
+    if (method === "GET" && path === "/api/telegram/status") {
+      const { user } = await requireActiveUser(request);
+      return response(await getTelegramStatus(user.id));
+    }
+
+    if (method === "POST" && path === "/api/telegram/connect") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      return response(await connectTelegramBot(user.id, body.token, originFor(request)));
+    }
+
+    if (method === "POST" && path === "/api/telegram/disconnect") {
+      const { user } = await requireActiveUser(request);
+      return response(await disconnectTelegramBot(user.id));
+    }
+
+    if (method === "POST" && path === "/api/telegram/authorize") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      return response(await requestTelegramAuthorization(user.id, body.label));
+    }
+
+    if (method === "DELETE" && path === "/api/telegram/chats") {
+      const { user } = await requireActiveUser(request);
+      const chatId = url.searchParams.get("chatId");
+      if (!chatId) throw apiError(400, "ID chat mancante.");
+      return response(await removeTelegramChat(user.id, chatId));
+    }
+
+    // Percorso dinamico (l'unico in questo router): Telegram richiama sempre lo stesso URL fisso
+    // registrato in setWebhook, che include l'id del bot invece del suo token — l'autenticazione
+    // vera avviene dentro handleTelegramWebhook confrontando l'header segreto per quel bot.
+    if (method === "POST" && path.startsWith("/api/telegram/webhook/")) {
+      const botId = decodeURIComponent(path.slice("/api/telegram/webhook/".length));
+      const secretToken = request.headers["x-telegram-bot-api-secret-token"];
+      const result = await handleTelegramWebhook(botId, secretToken, await jsonBody(request));
+      return response({ ok: true, ...result });
     }
 
     if (method === "GET" && path === "/api/integrations/google/status") {
@@ -680,7 +752,22 @@ export async function dispatchApi(request, url) {
       const { user } = await requireActiveUser(request);
       const body = await jsonBody(request);
       const result = await addWhatsappNumber(user.id, { phone: body.phone, label: body.label });
-      return response(result);
+      return response(await withVerificationCodeSent(user.id, result));
+    }
+
+    if (method === "POST" && path === "/api/whatsapp/numbers/verify") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      if (!body.numberId) throw apiError(400, "ID numero mancante.");
+      return response(await verifyWhatsappNumber(user.id, body.numberId, body.code));
+    }
+
+    if (method === "POST" && path === "/api/whatsapp/numbers/resend") {
+      const { user } = await requireActiveUser(request);
+      const body = await jsonBody(request);
+      if (!body.numberId) throw apiError(400, "ID numero mancante.");
+      const result = await resendWhatsappVerification(user.id, body.numberId);
+      return response(await withVerificationCodeSent(user.id, result));
     }
 
     if (method === "DELETE" && path === "/api/whatsapp/numbers") {
@@ -753,13 +840,12 @@ export async function dispatchApi(request, url) {
       try { fileName = decodeURIComponent(fileName); } catch {}
       const buffer = await bodyBuffer(request, MAX_UPLOAD);
       const plan = getPlan(user.planId);
-      const maxFiles = user.planId === "ufficio-digitale" ? 250 : 50;
       const file = await uploadAndIndex({
         userId: user.id,
         originalName: fileName,
         mimeType: request.headers["content-type"],
         buffer,
-        maxFiles: plan ? maxFiles : 0,
+        maxFiles: plan ? (plan.maxDocuments || 0) : 0,
       });
       return response({ file }, 201);
     }
@@ -830,6 +916,22 @@ export async function dispatchApi(request, url) {
     if (method === "GET" && path === "/api/admin/logs") {
       await requireAdminUser(request);
       return response({ logs: await adminLogs() });
+    }
+
+    if (method === "GET" && path === "/api/admin/whatsapp-sessions") {
+      await requireAdminUser(request);
+      return response({ sessions: await listAllWhatsAppSessions() });
+    }
+
+    if (method === "POST" && path === "/api/admin/whatsapp-sessions/disconnect") {
+      await requireAdminUser(request);
+      const body = await jsonBody(request);
+      if (!body.userId) throw apiError(400, "ID account mancante.");
+      // Solo per assistenza: forza una disconnessione (il cliente dovrà riscansionare il proprio QR
+      // dalla propria dashboard) — l'admin non vede né può mai vedere il QR o il contenuto dei
+      // messaggi del cliente da qui, solo lo stato della connessione.
+      await disconnectWhatsAppSession(body.userId);
+      return response({ sessions: await listAllWhatsAppSessions() });
     }
 
     return response({ error: "Endpoint non trovato." }, 404);

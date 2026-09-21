@@ -2,7 +2,8 @@
 set -Eeuo pipefail
 
 BASE_URL="${BASE_URL:-http://app.personaleartificiale.localhost:8081}"
-PLAN_ID="${PLAN_ID:-assistente-esecutivo}"
+PLAN_ID="${PLAN_ID:-assistente-digitale}"
+CYCLE_ID="${CYCLE_ID:-1m}"
 EMAIL="${E2E_EMAIL:-test+$(date +%s)@personaleartificiale.localhost}"
 PASSWORD="${E2E_PASSWORD:-Test12345!}"
 NAME="${E2E_NAME:-Cliente Test}"
@@ -52,8 +53,8 @@ u=json.load(open(sys.argv[1], encoding="utf-8"))["user"]
 print("utente={} status={} plan={}".format(u["email"], u["status"], u["planId"]))
 ' "$TMP_DIR/me-pending.json"
 
-echo "== Checkout piano $PLAN_ID =="
-CHECKOUT_BODY=$(PLAN_ID="$PLAN_ID" python -c 'import json,os; print(json.dumps({"planId":os.environ["PLAN_ID"]}))')
+echo "== Checkout piano $PLAN_ID (ciclo $CYCLE_ID) =="
+CHECKOUT_BODY=$(PLAN_ID="$PLAN_ID" CYCLE_ID="$CYCLE_ID" python -c 'import json,os; print(json.dumps({"planId":os.environ["PLAN_ID"],"cycle":os.environ["CYCLE_ID"]}))')
 api POST /api/stripe/checkout "$CHECKOUT_BODY" | tee "$TMP_DIR/checkout.json" >/dev/null
 CHECKOUT_URL="$(json_file_get "$TMP_DIR/checkout.json" url)"
 echo "checkout_url=$CHECKOUT_URL"

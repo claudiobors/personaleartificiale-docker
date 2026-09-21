@@ -1,50 +1,100 @@
-import { useEffect, useState } from "react";
-import { Copy, ExternalLink, Loader2, Lock, MessageCircle, Phone, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowRight, CheckCircle2, Loader2, Lock, MessageCircle, Phone, Plus, PowerOff, QrCode, Trash2 } from "lucide-react";
 import { backend } from "../api";
 import { PageHeader } from "../Shell";
-import type { Quota, WhatsAppContact, WhatsappNumber } from "../types";
+import { formatDate } from "../format";
+import type { Quota, WhatsAppSession, WhatsappNumber, WhatsappNumberPendingVerification } from "../types";
 
-interface Props {
-  contact: WhatsAppContact | null;
-  whatsappPhone: string;
-  onGoToSettings: () => void;
-}
+const STATUS_LABELS: Record<string, string> = {
+  not_configured: "Da collegare",
+  provisioning: "Preparazione",
+  provisioned: "Pronto per QR",
+  qr_ready: "QR pronto",
+  connecting: "Connessione",
+  connected: "Connesso",
+  disconnected: "Disconnesso",
+  error: "Errore",
+};
 
-export function WhatsAppClientSection({ contact, whatsappPhone, onGoToSettings }: Props) {
+const SETTLING_STATUSES = new Set(["provisioning", "qr_ready", "connecting"]);
+
+export function WhatsAppClientSection() {
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Il tuo assistente personale"
-        title="Parla con il tuo assistente"
-        description="Un dipendente artificiale al tuo servizio: risponde solo a te e ai numeri che autorizzi, non è un canale di assistenza per i tuoi clienti."
+        title="Collega il tuo WhatsApp"
+        description="Il tuo numero WhatsApp diventa il bot: risponde solo a te e ai numeri che autorizzi, non è un canale di assistenza per i tuoi clienti."
       />
       <div className="grid gap-5 lg:grid-cols-2">
-        <WhatsAppClientCard contact={contact} whatsappPhone={whatsappPhone} onConfigure={onGoToSettings} full />
-        <WhatsappNumbersCard contact={contact} />
+        <WhatsAppClientCard full />
+        <WhatsappNumbersCard />
       </div>
     </div>
   );
 }
 
-export function WhatsAppClientCard({
-  contact,
-  whatsappPhone,
-  onConfigure,
-  full = false,
-}: {
-  contact: WhatsAppContact | null;
-  whatsappPhone: string;
-  onConfigure: () => void;
-  full?: boolean;
-}) {
-  const qrUrl = contact?.url
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(contact.url)}`
-    : "";
+// Autosufficiente (stato, polling, provisioning, disconnessione): usato sia nella pagina dedicata
+// (full) sia come riquadro compatto nella Panoramica, senza bisogno di stato condiviso dal genitore.
+export function WhatsAppClientCard({ full = false }: { full?: boolean }) {
+  const [session, setSession] = useState<WhatsAppSession | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [error, setError] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const copyMessage = async () => {
-    if (!contact?.message) return;
-    await navigator.clipboard?.writeText(contact.message).catch(() => undefined);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
+    setError("");
+    try {
+      const result = await backend.whatsappStatus();
+      setSession(result.session);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Stato WhatsApp non disponibile.");
+    } finally {
+      if (!silent) setLoading(false);
+    }
   };
+
+  useEffect(() => { void load(); }, []);
+
+  useEffect(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    if (session && SETTLING_STATUSES.has(session.status)) {
+      pollRef.current = setInterval(() => void load(true), 4000);
+    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [session?.status]);
+
+  const provision = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await backend.provisionWhatsApp();
+      setSession(result.session);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Attivazione WhatsApp non riuscita.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const disconnect = async () => {
+    if (!window.confirm("Disconnettere il tuo WhatsApp? Il bot smetterà di rispondere finché non ricolleghi un nuovo QR.")) return;
+    setDisconnecting(true);
+    setError("");
+    try {
+      const result = await backend.disconnectWhatsApp();
+      setSession(result.session);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Disconnessione non riuscita.");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const status = session?.status || "not_configured";
+  const isConnected = status === "connected";
 
   return (
     <aside className={`pa-panel relative overflow-hidden p-6 sm:p-7 ${full ? "" : ""}`}>
@@ -54,64 +104,77 @@ export function WhatsAppClientCard({
       />
       <div className="relative flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-emerald-300">Chat WhatsApp</p>
-          <h2 className="mt-2 text-xl font-black">Scrivi al tuo assistente</h2>
+          <p className="text-xs font-black uppercase tracking-widest text-emerald-300">Il tuo numero WhatsApp</p>
+          <h2 className="mt-2 text-xl font-black">
+            {isConnected ? "Bot attivo" : "Collega il tuo WhatsApp"}
+          </h2>
           <p className="mt-2 text-sm leading-6 text-zinc-400">
-            Usa il numero del tuo assistente personale. Il messaggio è già preimpostato e il sistema ti riconosce dal numero salvato tra quelli autorizzati.
+            {isConnected
+              ? "Il tuo numero risponde già come il tuo assistente personale."
+              : "Scansiona il QR con lo stesso WhatsApp che vuoi trasformare nel tuo bot."}
           </p>
         </div>
         <MessageCircle className="h-6 w-6 shrink-0 text-emerald-300" />
       </div>
 
       <div className="relative mt-5 rounded-2xl border border-white/10 bg-black/25 p-4">
-        <p className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Numero da contattare</p>
-        <p className="mt-1 text-xl font-black">{contact?.number || "Numero bot non configurato"}</p>
-        {!contact?.configured && (
-          <p className="mt-2 text-xs leading-5 text-amber-300">
-            Chiedi all'amministratore di impostare `WHATSAPP_BOT_NUMBER` nel `.env` e riavviare l'app.
-          </p>
-        )}
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Stato</p>
+            <p className="mt-1 flex items-center gap-2 text-lg font-black">
+              {isConnected && <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />}
+              {STATUS_LABELS[status] || "Da collegare"}
+            </p>
+            {session?.connectedNumber && <p className="mt-1 text-xs text-emerald-300">{session.connectedNumber}</p>}
+            {full && session?.updatedAt && <p className="mt-1 text-[11px] text-zinc-600">Aggiornato: {formatDate(session.updatedAt, true)}</p>}
+            {session?.lastError && <p className="mt-2 text-xs text-red-300">{session.lastError}</p>}
+          </div>
+          <div className="flex shrink-0 flex-col gap-2">
+            <button onClick={() => void provision()} disabled={loading} className="pa-button flex items-center justify-center gap-2 px-4 py-2.5 text-sm">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+              {session?.instanceName ? "Rigenera" : "Connetti"}
+            </button>
+            {session?.instanceName && status !== "not_configured" && (
+              <button
+                onClick={() => void disconnect()}
+                disabled={disconnecting}
+                className="flex items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-500/10 px-4 py-2 text-xs font-extrabold text-red-200 hover:bg-red-500/20 disabled:opacity-60"
+              >
+                {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PowerOff className="h-3.5 w-3.5" />}
+                Disconnetti
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
-      {contact?.configured && (
-        <div className="relative mt-5 grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
-          <div className="inline-flex rounded-2xl bg-white p-3">
-            <img src={qrUrl} alt="QR per aprire la chat WhatsApp" className="h-32 w-32 rounded-lg object-contain" />
+      {error && <p className="relative mt-3 text-sm text-red-300">{error}</p>}
+
+      {session?.qrCode && (
+        <div className="relative mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.06] p-4">
+          <p className="flex items-center gap-2 text-sm font-extrabold text-emerald-200"><QrCode className="h-4 w-4" /> Scansiona con WhatsApp</p>
+          <p className="mt-1 text-xs leading-5 text-zinc-400">Apri WhatsApp sul telefono che vuoi collegare → Impostazioni → Dispositivi collegati → Collega un dispositivo.</p>
+          <div className="mt-4 inline-block rounded-2xl bg-white p-3">
+            <img
+              src={session.qrCode.startsWith("data:") ? session.qrCode : `data:image/png;base64,${session.qrCode}`}
+              alt="QR code WhatsApp"
+              className={full ? "h-56 w-56 object-contain" : "h-40 w-40 object-contain"}
+            />
           </div>
-          <div className="space-y-3">
-            <a href={contact.url} target="_blank" rel="noreferrer" className="pa-button flex w-full items-center justify-center gap-2 px-5 py-3">
-              Apri chat WhatsApp <ExternalLink className="h-4 w-4" />
-            </a>
-            <button onClick={() => void copyMessage()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-extrabold hover:bg-white/10">
-              <Copy className="h-4 w-4" /> Copia messaggio
-            </button>
-          </div>
+          <p className="mt-3 text-xs text-zinc-500">Lo stato si aggiorna da solo dopo la scansione.</p>
         </div>
       )}
 
-      <div className="relative mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
-        <p className="text-[11px] font-black uppercase tracking-wider text-zinc-500">Messaggio preimpostato</p>
-        <p className="mt-2 text-sm leading-6 text-zinc-300">{contact?.message || "Ciao, voglio aprire la chat con il mio assistente Personale Artificiale."}</p>
-      </div>
-
-      {!whatsappPhone ? (
-        <button onClick={onConfigure} className="relative mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-400/25 bg-blue-500/10 px-4 py-3 text-sm font-extrabold text-blue-100 hover:bg-blue-500/20">
-          <Phone className="h-4 w-4" /> Aggiungi il tuo numero personale
-        </button>
-      ) : (
-        <p className="relative mt-5 flex items-center gap-2 text-xs text-emerald-300">
-          <ShieldCheck className="h-3.5 w-3.5" /> L'assistente ti riconoscerà scrivendo da {whatsappPhone}
+      {full && !isConnected && (
+        <p className="relative mt-5 text-xs leading-5 text-zinc-500">
+          Il numero che scansioni diventa il numero del bot: risponderà a te e a chi autorizzi, non ai tuoi clienti finché non li aggiungi esplicitamente.
         </p>
       )}
     </aside>
   );
 }
 
-function onlyDigits(value: string) {
-  return value.replace(/\D/g, "");
-}
-
-function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
+function WhatsappNumbersCard() {
   const [numbers, setNumbers] = useState<WhatsappNumber[]>([]);
   const [quota, setQuota] = useState<Quota | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,11 +182,15 @@ function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
   const [phone, setPhone] = useState("");
   const [label, setLabel] = useState("");
   const [adding, setAdding] = useState(false);
-  const [addingSelf, setAddingSelf] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [buyingAddon, setBuyingAddon] = useState(false);
   const [quotaExceeded, setQuotaExceeded] = useState(false);
   const [addonNotice, setAddonNotice] = useState("");
+
+  const [pending, setPending] = useState<WhatsappNumberPendingVerification | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -156,15 +223,69 @@ function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
     setQuotaExceeded(false);
     try {
       const result = await backend.addWhatsappNumber({ phone, label });
-      setNumbers(result.numbers);
-      setQuota(result.quota);
-      setPhone("");
-      setLabel("");
+      if ("pendingVerification" in result) {
+        setPending(result);
+        setVerifyCode("");
+      } else {
+        setNumbers(result.numbers);
+        setQuota(result.quota);
+        setPhone("");
+        setLabel("");
+      }
     } catch (cause) {
       if (cause instanceof Error && cause.message.includes("limite")) setQuotaExceeded(true);
       setError(cause instanceof Error ? cause.message : "Aggiunta numero non riuscita.");
     } finally {
       setAdding(false);
+    }
+  };
+
+  const verifyPending = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!pending) return;
+    setVerifying(true);
+    setError("");
+    try {
+      const result = await backend.verifyWhatsappNumber({ numberId: pending.numberId, code: verifyCode });
+      setNumbers(result.numbers);
+      setQuota(result.quota);
+      setPending(null);
+      setVerifyCode("");
+      setPhone("");
+      setLabel("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Codice non corretto.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const resendPending = async () => {
+    if (!pending) return;
+    setError("");
+    try {
+      const result = await backend.resendWhatsappVerification({ numberId: pending.numberId });
+      if ("pendingVerification" in result) setPending(result);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Reinvio non riuscito.");
+    }
+  };
+
+  const resumeVerification = async (number: WhatsappNumber) => {
+    setResendingId(number.id);
+    setError("");
+    try {
+      const result = await backend.resendWhatsappVerification({ numberId: number.id });
+      if ("pendingVerification" in result) {
+        setPending(result);
+        setVerifyCode("");
+      } else {
+        await load();
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Invio codice non riuscito.");
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -196,25 +317,6 @@ function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
   };
 
   const atLimit = quota ? quota.used >= quota.total : false;
-  const ownNumberDigits = contact?.number ? onlyDigits(contact.number) : "";
-  const ownNumberAlreadyAdded = ownNumberDigits ? numbers.some((n) => onlyDigits(n.phone) === ownNumberDigits) : false;
-
-  const addSelfNumber = async () => {
-    if (!contact?.number) return;
-    setAddingSelf(true);
-    setError("");
-    setQuotaExceeded(false);
-    try {
-      const result = await backend.addWhatsappNumber({ phone: contact.number, label: "Io (nota a te stesso)" });
-      setNumbers(result.numbers);
-      setQuota(result.quota);
-    } catch (cause) {
-      if (cause instanceof Error && cause.message.includes("limite")) setQuotaExceeded(true);
-      setError(cause instanceof Error ? cause.message : "Aggiunta numero non riuscita.");
-    } finally {
-      setAddingSelf(false);
-    }
-  };
 
   return (
     <section className="pa-panel p-6 sm:p-7">
@@ -223,31 +325,14 @@ function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
           <Phone className="h-5 w-5" />
         </span>
         <div>
-          <h2 className="font-extrabold">Numeri WhatsApp autorizzati</h2>
-          <p className="text-xs text-zinc-500">Solo questi numeri possono scrivere al tuo assistente</p>
+          <h2 className="font-extrabold">Numeri autorizzati</h2>
+          <p className="text-xs text-zinc-500">Oltre a te, chi altro può scrivere al tuo bot</p>
         </div>
       </div>
 
-      <ul className="mt-4 space-y-1.5 text-xs leading-5 text-zinc-400">
-        <li>• <strong className="text-zinc-300">Il tuo numero</strong> (quello collegato con il QR): aggiungilo qui sotto per parlare con l'assistente aprendo la chat "Messaggi a te stesso" su WhatsApp, invece di scrivere da un altro numero.</li>
-        <li>• <strong className="text-zinc-300">Numeri di altre persone</strong> (socio, familiare, collega…): aggiungili per farli scrivere anche loro al numero del bot e ricevere risposta.</li>
-      </ul>
-
-      {contact?.configured && !ownNumberAlreadyAdded && (
-        <div className="mt-4 rounded-2xl border border-blue-400/25 bg-blue-500/10 p-4">
-          <p className="text-sm font-bold text-blue-100">Vuoi scrivere all'assistente da solo?</p>
-          <p className="mt-1 text-xs leading-5 text-blue-100/80">
-            Aggiungi il numero del bot ({contact.number}) tra i tuoi numeri autorizzati: da quel momento la chat "Messaggi a te stesso" su quel WhatsApp diventa una conversazione con il tuo assistente.
-          </p>
-          <button
-            onClick={() => void addSelfNumber()}
-            disabled={addingSelf || atLimit}
-            className="mt-3 flex items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/15 px-4 py-2.5 text-sm font-extrabold text-blue-100 hover:bg-blue-500/25 disabled:opacity-60"
-          >
-            {addingSelf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Abilita "scrivi a te stesso"
-          </button>
-        </div>
-      )}
+      <p className="mt-4 text-xs leading-5 text-zinc-400">
+        Scrivere "a te stesso" sul numero che hai collegato funziona già in automatico, senza bisogno di aggiungerlo qui. Aggiungi qui solo i numeri di altre persone (socio, familiare, collega…) che vuoi autorizzare a scrivere al bot e ricevere risposta.
+      </p>
 
       {addonNotice && (
         <div role="alert" className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
@@ -278,9 +363,25 @@ function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
           numbers.map((number) => (
             <div key={number.id} className="flex items-center gap-3 rounded-xl border border-white/8 bg-black/20 p-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold">{number.phone}</p>
+                <p className="flex items-center gap-2 text-sm font-bold">
+                  {number.phone}
+                  {!number.verified && (
+                    <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-amber-300">
+                      In attesa di verifica
+                    </span>
+                  )}
+                </p>
                 {number.label && <p className="truncate text-xs text-zinc-500">{number.label}</p>}
               </div>
+              {!number.verified && (
+                <button
+                  onClick={() => void resumeVerification(number)}
+                  disabled={resendingId === number.id}
+                  className="rounded-lg border border-blue-400/25 bg-blue-500/10 px-3 py-1.5 text-xs font-extrabold text-blue-100 hover:bg-blue-500/20 disabled:opacity-60"
+                >
+                  {resendingId === number.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Verifica"}
+                </button>
+              )}
               <button onClick={() => void remove(number.id)} disabled={removingId === number.id} className="rounded-lg p-2 text-zinc-500 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-60" aria-label="Rimuovi numero">
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -289,7 +390,40 @@ function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
         )}
       </div>
 
-      {quotaExceeded || atLimit ? (
+      {pending ? (
+        <form onSubmit={verifyPending} className="mt-5 space-y-3">
+          <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100">
+            {pending.deliveryFailed
+              ? `Non sono riuscito a mandare il codice via WhatsApp a ${pending.phone}: verifica che il tuo bot sia connesso, poi riprova.`
+              : `Ti abbiamo mandato un codice via WhatsApp a ${pending.phone}. Inseriscilo per confermare che il numero è autorizzato.`}
+            {pending.devCode && <p className="mt-2 font-mono text-xs text-emerald-300">Dev code: {pending.devCode}</p>}
+          </div>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Codice ricevuto su WhatsApp</span>
+            <input
+              required
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={verifyCode}
+              onChange={(event) => setVerifyCode(event.target.value.replace(/\D/g, ""))}
+              className="pa-input text-center text-xl tracking-[0.4em]"
+              placeholder="000000"
+            />
+          </label>
+          <button disabled={verifying || verifyCode.length !== 6} className="pa-button flex w-full items-center justify-center gap-2 px-5 py-2.5 text-sm">
+            {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Conferma numero
+          </button>
+          <div className="flex items-center justify-between text-xs">
+            <button type="button" onClick={() => void resendPending()} className="font-bold text-zinc-400 hover:text-white">
+              Rinvia codice
+            </button>
+            <button type="button" onClick={() => { setPending(null); setVerifyCode(""); }} className="font-bold text-zinc-400 hover:text-white">
+              Annulla
+            </button>
+          </div>
+        </form>
+      ) : quotaExceeded || atLimit ? (
         <div className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4">
           <p className="flex items-center gap-2 text-sm font-bold text-amber-200"><Lock className="h-4 w-4" /> Hai raggiunto il limite di numeri del tuo piano</p>
           <p className="mt-1 text-xs text-amber-100/80">Attiva un numero extra a 5€/mese per aggiungerne un altro.</p>
@@ -305,11 +439,12 @@ function WhatsappNumbersCard({ contact }: { contact: WhatsAppContact | null }) {
           </label>
           <label className="block">
             <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Etichetta (facoltativa)</span>
-            <input value={label} onChange={(event) => setLabel(event.target.value)} className="pa-input" placeholder="Es. Io, Socio, Assistente" />
+            <input value={label} onChange={(event) => setLabel(event.target.value)} className="pa-input" placeholder="Es. Socio, Collega" />
           </label>
           <button disabled={adding} className="pa-button flex w-full items-center justify-center gap-2 px-5 py-2.5 text-sm">
             {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Aggiungi numero
           </button>
+          <p className="text-center text-[11px] text-zinc-500">Gli mandiamo un codice via WhatsApp su quel numero per confermare che è autorizzato.</p>
         </form>
       )}
     </section>

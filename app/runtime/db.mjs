@@ -85,6 +85,8 @@ export async function migrate() {
     "ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ",
     "ADD COLUMN IF NOT EXISTS extra_integration_slots INTEGER NOT NULL DEFAULT 0",
     "ADD COLUMN IF NOT EXISTS extra_whatsapp_slots INTEGER NOT NULL DEFAULT 0",
+    "ADD COLUMN IF NOT EXISTS subscription_cycle_months INTEGER",
+    "ADD COLUMN IF NOT EXISTS custom_quote_requested_at TIMESTAMPTZ",
   ];
   for (const definition of userColumns) {
     await query(`ALTER TABLE users ${definition}`);
@@ -187,10 +189,26 @@ export async function migrate() {
   await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS qr_code TEXT");
   await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS last_error TEXT");
   await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'platform_main'");
+  // Da quando ogni account collega il proprio numero (non più un numero unico di piattaforma),
+  // questo è il numero reale letto da Evolution dopo la connessione: usato per riconoscere la chat
+  // "Messaggi a te stesso" e per mostrarlo al cliente, mai chiesto/digitato da lui.
+  await query("ALTER TABLE whatsapp_sessions ADD COLUMN IF NOT EXISTS connected_number TEXT");
   await query("ALTER TABLE whatsapp_sessions DROP CONSTRAINT IF EXISTS whatsapp_sessions_status_check");
   await query(`
     ALTER TABLE whatsapp_sessions ADD CONSTRAINT whatsapp_sessions_status_check
     CHECK (status IN ('not_configured', 'provisioning', 'provisioned', 'qr_ready', 'connecting', 'connected', 'disconnected', 'error'))
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS custom_quote_requests (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      company_size TEXT,
+      use_case TEXT,
+      notes TEXT,
+      status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'closed')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
   `);
 
   await query(`
@@ -391,6 +409,26 @@ export async function migrate() {
   );
   await query("CREATE INDEX IF NOT EXISTS idx_whatsapp_numbers_user ON whatsapp_numbers(user_id)");
 
+  // Prima non c'era alcuna prova che chi registra un numero lo controlli davvero: bastava conoscere
+  // le cifre di un numero altrui per farlo trattare come "autorizzato" (il bot avrebbe risposto a
+  // messaggi di uno sconosciuto usando la knowledge base/i crediti del titolare che l'ha registrato).
+  // Un nuovo numero ora resta "in attesa" finché non si inserisce il codice ricevuto via WhatsApp su
+  // quel numero. I numeri già registrati prima di questo aggiornamento restano validi così come sono
+  // (nessuno deve riverificare un numero che stava già funzionando).
+  await query("ALTER TABLE whatsapp_numbers ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ");
+  await query("ALTER TABLE whatsapp_numbers ADD COLUMN IF NOT EXISTS verification_code_hash TEXT");
+  await query("ALTER TABLE whatsapp_numbers ADD COLUMN IF NOT EXISTS verification_expires_at TIMESTAMPTZ");
+  await query("ALTER TABLE whatsapp_numbers ADD COLUMN IF NOT EXISTS verification_attempts INT NOT NULL DEFAULT 0");
+  // Solo le righe create PRIMA di questa funzionalità (mai avuto un codice di verifica assegnato):
+  // un numero realmente in attesa di verifica ha sempre verification_code_hash valorizzato, quindi
+  // questa condizione non lo tocca neppure se l'app viene riavviata mentre la verifica è in corso.
+  await query("UPDATE whatsapp_numbers SET verified_at = created_at WHERE verified_at IS NULL AND verification_code_hash IS NULL");
+  // Numeri mai verificati e con codice scaduto da più di 7 giorni: liberano lo slot di quota invece
+  // di restare per sempre "in attesa" senza che nessuno completi la verifica.
+  await query(
+    "DELETE FROM whatsapp_numbers WHERE verified_at IS NULL AND verification_expires_at IS NOT NULL AND verification_expires_at < NOW() - INTERVAL '7 days'",
+  );
+
   // Ripopola whatsapp_numbers dal vecchio campo singolo users.whatsapp_phone, una tantum
   // (idempotente: non tocca chi ha già righe in whatsapp_numbers).
   await query(`
@@ -413,6 +451,56 @@ export async function migrate() {
     )
   `);
   await query("CREATE INDEX IF NOT EXISTS idx_addon_subscriptions_user ON addon_subscriptions(user_id)");
+
+  // Canale Telegram: un bot per account (creato dal cliente su @BotFather, mai da noi), token
+  // cifrato come le altre credenziali di integrazioni terze. webhook_secret è generato da noi e
+  // rimandato a Telegram in setWebhook, che poi lo ripresenta in ogni chiamata al webhook
+  // nell'header X-Telegram-Bot-Api-Secret-Token: verificarlo impedisce a chiunque conosca solo
+  // l'URL del webhook di spacciarsi per Telegram.
+  await query(`
+    CREATE TABLE IF NOT EXISTS telegram_bots (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      bot_token_encrypted TEXT NOT NULL,
+      bot_username TEXT,
+      webhook_secret TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'connected' CHECK (status IN ('connected', 'error', 'disconnected')),
+      last_error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  // Chat Telegram autorizzate a parlare con il bot di un account: is_owner marca la prima persona
+  // che ha rivendicato il bot appena collegato (il titolare), le altre sono autorizzazioni successive
+  // — stesso principio dei "numeri WhatsApp autorizzati", ma qui l'identità è un chat_id Telegram.
+  await query(`
+    CREATE TABLE IF NOT EXISTS telegram_chats (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      chat_id TEXT NOT NULL,
+      telegram_username TEXT,
+      label TEXT,
+      is_owner BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(user_id, chat_id)
+    )
+  `);
+  await query("CREATE INDEX IF NOT EXISTS idx_telegram_chats_user ON telegram_chats(user_id)");
+
+  // Un solo codice di autorizzazione "in attesa" per account alla volta: chi lo manda per primo al
+  // bot (in chat privata) diventa un chat autorizzata — la primissima volta è così che il titolare
+  // stesso rivendica il bot appena collegato, le volte successive è come si autorizza chiunque altro.
+  await query(`
+    CREATE TABLE IF NOT EXISTS telegram_pending_verifications (
+      user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      code_hash TEXT NOT NULL,
+      label TEXT,
+      attempts INT NOT NULL DEFAULT 0,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id)");
   await query("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)");

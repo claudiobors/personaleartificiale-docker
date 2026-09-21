@@ -15,7 +15,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { SiteFooter, SiteHeader } from "~/components/SiteChrome";
+import { APP_URL, SiteFooter, SiteHeader } from "~/components/SiteChrome";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -272,65 +272,99 @@ const antiBan = [
   "Numero dedicato della piattaforma, non WhatsApp personale del cliente",
 ];
 
+const guarantees = [
+  {
+    title: "Dati isolati e cancellabili quando vuoi",
+    text: "I tuoi documenti e le tue conversazioni restano separati da quelli di tutti gli altri clienti. Esporti o cancelli tutto dalla dashboard, senza scriverci.",
+  },
+  {
+    title: "Nessun costo di attivazione",
+    text: "Registrazione, configurazione e avvio sono inclusi nel canone. Paghi solo il piano che scegli.",
+  },
+  {
+    title: "Continuità del servizio, non promesse vuote",
+    text: "Monitoriamo l'infrastruttura e interveniamo con priorità sui problemi. Un impegno concreto, non un contratto che nessuno legge.",
+  },
+  {
+    title: "Sistema innovativo, in evoluzione continua",
+    text: "Costruito su modelli di intelligenza artificiale che migliorano di continuo: aggiornamenti e nuove funzioni inclusi nel canone. Ti chiediamo di restare tu al comando sulle decisioni importanti.",
+  },
+];
+
 const plans = [
   {
-    name: "Assistente",
+    id: "assistente-digitale",
+    name: "Assistente Digitale",
     audience: "Per professionisti e piccole attività",
-    price: "97 €",
-    initialCost: "Configurazione iniziale: 399 € una tantum",
+    price: "78,90 €",
+    highlight: false,
     features: [
-      "Un aiuto configurato sulle tue priorità",
-      "Email, agenda e documenti",
-      "Uso tramite WhatsApp o chat",
-      "Infrastruttura, modelli di intelligenza artificiale, token, manutenzione e aggiornamenti inclusi",
+      "1 assistente AI configurato sulle tue priorità",
+      "1 connettore incluso (email, agenda, documenti o Telegram)",
+      "1 numero WhatsApp personale",
+      "200.000 token al mese inclusi",
+      "Infrastruttura, modelli AI, manutenzione e aggiornamenti inclusi",
+      "Nessun costo di attivazione",
     ],
   },
   {
+    id: "ufficio-digitale",
     name: "Ufficio Digitale",
-    audience: "Per studi e gruppi di lavoro",
-    price: "297 €",
-    initialCost: "Configurazione iniziale: 999 € una tantum",
+    audience: "Per studi, PMI e gruppi di lavoro",
+    price: "148,90 €",
+    highlight: true,
     features: [
-      "Più attività coordinate nello stesso servizio",
-      "Email, agenda, documenti e aggiornamenti clienti",
-      "Regole e documenti condivisi",
-      "Infrastruttura, modelli di intelligenza artificiale, token, manutenzione e aggiornamenti inclusi",
+      "Fino a 3 ruoli AI coordinati",
+      "3 connettori inclusi",
+      "2 numeri WhatsApp personali",
+      "700.000 token al mese inclusi",
+      "Infrastruttura, modelli AI, manutenzione e aggiornamenti inclusi",
+      "Nessun costo di attivazione",
     ],
   },
   {
+    id: "su-misura",
     name: "Su misura",
     audience: "Per esigenze e processi più articolati",
     price: "Preventivo",
-    initialCost: "Configurazione iniziale definita nel preventivo",
+    highlight: false,
     features: [
       "Flussi costruiti sulle procedure aziendali",
       "Collegamenti con gli strumenti già usati",
-      "Permessi e controlli personalizzati",
-      "Infrastruttura, modelli di intelligenza artificiale, token, manutenzione e aggiornamenti inclusi",
+      "Più assistenti e permessi personalizzati",
+      "Preventivo dopo una breve richiesta in app",
     ],
   },
 ];
 
 const faqs = [
   {
+    q: "Come inizio? Devo prima parlare con qualcuno?",
+    a: "No, puoi registrarti e attivare il piano scelto direttamente dal sito, in pochi minuti: crei l'account, scegli il piano (anche il ciclo di pagamento) e completi il pagamento sicuro con Stripe. Solo per il piano Su misura raccogliamo prima qualche informazione per preparare il preventivo.",
+  },
+  {
     q: "Devo essere esperto di tecnologia?",
     a: "No. Usi il servizio scrivendo in chat come faresti con un collaboratore. La preparazione tecnica viene gestita per te.",
   },
   {
-    q: "Cosa è compreso nel canone?",
-    a: "Per l’utilizzo previsto dal piano sono compresi server, infrastruttura, accesso ai modelli di intelligenza artificiale, token, manutenzione, correzioni, continuità del servizio e aggiornamenti. Non devi aprire account tecnici o pagare fatture separate per questi elementi.",
+    q: "Cosa è compreso nel canone? C'è un costo di attivazione?",
+    a: "Per l'utilizzo previsto dal piano sono compresi server, infrastruttura, accesso ai modelli di intelligenza artificiale, token, manutenzione, correzioni, continuità del servizio e aggiornamenti. Non c'è alcun costo di attivazione: paghi solo il canone del piano scelto.",
+  },
+  {
+    q: "Conviene pagare 3, 6 o 12 mesi in anticipo?",
+    a: "Sì, se sai già che userai il servizio a lungo: pagando l'intero ciclo in anticipo ottieni uno sconto crescente (fino al 15% sui 12 mesi) rispetto al pagamento mese per mese. Puoi comunque iniziare con il ciclo mensile e cambiare in seguito.",
   },
   {
     q: "Il servizio agisce senza chiedere?",
-    a: "Decidi tu permessi e regole. Può preparare un’azione e chiederti conferma prima di completarla, soprattutto quando è importante.",
+    a: "Decidi tu permessi e regole. Può preparare un'azione e chiederti conferma prima di completarla, soprattutto quando è importante.",
+  },
+  {
+    q: "I miei dati e il mio numero WhatsApp sono al sicuro?",
+    a: "Sì: i dati di ogni cliente sono isolati e cancellabili su richiesta, e il numero WhatsApp è protetto da policy anti-ban (limiti di invio, risposte solo a conversazioni consentite). Il dettaglio è nella pagina Garanzie e policy.",
   },
   {
     q: "Quanto tempo posso recuperare?",
     a: "Dipende dalle attività e dal modo in cui lavori. Il calcolatore fornisce una stima indicativa, non una promessa di risultato.",
-  },
-  {
-    q: "Il costo iniziale è incluso nel canone?",
-    a: "No. Quando previsto, il costo di configurazione iniziale è mostrato separatamente dal canone mensile.",
   },
 ];
 
@@ -359,14 +393,17 @@ function Home() {
                 aggiornamenti, mentre tu mantieni il controllo.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link to="/calcolatore" className="pa-button">
-                  Calcola le ore che puoi liberare{" "}
+                <a href={APP_URL + "/"} className="pa-button">
+                  Inizia ora, registrati in 2 minuti{" "}
                   <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a href="#cosa-fa" className="pa-button-secondary">
-                  Scopri come ti aiuta
                 </a>
+                <Link to="/calcolatore" className="pa-button-secondary">
+                  Calcola le ore che puoi liberare
+                </Link>
               </div>
+              <p className="pa-muted mt-4 text-xs">
+                Nessun costo di attivazione. Disdici quando vuoi.
+              </p>
               <div className="mt-8 grid max-w-2xl grid-cols-1 gap-3 min-[430px]:grid-cols-3">
                 {[
                   ["Una chat", "per dare istruzioni"],
@@ -533,6 +570,41 @@ function Home() {
           </div>
         </section>
 
+        <section className="pa-section">
+          <div className="pa-container">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="pa-kicker">Garanzie e policy</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Perché puoi fidarti prima di iscriverti.
+              </h2>
+              <p className="pa-muted mt-5 text-lg leading-8">
+                Siamo un sistema innovativo e in evoluzione continua: proprio per questo
+                mettiamo per iscritto cosa garantiamo e dove sono i limiti, senza promesse
+                vuote.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-5 md:grid-cols-2">
+              {guarantees.map((item) => (
+                <article key={item.title} className="pa-card p-6">
+                  <ShieldCheck className="h-6 w-6 text-blue-300" aria-hidden="true" />
+                  <h3 className="mt-4 text-lg font-extrabold">{item.title}</h3>
+                  <p className="pa-muted mt-2 text-sm leading-6">{item.text}</p>
+                </article>
+              ))}
+            </div>
+            <p className="pa-muted mx-auto mt-8 max-w-2xl text-center text-sm">
+              Il dettaglio completo è nella pagina{" "}
+              <Link to="/garanzie" className="text-blue-300 underline">
+                Garanzie e policy
+              </Link>{" "}
+              e nei{" "}
+              <Link to="/termini-servizio" className="text-blue-300 underline">
+                Termini di servizio
+              </Link>.
+            </p>
+          </div>
+        </section>
+
         <section id="prezzi" className="pa-section">
           <div className="pa-container">
             <div className="mx-auto max-w-3xl text-center">
@@ -543,26 +615,30 @@ function Home() {
               <p className="pa-muted mt-5 leading-7">
                 Ogni canone include infrastruttura, modelli di intelligenza
                 artificiale, token e consumi previsti, manutenzione e
-                aggiornamenti. L’eventuale configurazione iniziale è indicata a
-                parte.
+                aggiornamenti. Nessun costo di attivazione.
+              </p>
+              <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-semibold text-emerald-200">
+                Paga 3, 6 o 12 mesi in anticipo e risparmia fino al 15%
               </p>
             </div>
             <div className="mt-12 grid gap-6 lg:grid-cols-3">
               {plans.map((plan) => (
                 <article
                   key={plan.name}
-                  className="pa-card flex flex-col p-6 sm:p-7"
+                  className={`pa-card flex flex-col p-6 sm:p-7 ${plan.highlight ? "border-blue-400/40" : ""}`}
                 >
                   <div>
+                    {plan.highlight && (
+                      <span className="mb-3 inline-block rounded-full bg-blue-500 px-3 py-1 text-[10px] font-black uppercase tracking-wider">
+                        Più completo
+                      </span>
+                    )}
                     <h3 className="text-2xl font-extrabold">{plan.name}</h3>
                     <p className="pa-muted mt-2 text-sm">{plan.audience}</p>
                     <p className="mt-7 text-4xl font-extrabold">{plan.price}</p>
                     {plan.price !== "Preventivo" && (
-                      <p className="mt-1 text-sm text-slate-400">al mese</p>
+                      <p className="mt-1 text-sm text-slate-400">al mese, nessun costo di attivazione</p>
                     )}
-                    <p className="mt-4 rounded-xl border border-blue-500/20 bg-blue-500/10 p-3 text-sm font-semibold text-blue-200">
-                      {plan.initialCost}
-                    </p>
                     <ul className="mt-6 space-y-4">
                       {plan.features.map((feature) => (
                         <li
@@ -576,10 +652,10 @@ function Home() {
                     </ul>
                   </div>
                   <a
-                    href={`mailto:info@personaleartificiale.it?subject=Informazioni%20piano%20${encodeURIComponent(plan.name)}`}
-                    className="pa-button-secondary mt-8 w-full"
+                    href={`${APP_URL}/?plan=${plan.id}`}
+                    className={`mt-8 w-full ${plan.highlight ? "pa-button" : "pa-button-secondary"}`}
                   >
-                    Chiedi informazioni
+                    {plan.id === "su-misura" ? "Registrati e richiedi il preventivo" : "Registrati e attiva ora"}
                   </a>
                 </article>
               ))}
@@ -640,11 +716,17 @@ function Home() {
               </h2>
               <p className="pa-muted relative mx-auto mt-4 max-w-2xl">
                 Inserisci pochi dati e ottieni una stima indicativa basata sulle
-                tue attività ripetitive.
+                tue attività ripetitive. Oppure salta la stima e registrati subito:
+                nessun costo di attivazione, disdici quando vuoi.
               </p>
-              <Link to="/calcolatore" className="pa-button relative mt-7">
-                Calcola le ore che puoi liberare <Clock3 className="h-4 w-4" />
-              </Link>
+              <div className="relative mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+                <a href={APP_URL + "/"} className="pa-button">
+                  Registrati ora <ArrowRight className="h-4 w-4" />
+                </a>
+                <Link to="/calcolatore" className="pa-button-secondary">
+                  Calcola le ore che puoi liberare <Clock3 className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>

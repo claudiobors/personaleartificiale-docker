@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Bot,
   ClipboardList,
@@ -13,7 +13,6 @@ import {
   Users as UsersIcon,
   Wallet,
 } from "lucide-react";
-import { backend } from "./api";
 import { Shell, type NavGroup } from "./Shell";
 import { AdminLogs } from "./sections/AdminLogs";
 import { AdminUsers } from "./sections/AdminUsers";
@@ -27,7 +26,7 @@ import { Integrations } from "./sections/Integrations";
 import { Knowledge } from "./sections/Knowledge";
 import { Overview } from "./sections/Overview";
 import { WhatsAppClientSection } from "./sections/WhatsAppClient";
-import type { KnowledgeFile, OnboardingData, Plan, UserProfile, WhatsAppContact } from "./types";
+import type { KnowledgeFile, OnboardingData, Plan, UserProfile } from "./types";
 
 type SectionKey =
   | "overview"
@@ -68,7 +67,7 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   settings: "Impostazioni",
   "admin-users": "Amministrazione · Utenti",
   "admin-logs": "Amministrazione · Log",
-  "admin-whatsapp": "Amministrazione · WhatsApp",
+  "admin-whatsapp": "Amministrazione · WhatsApp clienti",
 };
 
 export function ControlPanel({
@@ -90,11 +89,6 @@ export function ControlPanel({
     if (params.get("addon") === "extra_whatsapp_number") return "whatsapp-client";
     return "overview";
   });
-  const [whatsAppContact, setWhatsAppContact] = useState<WhatsAppContact | null>(null);
-
-  useEffect(() => {
-    backend.whatsappContact().then((result) => setWhatsAppContact(result.contact)).catch(() => undefined);
-  }, []);
 
   const navGroups: NavGroup[] = [
     {
@@ -132,7 +126,7 @@ export function ControlPanel({
       items: [
         { key: "admin-users", label: "Utenti", icon: UsersIcon },
         { key: "admin-logs", label: "Log", icon: ClipboardList },
-        { key: "admin-whatsapp", label: "WhatsApp piattaforma", icon: ShieldCheck },
+        { key: "admin-whatsapp", label: "WhatsApp clienti", icon: ShieldCheck },
       ],
     });
   }
@@ -153,20 +147,13 @@ export function ControlPanel({
           plan={plan}
           onboarding={onboarding}
           stats={stats}
-          whatsAppContact={whatsAppContact}
           onNavigate={(key) => setActive(key as SectionKey)}
           onEditProfile={onEditProfile}
         />
       )}
       {active === "knowledge" && <Knowledge files={files} onFilesChange={onFilesChange} />}
       {active === "agent" && <AgentProfile onboarding={onboarding} onEdit={onEditProfile} />}
-      {active === "whatsapp-client" && (
-        <WhatsAppClientSection
-          contact={whatsAppContact}
-          whatsappPhone={user.whatsappPhone || ""}
-          onGoToSettings={() => setActive("settings")}
-        />
-      )}
+      {active === "whatsapp-client" && <WhatsAppClientSection />}
       {active === "integrations" && <Integrations />}
       {active === "email-drafts" && <EmailDrafts />}
       {active === "credits" && <Credits user={user} plan={plan} />}

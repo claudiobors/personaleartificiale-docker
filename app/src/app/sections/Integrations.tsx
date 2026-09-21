@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
   Calendar,
   CheckCircle2,
   Clock,
@@ -12,14 +13,16 @@ import {
   Plus,
   PowerOff,
   RefreshCw,
+  Send,
   Sheet,
+  Trash2,
   Unplug,
   Webhook,
 } from "lucide-react";
 import { backend } from "../api";
 import { PageHeader } from "../Shell";
 import { formatDate } from "../format";
-import type { CalendarStatus, DriveStatus, EmailStatus, Quota } from "../types";
+import type { CalendarStatus, DriveStatus, EmailStatus, Quota, TelegramAuthorization, TelegramStatus } from "../types";
 
 interface EmailPreset {
   label: string;
@@ -175,6 +178,7 @@ export function Integrations() {
       <div>
         <p className="mb-3 text-xs font-black uppercase tracking-widest text-zinc-500">Disponibili ora</p>
         <div className="grid gap-5 lg:grid-cols-2">
+          <TelegramCard />
           <GoogleCalendarCard atLimit={atLimit} onQuotaChange={loadQuota} />
           <GmailCard atLimit={atLimit} onQuotaChange={loadQuota} />
           <GoogleDriveCard atLimit={atLimit} onQuotaChange={loadQuota} />
@@ -187,10 +191,198 @@ export function Integrations() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ComingSoonCard icon={Webhook} name="Webhook personalizzato" description="Invia eventi (nuovo lead, nuovo messaggio) a Zapier, Make o un URL a tua scelta." />
           <ComingSoonCard icon={Sheet} name="Google Sheets" description="Usa un foglio come listino/orari sempre aggiornato per l'assistente." />
-          <ComingSoonCard icon={Mail} name="Telegram" description="Un canale in più con lo stesso assistente, senza numero di telefono." />
         </div>
       </div>
     </div>
+  );
+}
+
+function TelegramCard() {
+  const [status, setStatus] = useState<TelegramStatus | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [token, setToken] = useState("");
+  const [connecting, setConnecting] = useState(false);
+  const [claim, setClaim] = useState<TelegramAuthorization | null>(null);
+  const [requestingAuth, setRequestingAuth] = useState(false);
+  const [authLabel, setAuthLabel] = useState("");
+  const [removingChatId, setRemovingChatId] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setStatus(await backend.telegramStatus());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Stato Telegram non disponibile.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const connect = async () => {
+    setConnecting(true);
+    setError("");
+    try {
+      const result = await backend.telegramConnect(token);
+      setToken("");
+      if (result.claim) setClaim(result.claim);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Collegamento bot non riuscito.");
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const disconnect = async () => {
+    if (!window.confirm("Scollegare il bot Telegram? Smetterà di rispondere e tutte le chat autorizzate andranno rifatte se lo ricolleghi.")) return;
+    setLoading(true);
+    setError("");
+    try {
+      setStatus(await backend.telegramDisconnect());
+      setClaim(null);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Disconnessione non riuscita.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestAuth = async () => {
+    setRequestingAuth(true);
+    setError("");
+    try {
+      const result = await backend.telegramAuthorize(authLabel || undefined);
+      setClaim(result);
+      setAuthLabel("");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Generazione codice non riuscita.");
+    } finally {
+      setRequestingAuth(false);
+    }
+  };
+
+  const removeChat = async (chatId: string) => {
+    if (!window.confirm("Rimuovere questa chat? Smetterà di poter scrivere al bot.")) return;
+    setRemovingChatId(chatId);
+    setError("");
+    try {
+      setStatus(await backend.telegramRemoveChat(chatId));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Rimozione non riuscita.");
+    } finally {
+      setRemovingChatId(null);
+    }
+  };
+
+  const connected = status?.status === "connected";
+  const hasOwner = status?.chats.some((chat) => chat.isOwner) ?? false;
+
+  return (
+    <section className="pa-panel p-6 sm:p-7">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/10 text-sky-300">
+            <Send className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="font-extrabold">Telegram</h2>
+            <p className="text-xs text-zinc-500">Un canale in più con lo stesso assistente, senza numero di telefono</p>
+          </div>
+        </div>
+        <button onClick={() => void load()} disabled={loading} className="rounded-lg p-2 text-zinc-500 hover:bg-white/5 hover:text-white disabled:opacity-60" aria-label="Aggiorna">
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        </button>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <p className="flex items-center gap-2 text-sm font-bold">
+          {connected ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Unplug className="h-4 w-4 text-zinc-500" />}
+          {connected ? `Collegato · @${status?.botUsername}` : status?.status === "error" ? "Errore" : "Non collegato"}
+        </p>
+        {status?.lastError && <p className="mt-2 text-xs text-red-300">{status.lastError}</p>}
+      </div>
+
+      {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+
+      {!connected ? (
+        <div className="mt-5 space-y-3">
+          <p className="text-xs leading-5 text-zinc-500">
+            Crea un bot gratuito su Telegram parlando con <strong className="text-zinc-300">@BotFather</strong> (comando <code>/newbot</code>), poi incolla qui il token che ti dà.
+          </p>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-extrabold text-zinc-300">Token del bot</span>
+            <input value={token} onChange={(event) => setToken(event.target.value)} className="pa-input font-mono text-xs" placeholder="123456789:AAExampleTokenFromBotFather" />
+          </label>
+          <button onClick={() => void connect()} disabled={connecting || !token.trim()} className="pa-button flex w-full items-center justify-center gap-2 px-5 py-3">
+            {connecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Collega bot
+          </button>
+        </div>
+      ) : (
+        <div className="mt-5 space-y-4">
+          {!hasOwner && !claim && (
+            <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 p-4 text-xs leading-5 text-amber-100/80">
+              Il bot è collegato ma nessuno l'ha ancora rivendicato: genera un codice qui sotto e mandalo tu stesso al bot su Telegram per diventarne il titolare.
+            </div>
+          )}
+
+          {claim && (
+            <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4">
+              <p className="text-sm font-bold text-blue-100">
+                {hasOwner ? "Codice di autorizzazione pronto" : "Rivendica il tuo bot"}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-blue-100/80">
+                Apri Telegram, cerca <strong>@{claim.botUsername || status?.botUsername}</strong>, avvia la chat (/start) e mandagli questo codice come messaggio:
+              </p>
+              <p className="mt-3 text-center font-mono text-2xl font-black tracking-[0.3em] text-emerald-300">{claim.code}</p>
+              <p className="mt-2 text-center text-[11px] text-zinc-500">Scade tra {claim.expiresInMinutes} minuti.</p>
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <p className="text-xs font-extrabold uppercase tracking-wider text-zinc-500">Chat autorizzate</p>
+            <div className="mt-3 space-y-2">
+              {!status?.chats.length ? (
+                <p className="text-xs text-zinc-500">Nessuna chat ha ancora rivendicato il bot.</p>
+              ) : (
+                status.chats.map((chat) => (
+                  <div key={chat.chatId} className="flex items-center gap-3 rounded-xl border border-white/8 bg-black/20 p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 truncate text-sm font-bold">
+                        {chat.username ? `@${chat.username}` : chat.chatId}
+                        {chat.isOwner && (
+                          <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-emerald-300">
+                            Titolare
+                          </span>
+                        )}
+                      </p>
+                      {chat.label && <p className="truncate text-xs text-zinc-500">{chat.label}</p>}
+                    </div>
+                    <button onClick={() => void removeChat(chat.chatId)} disabled={removingChatId === chat.chatId} className="rounded-lg p-2 text-zinc-500 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-60" aria-label="Rimuovi chat">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input value={authLabel} onChange={(event) => setAuthLabel(event.target.value)} className="pa-input flex-1" placeholder="Etichetta (facoltativa, es. Socio)" />
+            <button onClick={() => void requestAuth()} disabled={requestingAuth} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-extrabold hover:bg-white/10 disabled:opacity-60 sm:w-auto">
+              {requestingAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Genera codice
+            </button>
+          </div>
+
+          <button onClick={() => void disconnect()} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-400/25 bg-red-500/10 px-5 py-3 text-sm font-extrabold text-red-200 hover:bg-red-500/20 disabled:opacity-60">
+            <PowerOff className="h-4 w-4" /> Scollega bot
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 

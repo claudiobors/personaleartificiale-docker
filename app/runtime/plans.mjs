@@ -1,46 +1,53 @@
+export const CYCLES = [
+  { id: "1m", months: 1, label: "Mensile", shortLabel: "1 mese", discountPercent: 0 },
+  { id: "3m", months: 3, label: "Ogni 3 mesi", shortLabel: "3 mesi", discountPercent: 5 },
+  { id: "6m", months: 6, label: "Ogni 6 mesi", shortLabel: "6 mesi", discountPercent: 10 },
+  { id: "12m", months: 12, label: "Ogni 12 mesi", shortLabel: "12 mesi", discountPercent: 15 },
+];
+
 export const PLANS = {
-  "assistente-esecutivo": {
-    id: "assistente-esecutivo",
-    name: "Assistente Esecutivo",
-    tagline: "Il tuo braccio destro digitale",
+  "assistente-digitale": {
+    id: "assistente-digitale",
+    name: "Assistente Digitale",
+    tagline: "Il tuo primo collaboratore AI",
     description: "Per professionisti, freelance e piccole attività che vogliono delegare comunicazioni e lavoro ripetitivo.",
-    setupFee: 39900,
-    monthlyPrice: 9700,
-    includedTokens: 250000,
-    maxDocuments: 50,
-    includedIntegrations: 2,
+    monthlyPrice: 7890,
+    includedTokens: 200000,
+    maxDocuments: 60,
+    includedIntegrations: 1,
     includedWhatsappNumbers: 1,
-    stripeMonthlyPriceEnv: "STRIPE_PRICE_EXECUTIVE_MONTHLY",
-    stripeSetupPriceEnv: "STRIPE_PRICE_EXECUTIVE_SETUP",
+    stripePriceEnvPrefix: "STRIPE_PRICE_ASSISTENTE_DIGITALE",
     features: [
       "1 assistente AI personale",
       "Knowledge base RAG aziendale",
-      "Fino a 50 documenti",
+      "Fino a 60 documenti",
       "Configurazione tono, regole e obiettivi",
       "1 numero WhatsApp personale",
-      "Fino a 2 integrazioni incluse",
+      "1 connettore incluso (Gmail, Calendar, Drive o Telegram)",
+      "200.000 token al mese inclusi",
+      "Nessun costo di attivazione",
     ],
   },
   "ufficio-digitale": {
     id: "ufficio-digitale",
-    name: "L'Ufficio Digitale",
+    name: "Ufficio Digitale",
     tagline: "Un team digitale per la tua impresa",
     description: "Per PMI, studi e agenzie che vogliono automatizzare più processi e gestire una base informativa estesa.",
-    setupFee: 99900,
-    monthlyPrice: 29700,
-    includedTokens: 1000000,
+    monthlyPrice: 14890,
+    includedTokens: 700000,
     maxDocuments: 250,
-    includedIntegrations: 6,
+    includedIntegrations: 3,
     includedWhatsappNumbers: 2,
-    stripeMonthlyPriceEnv: "STRIPE_PRICE_OFFICE_MONTHLY",
-    stripeSetupPriceEnv: "STRIPE_PRICE_OFFICE_SETUP",
+    stripePriceEnvPrefix: "STRIPE_PRICE_UFFICIO_DIGITALE",
     features: [
       "Fino a 3 ruoli AI coordinati",
       "Knowledge base RAG avanzata",
       "Fino a 250 documenti",
       "Configurazione processi e priorità",
       "2 numeri WhatsApp personali",
-      "Fino a 6 integrazioni incluse",
+      "3 connettori inclusi (Gmail, Calendar, Drive, Telegram...)",
+      "700.000 token al mese inclusi",
+      "Nessun costo di attivazione",
     ],
     highlighted: true,
   },
@@ -86,16 +93,59 @@ export const CREDIT_PACKS = {
   },
 };
 
+export function getCycle(cycleId) {
+  return CYCLES.find((cycle) => cycle.id === cycleId) ?? null;
+}
+
+// Prezzo totale del ciclo, scontato e arrotondato al centesimo: chi paga 12 mesi in
+// un colpo solo con il 15% di sconto deve vedere lo stesso numero sia sul sito che
+// nella sessione Stripe, quindi questa è l'UNICA funzione che lo calcola.
+export function cyclePrice(plan, cycle) {
+  const fullPrice = plan.monthlyPrice * cycle.months;
+  return Math.round(fullPrice * (1 - cycle.discountPercent / 100));
+}
+
+function cycleStripeEnv(plan, cycle) {
+  return `${plan.stripePriceEnvPrefix}_${cycle.id.toUpperCase()}`;
+}
+
+function planCyclesPublic(plan) {
+  return CYCLES.map((cycle) => {
+    const total = cyclePrice(plan, cycle);
+    const fullPrice = plan.monthlyPrice * cycle.months;
+    const savings = fullPrice - total;
+    return {
+      id: cycle.id,
+      months: cycle.months,
+      label: cycle.label,
+      shortLabel: cycle.shortLabel,
+      discountPercent: cycle.discountPercent,
+      totalPrice: total,
+      totalPriceFormatted: euro(total),
+      monthlyEquivalent: Math.round(total / cycle.months),
+      monthlyEquivalentFormatted: euro(Math.round(total / cycle.months)),
+      savingsFormatted: savings > 0 ? euro(savings) : null,
+    };
+  });
+}
+
 export function publicPlans() {
-  return Object.values(PLANS).map(({ stripeMonthlyPriceEnv, stripeSetupPriceEnv, ...plan }) => ({
+  return Object.values(PLANS).map(({ stripePriceEnvPrefix, ...plan }) => ({
     ...plan,
-    setupFeeFormatted: euro(plan.setupFee),
     monthlyPriceFormatted: euro(plan.monthlyPrice),
+    cycles: planCyclesPublic(plan),
   }));
 }
 
 export function getPlan(planId) {
   return PLANS[planId] ?? null;
+}
+
+export function getPlanCycleStripeEnv(planId, cycleId) {
+  const plan = getPlan(planId);
+  const cycle = getCycle(cycleId);
+  if (!plan || !cycle) return null;
+  return cycleStripeEnv(plan, cycle);
 }
 
 export function publicCreditPacks() {
@@ -120,6 +170,6 @@ export function euro(cents) {
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
     currency: "EUR",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(cents / 100);
 }
