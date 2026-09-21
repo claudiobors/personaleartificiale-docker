@@ -70,6 +70,17 @@ export interface Addon {
   priceFormatted: string;
 }
 
+export interface Connector {
+  id: string;
+  name: string;
+  category: string;
+  tagline: string;
+  icon: string;
+  kind: "oauth" | "manual" | "token";
+  countsTowardQuota: boolean;
+  status: "live" | "coming_soon";
+}
+
 export interface Quota {
   included: number;
   extra: number;
@@ -135,6 +146,17 @@ export interface AdminWhatsAppSession {
   instanceName: string | null;
   status: WhatsAppSession["status"];
   connectedNumber: string | null;
+  lastError: string | null;
+  updatedAt: string | null;
+}
+
+export interface AdminTelegramBot {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  botUsername: string | null;
+  status: "connected" | "error" | "disconnected";
+  chatsCount: number;
   lastError: string | null;
   updatedAt: string | null;
 }

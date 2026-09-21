@@ -145,6 +145,30 @@ export async function connectTelegramBot(userId, token, origin) {
   return { botUsername: me.username, claim };
 }
 
+// Pannello admin, stesso principio di listAllWhatsAppSessions in evolution.mjs: solo una
+// panoramica di stato per assistenza (connesso/errore, username del bot, quante chat lo hanno
+// autorizzato) — mai il token del bot né il contenuto dei messaggi di un cliente.
+export async function listAllTelegramBots() {
+  const result = await query(
+    `SELECT tb.user_id, tb.bot_username, tb.status, tb.last_error, tb.updated_at,
+            u.name, u.email,
+            (SELECT COUNT(*)::int FROM telegram_chats tc WHERE tc.user_id = tb.user_id) AS chats_count
+     FROM telegram_bots tb
+     JOIN users u ON u.id = tb.user_id
+     ORDER BY tb.updated_at DESC`,
+  );
+  return result.rows.map((row) => ({
+    userId: row.user_id,
+    userName: row.name,
+    userEmail: row.email,
+    botUsername: row.bot_username,
+    status: row.status,
+    chatsCount: row.chats_count,
+    lastError: row.last_error,
+    updatedAt: row.updated_at,
+  }));
+}
+
 export async function disconnectTelegramBot(userId) {
   const bot = await loadBot(userId);
   if (!bot) throw apiError(404, "Nessun bot Telegram da disconnettere.");

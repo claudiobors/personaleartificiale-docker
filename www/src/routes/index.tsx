@@ -1,18 +1,28 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
+  Calendar,
   CalendarDays,
   Check,
   ChevronDown,
+  Clock,
   Clock3,
   FileText,
   FolderCheck,
+  FolderOpen,
+  Inbox,
+  KanbanSquare,
   Mail,
   MessageCircle,
+  MessageSquare,
+  NotebookText,
+  Receipt,
   Send,
+  Sheet,
   ShieldCheck,
   Sparkles,
   UsersRound,
+  Webhook,
 } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { APP_URL, SiteFooter, SiteHeader } from "~/components/SiteChrome";
@@ -250,6 +260,10 @@ const platformPillars = [
     text: "Il numero principale è gestito dalla piattaforma. Ogni utente registra il proprio numero personale e parla solo con il proprio bot, senza trasformare il suo WhatsApp in un risponditore per altri.",
   },
   {
+    title: "Anche su Telegram, senza numero di telefono",
+    text: "Oltre a WhatsApp, ogni piano include il canale Telegram: basta creare gratuitamente un bot con @BotFather e collegarlo in dashboard. Stesso assistente, stessa knowledge base, un canale in più per chi lo preferisce.",
+  },
+  {
     title: "Crediti e Stripe automatici",
     text: "Ogni piano include token. Quando finiscono, l'utente può acquistare pacchetti extra in dashboard o ricevere dal bot un link Stripe sicuro.",
   },
@@ -261,6 +275,20 @@ const platformPillars = [
     title: "Sicurezza by design",
     text: "Sessioni sicure, OTP login, webhook firmati, permessi admin, rate limit e isolamento tenant riducono rischi operativi e accessi impropri.",
   },
+];
+
+const connectors = [
+  { icon: Calendar, name: "Google Calendar", tagline: "Propone orari liberi, crea appuntamenti solo dopo conferma.", available: true },
+  { icon: Mail, name: "Gmail", tagline: "Legge le email in arrivo e prepara le bozze di risposta.", available: true },
+  { icon: FolderOpen, name: "Google Drive", tagline: "Cerca, legge e archivia documenti su richiesta.", available: true },
+  { icon: Inbox, name: "Altra casella email", tagline: "Libero, Virgilio, TIM, Yahoo, Outlook, Aruba e altri.", available: true },
+  { icon: Send, name: "Telegram", tagline: "Un canale in più, senza numero di telefono, sempre incluso.", available: true },
+  { icon: Sheet, name: "Google Sheets", tagline: "Un foglio come listino o magazzino sempre aggiornato.", available: false },
+  { icon: Webhook, name: "Webhook personalizzato", tagline: "Colleghi Zapier, Make o un tuo sistema interno.", available: false },
+  { icon: Receipt, name: "Fatturazione", tagline: "Preventivi e stato fatture direttamente in chat.", available: false },
+  { icon: NotebookText, name: "Notion", tagline: "Pagine Notion come base di conoscenza viva.", available: false },
+  { icon: MessageSquare, name: "Slack", tagline: "Un altro canale per il team.", available: false },
+  { icon: KanbanSquare, name: "Trello", tagline: "Schede aggiornate a partire dai messaggi in chat.", available: false },
 ];
 
 const antiBan = [
@@ -300,7 +328,8 @@ const plans = [
     highlight: false,
     features: [
       "1 assistente AI configurato sulle tue priorità",
-      "1 connettore incluso (email, agenda, documenti o Telegram)",
+      "Canale WhatsApp e Telegram sempre inclusi",
+      "1 connettore a scelta dal marketplace",
       "1 numero WhatsApp personale",
       "200.000 token al mese inclusi",
       "Infrastruttura, modelli AI, manutenzione e aggiornamenti inclusi",
@@ -315,7 +344,8 @@ const plans = [
     highlight: true,
     features: [
       "Fino a 3 ruoli AI coordinati",
-      "3 connettori inclusi",
+      "Canale WhatsApp e Telegram sempre inclusi",
+      "3 connettori a scelta dal marketplace",
       "2 numeri WhatsApp personali",
       "700.000 token al mese inclusi",
       "Infrastruttura, modelli AI, manutenzione e aggiornamenti inclusi",
@@ -542,6 +572,47 @@ function Home() {
                 <article key={item.title} className="pa-card p-6">
                   <h3 className="text-xl font-extrabold">{item.title}</h3>
                   <p className="pa-muted mt-3 text-sm leading-7">{item.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="pa-section">
+          <div className="pa-container">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="pa-kicker">Marketplace connettori</span>
+              <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-5xl">
+                Colleghi solo quello che ti serve.
+              </h2>
+              <p className="pa-muted mt-5 text-lg leading-8">
+                Ogni piano include un numero di connettori a scelta dal marketplace. Puoi
+                sceglierne uno qualsiasi tra quelli disponibili e aggiungerne altri quando vuoi.
+                Stiamo continuando ad ampliare il catalogo.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {connectors.map(({ icon: Icon, name, tagline, available }) => (
+                <article
+                  key={name}
+                  className={`pa-card flex flex-col gap-3 p-5 ${available ? "" : "opacity-70"}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-500/25 bg-blue-500/10 text-blue-300">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    {available ? (
+                      <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">
+                        Disponibile
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        <Clock className="h-3 w-3" /> Presto
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-extrabold">{name}</h3>
+                  <p className="pa-muted text-xs leading-5">{tagline}</p>
                 </article>
               ))}
             </div>

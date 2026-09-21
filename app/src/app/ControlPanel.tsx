@@ -8,6 +8,7 @@ import {
   Mail,
   MessageCircle,
   Plug,
+  Send,
   Settings,
   ShieldCheck,
   Users as UsersIcon,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { Shell, type NavGroup } from "./Shell";
 import { AdminLogs } from "./sections/AdminLogs";
+import { AdminTelegram } from "./sections/AdminTelegram";
 import { AdminUsers } from "./sections/AdminUsers";
 import { AdminWhatsApp } from "./sections/AdminWhatsApp";
 import { AccountSettings } from "./sections/AccountSettings";
@@ -40,7 +42,8 @@ type SectionKey =
   | "settings"
   | "admin-users"
   | "admin-logs"
-  | "admin-whatsapp";
+  | "admin-whatsapp"
+  | "admin-telegram";
 
 interface Props {
   user: UserProfile;
@@ -62,12 +65,13 @@ const SECTION_LABELS: Record<SectionKey, string> = {
   "whatsapp-client": "WhatsApp",
   credits: "Crediti",
   billing: "Fatturazione",
-  integrations: "Integrazioni",
+  integrations: "Connettori",
   "email-drafts": "Bozze email",
   settings: "Impostazioni",
   "admin-users": "Amministrazione · Utenti",
   "admin-logs": "Amministrazione · Log",
   "admin-whatsapp": "Amministrazione · WhatsApp clienti",
+  "admin-telegram": "Amministrazione · Telegram clienti",
 };
 
 export function ControlPanel({
@@ -101,9 +105,9 @@ export function ControlPanel({
       ],
     },
     {
-      label: "Integrazioni",
+      label: "Connettori",
       items: [
-        { key: "integrations", label: "Calendario ed email", icon: Plug },
+        { key: "integrations", label: "Marketplace connettori", icon: Plug },
         { key: "email-drafts", label: "Bozze email", icon: Mail },
       ],
     },
@@ -127,6 +131,7 @@ export function ControlPanel({
         { key: "admin-users", label: "Utenti", icon: UsersIcon },
         { key: "admin-logs", label: "Log", icon: ClipboardList },
         { key: "admin-whatsapp", label: "WhatsApp clienti", icon: ShieldCheck },
+        { key: "admin-telegram", label: "Telegram clienti", icon: Send },
       ],
     });
   }
@@ -169,6 +174,7 @@ export function ControlPanel({
       {active === "admin-users" && user.isAdmin && <AdminUsers />}
       {active === "admin-logs" && user.isAdmin && <AdminLogs />}
       {active === "admin-whatsapp" && user.isAdmin && <AdminWhatsApp />}
+      {active === "admin-telegram" && user.isAdmin && <AdminTelegram />}
     </Shell>
   );
 }

@@ -1,4 +1,4 @@
-import type { Addon, AdminLogs, AdminUserProfile, AdminWhatsAppSession, CalendarStatus, CreditPack, CreditSummary, DriveStatus, EmailDraft, EmailStatus, InternetAccessSettings, KnowledgeFile, OnboardingData, Plan, Quota, TelegramAuthorization, TelegramStatus, UserProfile, WhatsAppSession, WhatsappNumber, WhatsappNumberPendingVerification } from "./types";
+import type { Addon, AdminLogs, AdminTelegramBot, AdminUserProfile, AdminWhatsAppSession, CalendarStatus, Connector, CreditPack, CreditSummary, DriveStatus, EmailDraft, EmailStatus, InternetAccessSettings, KnowledgeFile, OnboardingData, Plan, Quota, TelegramAuthorization, TelegramStatus, UserProfile, WhatsAppSession, WhatsappNumber, WhatsappNumberPendingVerification } from "./types";
 
 const TOKEN_KEY = "pa_session";
 
@@ -140,6 +140,12 @@ export const backend = {
       method: "POST",
       body: JSON.stringify({ userId }),
     }),
+  adminTelegramBots: () => api<{ bots: AdminTelegramBot[] }>("/api/admin/telegram-bots"),
+  adminDisconnectTelegramBot: (userId: string) =>
+    api<{ bots: AdminTelegramBot[] }>("/api/admin/telegram-bots/disconnect", {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    }),
   telegramStatus: () => api<TelegramStatus>("/api/telegram/status"),
   telegramConnect: (token: string) => api<{ botUsername: string; claim: TelegramAuthorization | null }>("/api/telegram/connect", {
     method: "POST",
@@ -184,6 +190,7 @@ export const backend = {
   removeWhatsappNumber: (id: string) =>
     api<{ numbers: WhatsappNumber[]; quota: Quota }>(`/api/whatsapp/numbers?id=${encodeURIComponent(id)}`, { method: "DELETE" }),
   integrationQuota: () => api<{ quota: Quota }>("/api/integrations/quota"),
+  integrationsCatalog: () => api<{ connectors: Connector[] }>("/api/integrations/catalog", {}, false),
   addonCheckout: (addonType: Addon["type"]) =>
     api<{ url: string }>("/api/billing/addon-checkout", { method: "POST", body: JSON.stringify({ addonType }) }),
   internetAccess: () => api<{ settings: InternetAccessSettings }>("/api/assistant/internet-access"),

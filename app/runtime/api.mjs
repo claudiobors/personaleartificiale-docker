@@ -17,6 +17,7 @@ import {
   verifyLoginOtp,
 } from "./auth.mjs";
 import { publicPlans, publicCreditPacks, publicAddons, getPlan } from "./plans.mjs";
+import { publicConnectors } from "./connectors.mjs";
 import {
   confirmCheckout,
   constructWebhook,
@@ -84,6 +85,7 @@ import {
   disconnectTelegramBot,
   getTelegramStatus,
   handleTelegramWebhook,
+  listAllTelegramBots,
   removeTelegramChat,
   requestTelegramAuthorization,
 } from "./telegram.mjs";
@@ -439,6 +441,10 @@ export async function dispatchApi(request, url) {
 
     if (method === "GET" && path === "/api/plans") {
       return response({ plans: publicPlans(), creditPacks: publicCreditPacks(), addons: publicAddons() });
+    }
+
+    if (method === "GET" && path === "/api/integrations/catalog") {
+      return response({ connectors: publicConnectors() });
     }
 
     if (method === "POST" && path === "/api/auth/register") {
@@ -932,6 +938,21 @@ export async function dispatchApi(request, url) {
       // messaggi del cliente da qui, solo lo stato della connessione.
       await disconnectWhatsAppSession(body.userId);
       return response({ sessions: await listAllWhatsAppSessions() });
+    }
+
+    if (method === "GET" && path === "/api/admin/telegram-bots") {
+      await requireAdminUser(request);
+      return response({ bots: await listAllTelegramBots() });
+    }
+
+    if (method === "POST" && path === "/api/admin/telegram-bots/disconnect") {
+      await requireAdminUser(request);
+      const body = await jsonBody(request);
+      if (!body.userId) throw apiError(400, "ID account mancante.");
+      // Stesso principio del disconnect WhatsApp qui sopra: solo per assistenza, il cliente dovrà
+      // ricollegare il proprio bot dalla propria dashboard.
+      await disconnectTelegramBot(body.userId);
+      return response({ bots: await listAllTelegramBots() });
     }
 
     return response({ error: "Endpoint non trovato." }, 404);

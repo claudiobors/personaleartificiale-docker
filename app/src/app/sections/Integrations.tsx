@@ -7,11 +7,16 @@ import {
   Clock,
   FolderOpen,
   Inbox,
+  KanbanSquare,
   Loader2,
   Lock,
   Mail,
+  MessageSquare,
+  NotebookText,
+  Plug,
   Plus,
   PowerOff,
+  Receipt,
   RefreshCw,
   Send,
   Sheet,
@@ -22,7 +27,11 @@ import {
 import { backend } from "../api";
 import { PageHeader } from "../Shell";
 import { formatDate } from "../format";
-import type { CalendarStatus, DriveStatus, EmailStatus, Quota, TelegramAuthorization, TelegramStatus } from "../types";
+import type { CalendarStatus, Connector, DriveStatus, EmailStatus, Quota, TelegramAuthorization, TelegramStatus } from "../types";
+
+const CONNECTOR_ICONS: Record<string, typeof Plug> = {
+  Calendar, Mail, FolderOpen, Inbox, Send, Sheet, Webhook, Receipt, NotebookText, MessageSquare, KanbanSquare,
+};
 
 interface EmailPreset {
   label: string;
@@ -93,6 +102,7 @@ export function Integrations() {
   const [quota, setQuota] = useState<Quota | null>(null);
   const [buyingAddon, setBuyingAddon] = useState(false);
   const [addonError, setAddonError] = useState("");
+  const [catalog, setCatalog] = useState<Connector[]>([]);
 
   const loadQuota = async () => {
     try {
@@ -102,6 +112,10 @@ export function Integrations() {
       setQuota(null);
     }
   };
+
+  useEffect(() => {
+    backend.integrationsCatalog().then((result) => setCatalog(result.connectors)).catch(() => setCatalog([]));
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -136,13 +150,15 @@ export function Integrations() {
   };
 
   const atLimit = quota ? quota.used >= quota.total : false;
+  const liveConnectors = catalog.filter((connector) => connector.status === "live");
+  const comingSoonConnectors = catalog.filter((connector) => connector.status === "coming_soon");
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Marketplace"
-        title="Integrazioni"
-        description="Scegli e attiva le integrazioni che vuoi usare, nel limite degli slot inclusi nel tuo piano. Ogni integrazione occupa uno slot finché resta collegata."
+        title="Connettori"
+        description="Scegli, attiva e configura i connettori che vuoi usare, nel limite degli slot inclusi nel tuo piano. Telegram è un canale sempre incluso e non consuma slot."
       />
       {callbackNotice && (
         <div
@@ -162,11 +178,9 @@ export function Integrations() {
               <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Slot usati</p>
               <p className="mt-1 text-lg font-black">{quota.used} / {quota.total} <span className="text-xs font-bold text-zinc-500">({quota.included} inclusi nel piano{quota.extra ? ` + ${quota.extra} extra` : ""})</span></p>
             </div>
-            {atLimit && (
-              <button onClick={() => void buyExtraSlot()} disabled={buyingAddon} className="pa-button flex items-center justify-center gap-2 px-4 py-2.5 text-sm">
-                {buyingAddon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Attiva slot extra (9€/mese)
-              </button>
-            )}
+            <button onClick={() => void buyExtraSlot()} disabled={buyingAddon} className="pa-button flex items-center justify-center gap-2 px-4 py-2.5 text-sm">
+              {buyingAddon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Acquista slot connettore extra (9€/mese)
+            </button>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/8">
             <div className="h-full rounded-full bg-blue-500" style={{ width: `${quota.total ? Math.min(100, (quota.used / quota.total) * 100) : 0}%` }} />
@@ -176,24 +190,69 @@ export function Integrations() {
       )}
 
       <div>
-        <p className="mb-3 text-xs font-black uppercase tracking-widest text-zinc-500">Disponibili ora</p>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <TelegramCard />
-          <GoogleCalendarCard atLimit={atLimit} onQuotaChange={loadQuota} />
-          <GmailCard atLimit={atLimit} onQuotaChange={loadQuota} />
-          <GoogleDriveCard atLimit={atLimit} onQuotaChange={loadQuota} />
-          <EmailCard atLimit={atLimit} onQuotaChange={loadQuota} />
+        <p className="mb-1 text-xs font-black uppercase tracking-widest text-zinc-500">Marketplace connettori</p>
+        <p className="mb-3 text-xs text-zinc-500">Sfoglia tutti i connettori: clicca su uno disponibile per configurarlo qui sotto.</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {liveConnectors.map((connector) => (
+            <ConnectorTile key={connector.id} connector={connector} locked={atLimit && connector.countsTowardQuota} />
+          ))}
+          {comingSoonConnectors.map((connector) => (
+            <ConnectorTile key={connector.id} connector={connector} locked={false} />
+          ))}
         </div>
       </div>
 
       <div>
-        <p className="mb-3 text-xs font-black uppercase tracking-widest text-zinc-500">Presto disponibili</p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <ComingSoonCard icon={Webhook} name="Webhook personalizzato" description="Invia eventi (nuovo lead, nuovo messaggio) a Zapier, Make o un URL a tua scelta." />
-          <ComingSoonCard icon={Sheet} name="Google Sheets" description="Usa un foglio come listino/orari sempre aggiornato per l'assistente." />
+        <p className="mb-3 text-xs font-black uppercase tracking-widest text-zinc-500">Configurazione</p>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div id="connector-telegram"><TelegramCard /></div>
+          <div id="connector-google_calendar"><GoogleCalendarCard atLimit={atLimit} onQuotaChange={loadQuota} /></div>
+          <div id="connector-gmail"><GmailCard atLimit={atLimit} onQuotaChange={loadQuota} /></div>
+          <div id="connector-google_drive"><GoogleDriveCard atLimit={atLimit} onQuotaChange={loadQuota} /></div>
+          <div id="connector-email_imap"><EmailCard atLimit={atLimit} onQuotaChange={loadQuota} /></div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ConnectorTile({ connector, locked }: { connector: Connector; locked: boolean }) {
+  const Icon = CONNECTOR_ICONS[connector.icon] ?? Plug;
+  const comingSoon = connector.status === "coming_soon";
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-zinc-300">
+          <Icon className="h-5 w-5" />
+        </span>
+        {comingSoon ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-500">
+            <Clock className="h-3 w-3" /> Presto
+          </span>
+        ) : locked ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-amber-300">
+            <Lock className="h-3 w-3" /> Slot pieno
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-300">
+            Disponibile
+          </span>
+        )}
+      </div>
+      <p className="mt-3 text-xs font-bold uppercase tracking-wide text-zinc-500">{connector.category}</p>
+      <h3 className="mt-1 text-sm font-extrabold">{connector.name}</h3>
+      <p className="mt-2 text-xs leading-5 text-zinc-500">{connector.tagline}</p>
+    </>
+  );
+
+  if (comingSoon) {
+    return <article className="pa-panel-tight flex flex-col p-5 opacity-70">{content}</article>;
+  }
+
+  return (
+    <a href={`#connector-${connector.id}`} className="pa-panel-tight flex flex-col p-5 transition hover:border-white/20">
+      {content}
+    </a>
   );
 }
 
@@ -392,23 +451,6 @@ function QuotaLockedNotice({ label }: { label: string }) {
       <p className="flex items-center gap-2 text-sm font-bold text-amber-200"><Lock className="h-4 w-4" /> Slot integrazioni esaurito</p>
       <p className="mt-1 text-xs text-amber-100/80">Attiva uno slot extra qui sopra per collegare {label}.</p>
     </div>
-  );
-}
-
-function ComingSoonCard({ icon: Icon, name, description }: { icon: typeof Webhook; name: string; description: string }) {
-  return (
-    <article className="pa-panel-tight flex flex-col gap-3 p-5 opacity-70">
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-zinc-400">
-          <Icon className="h-4.5 w-4.5" />
-        </span>
-        <h3 className="text-sm font-extrabold">{name}</h3>
-      </div>
-      <p className="text-xs leading-5 text-zinc-500">{description}</p>
-      <span className="mt-auto inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-zinc-500">
-        <Clock className="h-3 w-3" /> Presto disponibile
-      </span>
-    </article>
   );
 }
 
