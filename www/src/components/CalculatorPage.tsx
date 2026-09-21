@@ -252,7 +252,7 @@ export function CalculatorPage({ campaign = false }: { campaign?: boolean }) {
                   Questi valori sono una stima orientativa e non costituiscono
                   una garanzia di risultato economico o di tempo recuperato.
                 </p>
-                <a href={APP_URL + "/"} className="pa-button mt-6 w-full">
+                <a href={APP_URL + "/dashboard"} className="pa-button mt-6 w-full">
                   Registrati e inizia ora <ArrowRight className="h-4 w-4" />
                 </a>
                 <Link to="/" hash="prezzi" className="pa-button-secondary mt-3 w-full">

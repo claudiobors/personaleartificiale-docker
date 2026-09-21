@@ -393,7 +393,7 @@ function Home() {
                 aggiornamenti, mentre tu mantieni il controllo.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a href={APP_URL + "/"} className="pa-button">
+                <a href={APP_URL + "/dashboard"} className="pa-button">
                   Inizia ora, registrati in 2 minuti{" "}
                   <ArrowRight className="h-4 w-4" />
                 </a>
@@ -652,7 +652,7 @@ function Home() {
                     </ul>
                   </div>
                   <a
-                    href={`${APP_URL}/?plan=${plan.id}`}
+                    href={`${APP_URL}/dashboard?plan=${plan.id}`}
                     className={`mt-8 w-full ${plan.highlight ? "pa-button" : "pa-button-secondary"}`}
                   >
                     {plan.id === "su-misura" ? "Registrati e richiedi il preventivo" : "Registrati e attiva ora"}
@@ -720,7 +720,7 @@ function Home() {
                 nessun costo di attivazione, disdici quando vuoi.
               </p>
               <div className="relative mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-                <a href={APP_URL + "/"} className="pa-button">
+                <a href={APP_URL + "/dashboard"} className="pa-button">
                   Registrati ora <ArrowRight className="h-4 w-4" />
                 </a>
                 <Link to="/calcolatore" className="pa-button-secondary">

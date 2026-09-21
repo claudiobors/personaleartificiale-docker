@@ -64,10 +64,10 @@ export function SiteHeader() {
               {item.label}
             </a>
           ))}
-          <a href={APP_URL + "/"} className="text-sm font-semibold text-slate-300 transition hover:text-white">
+          <a href={APP_URL + "/dashboard"} className="text-sm font-semibold text-slate-300 transition hover:text-white">
             Accedi
           </a>
-          <a href={APP_URL + "/"} className="pa-button">
+          <a href={APP_URL + "/dashboard"} className="pa-button">
             Registrati
           </a>
         </nav>
@@ -104,14 +104,14 @@ export function SiteHeader() {
               </a>
             ))}
             <a
-              href={APP_URL + "/"}
+              href={APP_URL + "/dashboard"}
               onClick={() => setOpen(false)}
               className="flex min-h-12 items-center rounded-xl px-4 font-semibold text-slate-200 hover:bg-white/5"
             >
               Accedi
             </a>
             <a
-              href={APP_URL + "/"}
+              href={APP_URL + "/dashboard"}
               onClick={() => setOpen(false)}
               className="pa-button mt-1 w-full"
             >
